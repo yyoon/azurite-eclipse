@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+
+   <extension
+         point="org.eclipse.ui.views">
+      <category
+            name="Azurite"
+            id="edu.cmu.scs.azurite">
+      </category>
+      <view
+            category="edu.cmu.scs.azurite"
+            class="edu.cmu.scs.azurite.views.GraphViewPart"
+            icon="icons/azurite.gif"
+            id="edu.cmu.scs.azurite.views.GraphViewPart"
+            name="Graph View">
+      </view>
+      <view
+            category="edu.cmu.scs.azurite"
+            class="edu.cmu.scs.azurite.views.TimelineViewPart"
+            icon="icons/azurite.gif"
+            id="edu.cmu.scs.azurite.views.TimelineViewPart"
+            name="Timeline View"
+            restorable="true">
+      </view>
+   </extension>
+   <extension
+         point="org.eclipse.ui.startup">
+      <startup
+            class="edu.cmu.scs.azurite.plugin.AzuriteStartup">
+      </startup>
+   </extension>
+
+</plugin>
