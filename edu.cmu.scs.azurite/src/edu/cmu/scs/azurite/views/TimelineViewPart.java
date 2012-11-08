@@ -11,8 +11,11 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
+import java.net.URL;
 import java.nio.charset.Charset;
 
+import org.eclipse.core.runtime.FileLocator;
+import org.eclipse.core.runtime.Platform;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.browser.Browser;
 import org.eclipse.swt.browser.BrowserFunction;
@@ -37,8 +40,16 @@ public class TimelineViewPart extends ViewPart implements RuntimeDocumentChangeL
 		browser = new Browser(parent, SWT.NONE);
 		new ReadFileFunction(browser, "readLog");
 		
+		// Retrieve the full URL of /html/index.html in our project.
+		try {
+			URL indexUrl = FileLocator.toFileURL(Platform.getBundle(
+					"edu.cmu.scs.azurite").getEntry("/html/index.html"));
+			browser.setUrl(indexUrl.toString());
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		}
 		
-		browser.setUrl("file:///" + PATH + "index.html");
+//		browser.setUrl("file:///" + PATH + "index.html");
 		
 		browser.addProgressListener(new ProgressListener() {
             

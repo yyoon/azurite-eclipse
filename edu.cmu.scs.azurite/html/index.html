@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=EmulateIE9">
+	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+    <title>Timeline</title>
+	
+    <script type="text/javascript" src="scripts/d3.v2.js"></script>
+	<script type="text/javascript" src="scripts/jquery.js"></script>
+	
+	
+	<style type="text/css">
+
+#sel_box
+{
+display: none;
+position: absolute;
+border: 1px solid #000000;
+background: transparent;
+width: 0;
+height: 0;
+}
+
+
+.extent {
+  stroke: #fff;
+  fill-opacity: .125;
+  fill: blue;
+  shape-rendering: crispEdges;
+}
+
+
+body {
+	background-color:black;
+	font-family:helvetica;
+	font-size:12px;
+}
+
+.fileTitle {
+	
+}
+
+.menu_panel {
+	background-color:grey;
+	position: absolute;
+}
+
+.menu {
+	position: absolute;
+}
+
+.svg {
+	position: absolute;
+	left:0px;
+	top:0px;
+}
+
+
+</style>
+  </head>
+  <body>
+	<div class='menu_panel' id='menu_panel'>
+		<button id='button_before' class='menu' onclick='show_before()'><</button>
+		<button id='button_after' class='menu' onclick='show_after()'>></button>
+		<button id='bar_zoom_in' class='menu' onclick='bar_zoom_in()'>+</button>
+		<button id='bar_zoom_out' class='menu' onclick='bar_zoom_out()'>-</button>
+		<div id='bar_zoom_level' class='menu' style='color:white'></div>
+		<div id='bar_page_index' class='menu' style='color:white'></div>
+		
+		<button id='button_up' class='menu' onclick='show_up()'>Up</button>
+		<button id='button_down' class='menu' onclick='show_down()'>Down</button>
+		<button id='file_zoom_in' class='menu' onclick='file_zoom_in()'>+</button>
+		<button id='file_zoom_out' class='menu' onclick='file_zoom_out()'>-</button>
+		<div id='file_zoom_level' class='menu' style='color:white'></div>
+		<div id='file_page_index' class='menu' style='color:white'></div>
+	</div>
+	
+    <script type="text/javascript" src="scripts/timeline.js"></script>
+	<script type="text/javascript" src="scripts/time.js"></script>
+
+  </body>
+</html>
