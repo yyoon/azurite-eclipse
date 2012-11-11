@@ -43,7 +43,8 @@ function File(path, fileName) {
 
 
 // Type 0 : insertion, 1 : deletion, 2: replacement
-function Event(timestamp, timestamp2, type) {
+function Event(id, timestamp, timestamp2, type) {
+	this.id = id;
 	this.timestamp = timestamp;
 	this.timestamp2 = timestamp2;
 	this.type = type;
@@ -60,7 +61,8 @@ function Event(timestamp, timestamp2, type) {
 /**
  * Block object to draw
  */
-function Block(width, height, x, y, color, timestamp, timestamp2) {
+function Block(id, width, height, x, y, color, timestamp, timestamp2) {
+	this.id = id;
 	this.width = width;
 	this.height = height;
 	this.x = x;
@@ -140,6 +142,7 @@ function parseXml() {
 			}
 		} else if (command.tagName === "DocumentChange" ) {	
 			var type;
+			var id = command.getAttribute("__id");
 			
 			if(command.getAttribute("_type") === "Insert") {
 				type = INSERTION;
@@ -159,7 +162,7 @@ function parseXml() {
 					timestamp2 = parseInt(timestamp2);
 				}
 				
-				current_file.event.push(new Event(timestamp, timestamp2, type));
+				current_file.event.push(new Event(id, timestamp, timestamp2, type));
 			
 				// update max_timestamp if necessary
 				if(timestamp2 == null && timestamp > max_timestamp) {
@@ -524,6 +527,7 @@ function draw_chart(files_to_draw, chart_width, chart_height) {
 				
 				blocks_to_draw.push(
 					new Block(
+						events[j].id,
 						width, 
 						file_zoom_levels[file_zoom_index], 
 						x_bar(timestamp), 
@@ -542,6 +546,7 @@ function draw_chart(files_to_draw, chart_width, chart_height) {
 				
 				blocks_to_draw.push(
 					new Block(
+						events[j].id,
 						width, 
 						file_zoom_levels[file_zoom_index], 
 						x_bar(timestamp), 
@@ -795,10 +800,11 @@ function show_down() {
 
 function undo() {
 	if(selected.length > 0) {
-		var result = ["1","2"];
+		var result = [];
+		
 		
 		for(var i = 0; i < selected.length; i++) {
-			result.push(selected[i].width);
+			result.push(selected[i].id);
 		}
 	
 		doUndo(result);

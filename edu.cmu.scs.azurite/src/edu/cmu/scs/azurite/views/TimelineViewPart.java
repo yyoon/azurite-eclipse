@@ -82,18 +82,12 @@ public class TimelineViewPart extends ViewPart implements RuntimeDocumentChangeL
 
 		@Override
 		public Object function(Object[] arguments) {
-			System.out.println("AAAAAAAAAAAA");
-			String[] a = (String[])arguments[0];
-			System.out.println(a[0]);
+			Object[] selected = (Object[])arguments[0];
 			
-			String[] arr = (String[])arguments[0];
-			System.out.println(arr[0]);
-			/*
-			for(int i = 0; i < arguments.length; i++){
-				String temp = arguments[i].toString();
-				System.out.println(temp);
-			}*/
-			
+			for(int i = 0; i < selected.length; i++){
+				System.out.print(selected[i].toString() + ", ");
+			}
+			System.out.println("");
 			return "test";
 		}
 
