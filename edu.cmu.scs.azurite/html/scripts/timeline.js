@@ -19,6 +19,7 @@ var REPLACEMENT = 2;
 var LOCAL_MODE = false;
 
 var files = [];
+var blocks_to_draw = [];
 var selected = [];
 var xmlDoc = null;
 
@@ -235,30 +236,8 @@ var rules = sub_bar.append('g')
 	.attr('class', 'rules');
 
 var brush = d3.svg.brush()
-	.on("brushstart", brushstart)
-	.on("brush", brush)
 	.on("brushend", brushend);
-	
 
-
-	
-function brushstart(p) {
-	var extent = brush.extent();
-	
-	if (brush.data !== p) {
-		sub_bar.call(brush.clear());
-		brush.x(x_bar).y(y).data = p;
-	}
-}
-
-function brush(p) {
-	
-}
-
-function brushend() {
-	
-}
-	
 
 
 //var temp = new Event(100, 0);
@@ -329,6 +308,11 @@ function redraw() {
 	rules.selectAll('text').remove();
 	sub_bar.selectAll('rect').remove();
 	
+	selected = [];
+	sub_bar.selectAll('polygon').remove();
+	
+	
+	
 	svg.attr("width", svg_width)
 		.attr("height", svg_height)
 		
@@ -355,6 +339,8 @@ function redraw() {
 	draw_menu();
 	draw_chart(files_to_draw, chart_width, chart_height);
 	//debugger;
+	
+	console.log("CHART HEIGHT " + chart_height);
 }
 
 function draw_menu() {
@@ -480,9 +466,11 @@ function draw_chart(files_to_draw, chart_width, chart_height) {
 		.domain([min_to_show, max_to_show])
 		.range([0, bar_width]);
 		
-	y = d3.time.scale()
-		.domain([min_to_show, max_to_show])
+	y = d3.scale.linear()
+		.domain([0, chart_height])
 		.range([0, chart_height]);
+	
+	
 	
 	rules.selectAll(".rule")
 		.data(x_rule.ticks(5))
@@ -501,7 +489,7 @@ function draw_chart(files_to_draw, chart_width, chart_height) {
 		.text(function(d,i) { return (new Time(startTimestamp + x_rule(i))).toString(); });
 	
 	// select blocks to draw
-	var blocks_to_draw = [];
+	blocks_to_draw = [];
 	var min_width = bar_width * 0.005;
 	
 	for(var i = 0; i < files_to_draw.length; i++) {
@@ -570,42 +558,19 @@ function draw_chart(files_to_draw, chart_width, chart_height) {
 		}
 	}
 	
+	
 	sub_bar.selectAll("rect")
 		.data(blocks_to_draw).enter().append("rect")
 		.attr("width", function(d) { return d.width; })
 		.attr("height", function(d) { return d.height; })
 		.attr("x", function(d) { return d.x; })
 		.attr("y", function(d) { return d.y; })
-		.style("fill", function(d) { return d.color; })
-		.on("click", function(d) {  select(d); });
+		.style("fill", function(d) { return d.color; });
+	
 	
 	sub_bar.call(brush.x(x_bar).y(y));
-	
 }
 
-function select(d) {
-	var highlight_width = 3;
-	/*
-	sub_bar.append("polygon")
-		.attr("points", (d.x-highlight_width) + "," + (d.y-highlight_width) + " \ " + 
-		(d.x+d.width+highlight_width) + "," + (d.y-highlight_width) + " \ " +
-		(d.x+d.width+highlight_width) + "," + (d.y+d.height+highlight_width) + " \ " +
-		(d.x-highlight_width) + "," + (d.y+d.height+highlight_width))
-		.style("stroke", "yellow")
-		.style("stroke-width", highlight_width)
-		.style("fill-opacity", 0);
-	*/
-	sub_bar.append("polygon")
-		.attr("points", (d.x) + "," + (d.y) + " \ " + 
-		(d.x+d.width) + "," + (d.y) + " \ " +
-		(d.x+d.width) + "," + (d.y+d.height) + " \ " +
-		(d.x) + "," + (d.y+d.height))
-		.style("stroke", "yellow")
-		.style("stroke-width", highlight_width)
-		.style("fill-opacity", 0);
-		
-	
-}
 
 
 /*
@@ -615,7 +580,10 @@ window.onload = function () {
 	console.log("ON LOAD");
 	console.log(window.innerWidth);
 	console.log(window.innerHeight);
-
+	var a = 1;
+	var c = 2;
+	var b = 4;
+	console.log(a|b|c);
 	
 	loadFile();
 	parseXml();
@@ -648,6 +616,124 @@ window.onresize = function(event) {
 	}
 }
 
+/******************************************************************
+ SELECTOR FUNCTIONS
+ ******************************************************************/
+
+function brushend() {
+	selected = [];
+	sub_bar.selectAll('polygon').remove();
+	
+	
+	var extent = brush.extent();
+	
+	var upperLeft = extent[0];
+	var lowerRight = extent[1];
+	console.log(extent);
+	
+	var blockLength = blocks_to_draw.length;
+	for(var i = 0; i < blockLength; i++) {
+		if(trivial_reject_test(upperLeft, lowerRight, blocks_to_draw[i]) == 0) {
+			selected.push(blocks_to_draw[i]);
+		}
+	}
+	
+	console.log(selected);
+	sub_bar.call(brush.clear());
+	
+	// check overlapping blocks decide width and height of highlight boxes
+	var itemsToHighlight = [];
+	
+	
+	var selectedLength = selected.length;
+	
+	if(selectedLength > 0) {
+		var prev = selected[0];
+		var item = {startX: prev.x, startY: prev.y, endX: prev.x + prev.width, endY: prev.y + prev.height};
+		
+		for(var i = 1; i < selectedLength; i++) {
+			if(item.startY == selected[i].y &&  Math.abs(item.endX - selected[i].x) <= 8) {
+				item.endX = (item.endX > (selected[i].x + selected[i].width)) ? item.endX : (selected[i].x + selected[i].width);
+			} else {
+				itemsToHighlight.push(item);
+				item = {startX: selected[i].x, startY: selected[i].y, endX: selected[i].x + selected[i].width, endY: selected[i].y + selected[i].height};
+			}
+			/*
+			if(item.startY == selected[i].y &&  item.endX >= selected[i].x) {
+				item.endX = (item.endX > (selected[i].x + selected[i].width)) ? item.endX : (selected[i].x + selected[i].width);
+			} else {
+				itemsToHighlight.push(item);
+				item = {startX: selected[i].x, startY: selected[i].y, endX: selected[i].x + selected[i].width, endY: selected[i].y + selected[i].height};
+			}*/
+			
+			prev = selected[i];
+		}
+		
+		itemsToHighlight.push(item);
+		
+		console.log(itemsToHighlight);
+		
+		var highlight_width = 3;
+		/*
+		sub_bar.append("polygon")
+			.attr("points", (d.x-highlight_width) + "," + (d.y-highlight_width) + " \ " + 
+			(d.x+d.width+highlight_width) + "," + (d.y-highlight_width) + " \ " +
+			(d.x+d.width+highlight_width) + "," + (d.y+d.height+highlight_width) + " \ " +
+			(d.x-highlight_width) + "," + (d.y+d.height+highlight_width))
+			.style("stroke", "yellow")
+			.style("stroke-width", highlight_width)
+			.style("fill-opacity", 0);
+		*/
+		
+		sub_bar.selectAll('polygon')
+			.data(itemsToHighlight).enter().append('polygon')
+			.attr("points", function(d) { return ((d.startX) + "," + (d.startY) + " \ " + 
+			(d.endX) + "," + (d.startY) + " \ " +
+			(d.endX) + "," + (d.endY) + " \ " +
+			(d.startX) + "," + (d.endY)) })
+			.style("stroke", "yellow")
+			.style("stroke-width", highlight_width)
+			.style("fill-opacity", 0);
+			
+	}
+}
+	
+function trivial_reject_test(upperLeft, lowerRight, block) {
+	var result0 = 0, result1= 0;
+	var left = 1;
+	var right = 2;
+	var bottom = 4;
+	var top = 8;
+	
+	
+	if(x_bar(upperLeft[0]) < block.x) {
+		result0 = result0 | left;
+	} else if(x_bar(upperLeft[0]) > (block.x + block.width)) {
+		result0 = result0 | right;
+	}
+	
+	if(upperLeft[1] < block.y) {
+		result0 = result0 | top;
+	} else if(upperLeft[1] > (block.y + block.height)) {
+		result0 = result0 | bottom;
+	}
+	
+	if(x_bar(lowerRight[0]) < block.x) {
+		result1 = result1 | left;
+	} else if(x_bar(lowerRight[0]) > (block.x + block.width)) {
+		result1 = result1 | right;
+	}
+	
+	if(lowerRight[1] < block.y) {
+		result1 = result1 | top;
+	} else if(lowerRight[1] > (block.y + block.height)) {
+		result1 = result1 | bottom;
+	}
+	
+	return (result0 & result1);
+}
+
+	
 /******************************************************************
  LISTENER FUNCTIONS
  ******************************************************************/
@@ -705,4 +791,18 @@ function show_down() {
 		file_cur_index++;
 		redraw();
 	}
+}
+
+function undo() {
+	if(selected.length > 0) {
+		var result = ["1","2"];
+		
+		for(var i = 0; i < selected.length; i++) {
+			result.push(selected[i].width);
+		}
+	
+		doUndo(result);
+	
+	}
+
 }

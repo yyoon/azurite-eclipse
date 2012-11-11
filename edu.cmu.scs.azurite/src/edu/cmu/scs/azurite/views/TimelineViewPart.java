@@ -29,8 +29,8 @@ import edu.cmu.scs.azurite.model.RuntimeDocumentChangeListener;
 
 public class TimelineViewPart extends ViewPart implements RuntimeDocumentChangeListener {
 
-//	private static final String PATH = "C:/Users/asder/workspace/Timeline/";
-	private static final String PATH = "D:/timeline_ver6/";
+	private static final String PATH = "C:/Users/asder/Desktop/timeline/";
+//	private static final String PATH = "D:/timeline_ver6/";
 
 	private Browser browser;
 	
@@ -39,7 +39,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDocumentChangeL
 		
 		browser = new Browser(parent, SWT.NONE);
 		new ReadFileFunction(browser, "readLog");
-		
+		new UndoFunction(browser, "doUndo");
 		// Retrieve the full URL of /html/index.html in our project.
 		try {
 			URL indexUrl = FileLocator.toFileURL(Platform.getBundle(
@@ -48,8 +48,6 @@ public class TimelineViewPart extends ViewPart implements RuntimeDocumentChangeL
 		} catch (IOException e1) {
 			e1.printStackTrace();
 		}
-		
-//		browser.setUrl("file:///" + PATH + "index.html");
 		
 		browser.addProgressListener(new ProgressListener() {
             
@@ -76,6 +74,31 @@ public class TimelineViewPart extends ViewPart implements RuntimeDocumentChangeL
 	}
 
 
+	class UndoFunction extends BrowserFunction {
+
+		public UndoFunction(Browser browser, String name) {
+			super(browser, name);
+		}
+
+		@Override
+		public Object function(Object[] arguments) {
+			System.out.println("AAAAAAAAAAAA");
+			String[] a = (String[])arguments[0];
+			System.out.println(a[0]);
+			
+			String[] arr = (String[])arguments[0];
+			System.out.println(arr[0]);
+			/*
+			for(int i = 0; i < arguments.length; i++){
+				String temp = arguments[i].toString();
+				System.out.println(temp);
+			}*/
+			
+			return "test";
+		}
+
+	}
+	
 	class ReadFileFunction extends BrowserFunction {
 
 		public ReadFileFunction(Browser browser, String name) {
