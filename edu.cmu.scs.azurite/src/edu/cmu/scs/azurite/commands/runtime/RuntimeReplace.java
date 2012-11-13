@@ -92,5 +92,10 @@ public class RuntimeReplace extends BaseRuntimeDocumentChange {
 		segments.addAll(getInsertSegments());
 		return segments;
 	}
+	
+	@Override
+	public int getTypeIndex() {
+		return 2;
+	}
 
 }

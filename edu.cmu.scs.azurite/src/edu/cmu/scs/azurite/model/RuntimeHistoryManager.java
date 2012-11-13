@@ -1,6 +1,7 @@
 package edu.cmu.scs.azurite.model;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -232,5 +233,25 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		
 		// Fire runtime document change event
 		fireDocumentChangedEvent(runtimeDocChange);
+	}
+	
+	public List<BaseRuntimeDocumentChange> filterDocumentChangesByIds(List<Integer> ids) {
+		if (ids == null) {
+			throw new IllegalArgumentException();
+		}
+		
+		List<BaseRuntimeDocumentChange> list = mDocumentChanges.get(getCurrentFileKey());
+		if (list == null) {
+			throw new IllegalStateException();
+		}
+		
+		List<BaseRuntimeDocumentChange> result = new ArrayList<BaseRuntimeDocumentChange>();
+		for (BaseRuntimeDocumentChange docChange : list) {
+			if (ids.contains(docChange.getOriginal().getCommandIndex())) {
+				result.add(docChange);
+			}
+		}
+		
+		return result;
 	}
 }

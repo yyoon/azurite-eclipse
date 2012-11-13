@@ -60,4 +60,19 @@ public abstract class BaseRuntimeDocumentChange {
 	}
 	
 	public abstract List<Segment> getAllSegments();
+	
+	/**
+	 * This type index is used inside the timeline view.
+	 * The timeline.js code defines:
+	 * 
+	 * // Constants
+	 * var INSERTION = 0;
+	 * var DELETION = 1;
+	 * var REPLACEMENT = 2;
+	 * 
+	 * So that it can color those things differently.
+	 * 
+	 * @return 0 if insertion, 1 if deletion, and 2 if replacement.
+	 */
+	public abstract int getTypeIndex();
 }

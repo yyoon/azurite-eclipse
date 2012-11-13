@@ -90,6 +90,9 @@ function loadFile() {
 		xmlhttp.send();
 		xmlDoc = xmlhttp.responseXML; 
 	} else {
+    // disable this block temporarily.
+    return;
+    
 		var log = readLog();
 
 		if(log == "") {
@@ -261,14 +264,20 @@ function add_file(path) {
 	redraw();
 }
 
+function set_start_timestamp(timestamp) {
+  startTimestamp = parseInt(timestamp);
+  redraw();
+}
+
 /**
  * Add an event to the end of the file
  */
-function add_block(parameter) {
+// function add_block(parameter) {
+function add_block(id, timestamp1, timestamp2, type) {
 //	alert(typeof parameter);
 //	alert(parameter);
 	
-	var newEvent = new Event(0, parseInt(parameter));
+	var newEvent = new Event(parseInt(id), parseInt(timestamp1), parseInt(timestamp2), parseInt(type));
 	
 	var file_index = -1;
 	
@@ -281,6 +290,7 @@ function add_block(parameter) {
 	if(file_index == -1)
 		return;
 	
+  /*
 	// If not drawn here, it will be drawn in redraw()
 	for(var i = min_to_show; i <= max_to_show; i++) {
 		var event = current_file.event[i];
@@ -296,8 +306,21 @@ function add_block(parameter) {
 			break;
 		}
 	}
+  
+  alert('before push');
 	current_file.event.push(newEvent);
-	
+  alert('after push');
+	*/
+	current_file.event.push(newEvent);
+  
+  // update max_timestamp if necessary
+  if(timestamp2 == null && timestamp > max_timestamp) {
+    max_timestamp = timestamp;
+  } else if(timestamp2 != null && timestamp2 > max_timestamp) {
+    max_timestamp = timestamp2;
+  }
+
+  redraw();
 }
 
 function redraw() {

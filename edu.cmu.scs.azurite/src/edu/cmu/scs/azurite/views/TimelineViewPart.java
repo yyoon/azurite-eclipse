@@ -13,6 +13,8 @@ import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.eclipse.core.runtime.FileLocator;
 import org.eclipse.core.runtime.Platform;
@@ -26,6 +28,9 @@ import org.eclipse.ui.part.ViewPart;
 
 import edu.cmu.scs.azurite.commands.runtime.BaseRuntimeDocumentChange;
 import edu.cmu.scs.azurite.model.RuntimeDocumentChangeListener;
+import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
+import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
+import edu.cmu.scs.fluorite.model.EventRecorder;
 
 public class TimelineViewPart extends ViewPart implements RuntimeDocumentChangeListener {
 
@@ -60,11 +65,32 @@ public class TimelineViewPart extends ViewPart implements RuntimeDocumentChangeL
                 }
                 // Execute JavaScript in the browser
                 browser.execute("call();");
+                
+                EventRecorder.getInstance().scheduleTask(new Runnable() {
+
+					@Override
+					public void run() {
+						browser.execute("set_start_timestamp("
+								+ EventRecorder.getInstance().getStartTimestamp()
+								+ ");");
+					}
+                	
+                });
             }
             
             public void changed(ProgressEvent event) {
             }
         });
+		
+		// Register to the EventRecorder.
+		RuntimeHistoryManager.getInstance().addRuntimeDocumentChangeListener(this);
+	}
+
+	@Override
+	public void dispose() {
+		RuntimeHistoryManager.getInstance().removeRuntimeDocumentChangeListener(this);
+		
+		super.dispose();
 	}
 
 	@Override
@@ -82,13 +108,29 @@ public class TimelineViewPart extends ViewPart implements RuntimeDocumentChangeL
 
 		@Override
 		public Object function(Object[] arguments) {
+			if (arguments == null || arguments.length != 1 || arguments[0] == null) {
+				return "fail";
+			}
+			
 			Object[] selected = (Object[])arguments[0];
 			
-			for(int i = 0; i < selected.length; i++){
+			// Convert everything into integer.
+			List<Integer> ids = new ArrayList<Integer>();
+			for (Object element : selected) {
+				if (element instanceof Number) {
+					ids.add(((Number)element).intValue());
+				}
+			}
+			
+			SelectiveUndoEngine.getInstance().doSelectiveUndo(
+					RuntimeHistoryManager.getInstance().filterDocumentChangesByIds(ids));
+			
+/*			for(int i = 0; i < selected.length; i++){
 				System.out.print(selected[i].toString() + ", ");
 			}
-			System.out.println("");
-			return "test";
+			System.out.println("");*/
+			
+			return "ok";
 		}
 
 	}
@@ -165,11 +207,18 @@ public class TimelineViewPart extends ViewPart implements RuntimeDocumentChangeL
 
 	@Override
 	public void activeFileChanged(String projectName, String filePath) {
-		browser.execute("add_file();");
+		String executeStr = String.format("add_file('%1$s');",
+				filePath.replace('\\', '/'));	// avoid escaping..
+		browser.execute(executeStr);
 	}
 
 	@Override
 	public void runtimeDocumentChangeAdded(BaseRuntimeDocumentChange docChange) {
-		// TODO Auto-generated method stub
+		String executeStr = String.format("add_block(%1$d, %2$d, %3$d, %4$d);",
+				docChange.getOriginal().getCommandIndex(),
+				docChange.getOriginal().getTimestamp(),
+				docChange.getOriginal().getTimestamp2(),
+				docChange.getTypeIndex());
+		browser.execute(executeStr);
 	}
 }

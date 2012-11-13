@@ -74,4 +74,9 @@ public class RuntimeInsert extends BaseRuntimeDocumentChange {
 		return getInsertComponent().getInsertSegments();
 	}
 	
+	@Override
+	public int getTypeIndex() {
+		return 0;
+	}
+	
 }

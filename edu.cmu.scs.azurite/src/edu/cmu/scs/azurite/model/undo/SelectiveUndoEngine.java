@@ -36,11 +36,25 @@ public class SelectiveUndoEngine {
 
 		return instance;
 	}
+
+	public void doSelectiveUndo(
+			List<BaseRuntimeDocumentChange> runtimeDocChanges) {
+		if (runtimeDocChanges == null) {
+			throw new IllegalArgumentException();
+		}
+		
+		doSelectiveUndo(runtimeDocChanges
+				.toArray(new BaseRuntimeDocumentChange[runtimeDocChanges.size()]));
+	}
 	
 	/**
 	 * @param runtimeDocChanges
 	 */
 	public void doSelectiveUndo(BaseRuntimeDocumentChange[] runtimeDocChanges) {
+		if (runtimeDocChanges == null) {
+			throw new IllegalArgumentException();
+			
+		}
 		// Get all the segments.
 		List<Segment> segments = getAllSegments(runtimeDocChanges);
 		

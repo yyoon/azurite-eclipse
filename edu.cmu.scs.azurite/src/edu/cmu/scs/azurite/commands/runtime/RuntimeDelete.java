@@ -76,5 +76,10 @@ public class RuntimeDelete extends BaseRuntimeDocumentChange {
 		segments.add(getDeleteSegment());
 		return segments;
 	}
+	
+	@Override
+	public int getTypeIndex() {
+		return 1;
+	}
 
 }
