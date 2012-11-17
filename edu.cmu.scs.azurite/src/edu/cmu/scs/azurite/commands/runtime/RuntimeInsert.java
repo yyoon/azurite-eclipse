@@ -12,6 +12,10 @@ public class RuntimeInsert extends BaseRuntimeDocumentChange {
 	
 	InsertComponent mInsertComponent;
 	
+	public RuntimeInsert() {
+		this(new Insert(0, "", null));
+	}
+	
 	public RuntimeInsert(Insert insert) {
 		super(insert);
 		

@@ -126,6 +126,9 @@ public class Segment {
 	 *            The amount used when incrementing the offset.
 	 */
 	public void incrementOffset(int amount) {
+		if (mOffset + amount < 0) {
+			throw new IllegalArgumentException();
+		}
 		mOffset += amount;
 	}
 

@@ -13,6 +13,10 @@ public class RuntimeReplace extends BaseRuntimeDocumentChange {
 	
 	private DeleteComponent mDeleteComponent;
 	private InsertComponent mInsertComponent;
+	
+	public RuntimeReplace() {
+		this(new Replace(0, 0, 0, 0, 0, "", "", null));
+	}
 
 	public RuntimeReplace(Replace replace) {
 		super(replace);

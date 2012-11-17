@@ -164,7 +164,7 @@ public class SelectiveUndoEngine {
 		return buffer.toString();
 	}
 
-	private List<Segment> getAllSegments(
+	List<Segment> getAllSegments(
 			BaseRuntimeDocumentChange[] runtimeDocChanges) {
 		ArrayList<Segment> segments = new ArrayList<Segment>();
 		
@@ -174,7 +174,7 @@ public class SelectiveUndoEngine {
 		return segments;
 	}
 	
-	private List<Chunk> determineChunks(List<Segment> segments) {
+	List<Chunk> determineChunks(List<Segment> segments) {
 		// Sort! Collections.sort is guaranteed to be *stable*.
 		Collections.sort(segments, new Comparator<Segment>() {
 			public int compare(Segment lhs, Segment rhs) {

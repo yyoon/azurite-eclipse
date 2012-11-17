@@ -12,6 +12,10 @@ import edu.cmu.scs.fluorite.commands.Delete;
 public class RuntimeDelete extends BaseRuntimeDocumentChange {
 
 	private DeleteComponent mDeleteComponent;
+	
+	public RuntimeDelete() {
+		this(new Delete(0, 0, 0, 0, "", null));
+	}
 
 	public RuntimeDelete(Delete delete) {
 		super(delete);
