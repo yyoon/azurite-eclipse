@@ -1,6 +1,7 @@
 package edu.cmu.scs.azurite.model.undo;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -87,8 +88,11 @@ public class SelectiveUndoEngine {
 	public void doSelectiveUndo(BaseRuntimeDocumentChange[] runtimeDocChanges, IDocument document) {
 		if (runtimeDocChanges == null || document == null) {
 			throw new IllegalArgumentException();
-			
 		}
+		
+		// Sort the runtimeDocChanges by their original command IDs.
+		sortRuntimeDocumentChanges(runtimeDocChanges);
+		
 		// Get all the segments.
 		List<Segment> segments = getAllSegments(runtimeDocChanges);
 		
@@ -131,6 +135,22 @@ public class SelectiveUndoEngine {
 				}
 			}
 		}
+	}
+
+	// Sort the runtimeDocChanges by their original command IDs.
+	private void sortRuntimeDocumentChanges(
+			BaseRuntimeDocumentChange[] runtimeDocChanges) {
+		Arrays.sort(runtimeDocChanges, new Comparator<BaseRuntimeDocumentChange>() {
+
+			@Override
+			public int compare(BaseRuntimeDocumentChange lhs,
+					BaseRuntimeDocumentChange rhs) {
+				int lindex = lhs.getOriginal().getCommandIndex();
+				int rindex = rhs.getOriginal().getCommandIndex();
+				return new Integer(lindex).compareTo(rindex);
+			}
+			
+		});
 	}
 	
 	private String doSelectiveUndoChunkWithoutConflicts(
