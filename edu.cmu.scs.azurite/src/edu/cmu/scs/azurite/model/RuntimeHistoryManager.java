@@ -1,18 +1,17 @@
 package edu.cmu.scs.azurite.model;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.eclipse.core.runtime.ListenerList;
 
+import edu.cmu.scs.azurite.commands.runtime.BaseRuntimeDocumentChange;
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 import edu.cmu.scs.fluorite.commands.FileOpenCommand;
 import edu.cmu.scs.fluorite.model.DocumentChangeListener;
 import edu.cmu.scs.fluorite.model.EventRecorder;
-import edu.cmu.scs.azurite.commands.runtime.BaseRuntimeDocumentChange;
 
 public class RuntimeHistoryManager implements DocumentChangeListener {
 	
@@ -73,7 +72,8 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 	private boolean mStarted;
 	
 	/**
-	 * Basic constructor
+	 * Basic constructor. Only use this public constructor for testing purposes!
+	 * Otherwise, use <code>getInstance</code> static method instead.
 	 */
 	public RuntimeHistoryManager() {
 		mDocumentChanges = new HashMap<FileKey, List<BaseRuntimeDocumentChange>>();
@@ -202,12 +202,16 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 	private void setCurrentFileKey(FileKey newFileKey) {
 		mCurrentFileKey = newFileKey;
 	}
+	
+	public void activeFileChanged(FileOpenCommand foc) {
+		activeFileChanged(foc.getProjectName(), foc.getFilePath());
+	}
 
 	/**
 	 * Simply updates the current file path.
 	 */
-	public void activeFileChanged(FileOpenCommand foc) {
-		FileKey key = new FileKey(foc.getProjectName(), foc.getFilePath());
+	public void activeFileChanged(String projectName, String filePath) {
+		FileKey key = new FileKey(projectName, filePath);
 		setCurrentFileKey(key);
 		
 		if (!mDocumentChanges.containsKey(key)) {

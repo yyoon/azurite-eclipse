@@ -46,23 +46,22 @@ public class SelectiveUndoEngine {
 		doSelectiveUndo(runtimeDocChanges
 				.toArray(new BaseRuntimeDocumentChange[runtimeDocChanges.size()]));
 	}
-	
-	/**
-	 * @param runtimeDocChanges
-	 */
+
+	public void doSelectiveUndo(
+			List<BaseRuntimeDocumentChange> runtimeDocChanges, IDocument document) {
+		if (runtimeDocChanges == null || document == null) {
+			throw new IllegalArgumentException();
+		}
+		
+		doSelectiveUndo(runtimeDocChanges
+				.toArray(new BaseRuntimeDocumentChange[runtimeDocChanges.size()]),
+				document);
+	}
+
 	public void doSelectiveUndo(BaseRuntimeDocumentChange[] runtimeDocChanges) {
 		if (runtimeDocChanges == null) {
 			throw new IllegalArgumentException();
-			
 		}
-		// Get all the segments.
-		List<Segment> segments = getAllSegments(runtimeDocChanges);
-		
-		// Determine Chunks.
-		List<Chunk> chunks = determineChunks(segments);
-		
-		// Reverse the chunks, so the last chunk comes at first.
-		Collections.reverse(chunks);
 		
 		// Get the IDocument object for the current editor.
 		IDocument document = null;
@@ -76,7 +75,28 @@ public class SelectiveUndoEngine {
 		}
 		
 		if (document == null)
-			return;
+			throw new IllegalStateException("Failed to get the active document");
+		
+		doSelectiveUndo(runtimeDocChanges, document);
+	}
+		
+
+	/**
+	 * @param runtimeDocChanges
+	 */
+	public void doSelectiveUndo(BaseRuntimeDocumentChange[] runtimeDocChanges, IDocument document) {
+		if (runtimeDocChanges == null || document == null) {
+			throw new IllegalArgumentException();
+			
+		}
+		// Get all the segments.
+		List<Segment> segments = getAllSegments(runtimeDocChanges);
+		
+		// Determine Chunks.
+		List<Chunk> chunks = determineChunks(segments);
+		
+		// Reverse the chunks, so the last chunk comes at first.
+		Collections.reverse(chunks);
 		
 		// For each chunk..
 		for (Chunk chunk : chunks) {
@@ -215,7 +235,7 @@ public class SelectiveUndoEngine {
 			}
 			
 			// See if there's any following segment coming from the same runtime doc change.
-			// Find the last occurence.
+			// Find the last occurrence.
 			int j = segments.size() - 1;
 			for (; j > i; --j) {
 				if (segments.get(i).getOwner() == segments.get(j).getOwner()) {
