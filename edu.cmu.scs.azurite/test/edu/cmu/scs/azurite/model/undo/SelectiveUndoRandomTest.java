@@ -8,10 +8,12 @@ import java.util.List;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IDocument;
+import org.junit.Before;
 import org.junit.Test;
 
 import edu.cmu.scs.azurite.commands.runtime.BaseRuntimeDocumentChange;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
+import edu.cmu.scs.fluorite.commands.AbstractCommand;
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 import edu.cmu.scs.fluorite.commands.Delete;
 import edu.cmu.scs.fluorite.commands.Insert;
@@ -24,6 +26,11 @@ public class SelectiveUndoRandomTest {
 	private static final int LOOP_COUNT = 1;
 	private static final int INITIAL_TEXT_LENGTH = 10;
 	private static final int RANDOM_TEXT_MAX_LENGTH = 5;
+	
+	@Before
+	public void setUp() {
+		AbstractCommand.resetCommandID();
+	}
 
 	@Test
 	public void testRandom10Operations() {
