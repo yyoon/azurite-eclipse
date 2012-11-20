@@ -26,13 +26,13 @@ import org.eclipse.swt.browser.ProgressListener;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.part.ViewPart;
 
-import edu.cmu.scs.azurite.commands.runtime.BaseRuntimeDocumentChange;
-import edu.cmu.scs.azurite.model.RuntimeDocumentChangeListener;
+import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
+import edu.cmu.scs.azurite.model.RuntimeDCListener;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
 import edu.cmu.scs.fluorite.model.EventRecorder;
 
-public class TimelineViewPart extends ViewPart implements RuntimeDocumentChangeListener {
+public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 
 	private static final String PATH = "C:/Users/asder/Desktop/timeline/";
 //	private static final String PATH = "D:/timeline_ver6/";
@@ -213,7 +213,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDocumentChangeL
 	}
 
 	@Override
-	public void runtimeDocumentChangeAdded(BaseRuntimeDocumentChange docChange) {
+	public void runtimeDCAdded(RuntimeDC docChange) {
 		String executeStr = String.format("add_block(%1$d, %2$d, %3$d, %4$d);",
 				docChange.getOriginal().getCommandIndex(),
 				docChange.getOriginal().getTimestamp(),

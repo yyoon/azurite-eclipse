@@ -1,6 +1,7 @@
 package edu.cmu.scs.azurite.model.undo;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -12,7 +13,7 @@ import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.widgets.Shell;
 
-import edu.cmu.scs.azurite.commands.runtime.BaseRuntimeDocumentChange;
+import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.commands.runtime.Segment;
 import edu.cmu.scs.fluorite.model.EventRecorder;
 import edu.cmu.scs.fluorite.util.Utilities;
@@ -38,31 +39,30 @@ public class SelectiveUndoEngine {
 	}
 
 	public void doSelectiveUndo(
-			List<BaseRuntimeDocumentChange> runtimeDocChanges) {
+			List<RuntimeDC> runtimeDocChanges) {
 		if (runtimeDocChanges == null) {
 			throw new IllegalArgumentException();
 		}
 		
 		doSelectiveUndo(runtimeDocChanges
-				.toArray(new BaseRuntimeDocumentChange[runtimeDocChanges.size()]));
+				.toArray(new RuntimeDC[runtimeDocChanges.size()]));
 	}
-	
-	/**
-	 * @param runtimeDocChanges
-	 */
-	public void doSelectiveUndo(BaseRuntimeDocumentChange[] runtimeDocChanges) {
+
+	public void doSelectiveUndo(
+			List<RuntimeDC> runtimeDocChanges, IDocument document) {
+		if (runtimeDocChanges == null || document == null) {
+			throw new IllegalArgumentException();
+		}
+		
+		doSelectiveUndo(runtimeDocChanges
+				.toArray(new RuntimeDC[runtimeDocChanges.size()]),
+				document);
+	}
+
+	public void doSelectiveUndo(RuntimeDC[] runtimeDocChanges) {
 		if (runtimeDocChanges == null) {
 			throw new IllegalArgumentException();
-			
 		}
-		// Get all the segments.
-		List<Segment> segments = getAllSegments(runtimeDocChanges);
-		
-		// Determine Chunks.
-		List<Chunk> chunks = determineChunks(segments);
-		
-		// Reverse the chunks, so the last chunk comes at first.
-		Collections.reverse(chunks);
 		
 		// Get the IDocument object for the current editor.
 		IDocument document = null;
@@ -76,7 +76,31 @@ public class SelectiveUndoEngine {
 		}
 		
 		if (document == null)
-			return;
+			throw new IllegalStateException("Failed to get the active document");
+		
+		doSelectiveUndo(runtimeDocChanges, document);
+	}
+		
+
+	/**
+	 * @param runtimeDocChanges
+	 */
+	public void doSelectiveUndo(RuntimeDC[] runtimeDocChanges, IDocument document) {
+		if (runtimeDocChanges == null || document == null) {
+			throw new IllegalArgumentException();
+		}
+		
+		// Sort the runtimeDocChanges by their original command IDs.
+		sortRuntimeDocumentChanges(runtimeDocChanges);
+		
+		// Get all the segments.
+		List<Segment> segments = getAllSegments(runtimeDocChanges);
+		
+		// Determine Chunks.
+		List<Chunk> chunks = determineChunks(segments);
+		
+		// Reverse the chunks, so the last chunk comes at first.
+		Collections.reverse(chunks);
 		
 		// For each chunk..
 		for (Chunk chunk : chunks) {
@@ -111,6 +135,13 @@ public class SelectiveUndoEngine {
 				}
 			}
 		}
+	}
+
+	// Sort the runtimeDocChanges by their original command IDs.
+	private void sortRuntimeDocumentChanges(
+			RuntimeDC[] runtimeDocChanges) {
+		Arrays.sort(runtimeDocChanges,
+				RuntimeDC.getCommandIDComparator());
 	}
 	
 	private String doSelectiveUndoChunkWithoutConflicts(
@@ -164,17 +195,17 @@ public class SelectiveUndoEngine {
 		return buffer.toString();
 	}
 
-	private List<Segment> getAllSegments(
-			BaseRuntimeDocumentChange[] runtimeDocChanges) {
+	List<Segment> getAllSegments(
+			RuntimeDC[] runtimeDocChanges) {
 		ArrayList<Segment> segments = new ArrayList<Segment>();
 		
-		for (BaseRuntimeDocumentChange runtimeDocChange : runtimeDocChanges) {
+		for (RuntimeDC runtimeDocChange : runtimeDocChanges) {
 			segments.addAll(runtimeDocChange.getAllSegments());
 		}
 		return segments;
 	}
 	
-	private List<Chunk> determineChunks(List<Segment> segments) {
+	List<Chunk> determineChunks(List<Segment> segments) {
 		// Sort! Collections.sort is guaranteed to be *stable*.
 		Collections.sort(segments, new Comparator<Segment>() {
 			public int compare(Segment lhs, Segment rhs) {
@@ -215,7 +246,7 @@ public class SelectiveUndoEngine {
 			}
 			
 			// See if there's any following segment coming from the same runtime doc change.
-			// Find the last occurence.
+			// Find the last occurrence.
 			int j = segments.size() - 1;
 			for (; j > i; --j) {
 				if (segments.get(i).getOwner() == segments.get(j).getOwner()) {

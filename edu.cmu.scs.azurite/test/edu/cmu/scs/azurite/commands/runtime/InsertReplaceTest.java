@@ -55,4 +55,49 @@ public class InsertReplaceTest {
 				0, NEWLEN, NEW_TEXT));
 	}
 
+	// | existing insert |
+	//   | new replace |
+	@Test
+	public void testIR02_01() {
+		RuntimeInsert i = new RuntimeInsert(new Insert(10, OLD_TEXT, null));
+		RuntimeReplace r = new RuntimeReplace(new Replace(12, 5, 0, 0, NEWLEN,
+				".....", NEW_TEXT, null));
+		r.applyTo(i);
+
+		assertEquals(2, i.getInsertSegments().size());
+		assertTrue(checkSegmentEquals(i.getInsertSegments().get(0),
+				10, 2, "Ol"));
+		assertTrue(checkSegmentEquals(i.getInsertSegments().get(1),
+				12 + NEWLEN, 1, "t"));
+
+		assertTrue(checkSegmentEquals(r.getDeleteSegment(), 12, 5, "....."));
+		assertEquals(1, r.getInsertSegments().size());
+		assertTrue(checkSegmentEquals(r.getInsertSegments().get(0),
+				12, NEWLEN, NEW_TEXT));
+		
+		assertEquals(1, i.getConflicts().size());
+		assertEquals(r, i.getConflicts().get(0));
+	}
+	
+	// | existing insert |
+	//                       | new replace |
+	@Test
+	public void testIR03_01() {
+		RuntimeInsert i = new RuntimeInsert(new Insert(10, OLD_TEXT, null));
+		RuntimeReplace r = new RuntimeReplace(new Replace(20, 5, 0, 0, NEWLEN,
+				".....", NEW_TEXT, null));
+		r.applyTo(i);
+
+		assertEquals(1, i.getInsertSegments().size());
+		assertTrue(checkSegmentEquals(i.getInsertSegments().get(0),
+				10, OLDLEN, OLD_TEXT));
+
+		assertTrue(checkSegmentEquals(r.getDeleteSegment(), 20, 5, "....."));
+		assertEquals(1, r.getInsertSegments().size());
+		assertTrue(checkSegmentEquals(r.getInsertSegments().get(0),
+				20, NEWLEN, NEW_TEXT));
+		
+		assertEquals(0, i.getConflicts().size());
+	}
+
 }
