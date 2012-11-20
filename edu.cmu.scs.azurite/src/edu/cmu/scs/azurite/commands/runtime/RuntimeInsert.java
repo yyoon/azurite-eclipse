@@ -8,7 +8,7 @@ import edu.cmu.scs.fluorite.commands.Insert;
  * @author YoungSeok Yoon
  *
  */
-public class RuntimeInsert extends BaseRuntimeDocumentChange {
+public class RuntimeInsert extends RuntimeDC {
 	
 	InsertComponent mInsertComponent;
 	
@@ -61,7 +61,7 @@ public class RuntimeInsert extends BaseRuntimeDocumentChange {
 	}
 
 	@Override
-	public void applyTo(BaseRuntimeDocumentChange docChange) {
+	public void applyTo(RuntimeDC docChange) {
 		docChange.applyInsert(this);
 	}
 	

@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeSet;
 
-import edu.cmu.scs.azurite.commands.runtime.BaseRuntimeDocumentChange;
+import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.commands.runtime.Segment;
 
 @SuppressWarnings("serial")
@@ -33,15 +33,15 @@ public class Chunk extends ArrayList<Segment> {
 	
 	public boolean hasConflictOutsideThisChunk() {
 		// Determine all the runtime docChanges.
-		List<BaseRuntimeDocumentChange> involvedDocChanges = getInvolvedChanges();
+		List<RuntimeDC> involvedDocChanges = getInvolvedChanges();
 		
 		// Iterate through the docChanges,
 		// and see if there are any conflicts outside of this chunk.
-		for (BaseRuntimeDocumentChange docChange : involvedDocChanges) {
-			List<BaseRuntimeDocumentChange> conflicts =
+		for (RuntimeDC docChange : involvedDocChanges) {
+			List<RuntimeDC> conflicts =
 					docChange.getConflicts();
 			
-			for (BaseRuntimeDocumentChange conflict : conflicts) {
+			for (RuntimeDC conflict : conflicts) {
 				if (!involvedDocChanges.contains(conflict)) {
 					return true;
 				}
@@ -52,14 +52,14 @@ public class Chunk extends ArrayList<Segment> {
 		return false;
 	}
 	
-	public List<BaseRuntimeDocumentChange> getInvolvedChanges() {
-		TreeSet<BaseRuntimeDocumentChange> set = new TreeSet<BaseRuntimeDocumentChange>(
-				BaseRuntimeDocumentChange.getCommandIDComparator());
+	public List<RuntimeDC> getInvolvedChanges() {
+		TreeSet<RuntimeDC> set = new TreeSet<RuntimeDC>(
+				RuntimeDC.getCommandIDComparator());
 
 		for (Segment segment : this) {
 			set.add(segment.getOwner());
 		}
 
-		return new ArrayList<BaseRuntimeDocumentChange>(set);
+		return new ArrayList<RuntimeDC>(set);
 	}
 }

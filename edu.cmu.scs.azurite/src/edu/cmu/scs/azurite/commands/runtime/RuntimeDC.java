@@ -13,13 +13,13 @@ import edu.cmu.scs.fluorite.commands.Replace;
  * @author YoungSeok Yoon
  *
  */
-public abstract class BaseRuntimeDocumentChange {
+public abstract class RuntimeDC {
 
 	private BaseDocumentChangeEvent mOriginal;
 	
-	private List<BaseRuntimeDocumentChange> mConflicts;
+	private List<RuntimeDC> mConflicts;
 	
-	public static BaseRuntimeDocumentChange createRuntimeDocumentChange(BaseDocumentChangeEvent original) {
+	public static RuntimeDC createRuntimeDocumentChange(BaseDocumentChangeEvent original) {
 		if (original instanceof Insert) {
 			return new RuntimeInsert((Insert) original);
 		}
@@ -34,10 +34,10 @@ public abstract class BaseRuntimeDocumentChange {
 		}
 	}
 	
-	protected BaseRuntimeDocumentChange(BaseDocumentChangeEvent original) {
+	protected RuntimeDC(BaseDocumentChangeEvent original) {
 		mOriginal = original;
 		
-		mConflicts = new ArrayList<BaseRuntimeDocumentChange>();
+		mConflicts = new ArrayList<RuntimeDC>();
 	}
 	
 	public BaseDocumentChangeEvent getOriginal() {
@@ -50,13 +50,13 @@ public abstract class BaseRuntimeDocumentChange {
 	
 	public abstract void applyReplace(RuntimeReplace replace);
 	
-	public abstract void applyTo(BaseRuntimeDocumentChange docChange);
+	public abstract void applyTo(RuntimeDC docChange);
 	
-	public List<BaseRuntimeDocumentChange> getConflicts() {
+	public List<RuntimeDC> getConflicts() {
 		return mConflicts;
 	}
 	
-	protected void addConflict(BaseRuntimeDocumentChange docChange) {
+	protected void addConflict(RuntimeDC docChange) {
 		mConflicts.add(docChange);
 	}
 	
@@ -77,20 +77,20 @@ public abstract class BaseRuntimeDocumentChange {
 	 */
 	public abstract int getTypeIndex();
 	
-	private static Comparator<BaseRuntimeDocumentChange> commandIDComparator;
+	private static Comparator<RuntimeDC> commandIDComparator;
 	
 	/**
 	 * Returns the singleton comparator objects which compares the runtime
 	 * document changes based on the command IDs of their original events.
 	 * @return comparator object.
 	 */
-	public static Comparator<BaseRuntimeDocumentChange> getCommandIDComparator() {
+	public static Comparator<RuntimeDC> getCommandIDComparator() {
 		if (commandIDComparator == null) {
-			commandIDComparator = new Comparator<BaseRuntimeDocumentChange>() {
+			commandIDComparator = new Comparator<RuntimeDC>() {
 
 				@Override
-				public int compare(BaseRuntimeDocumentChange lhs,
-						BaseRuntimeDocumentChange rhs) {
+				public int compare(RuntimeDC lhs,
+						RuntimeDC rhs) {
 					int lindex = lhs.getOriginal().getCommandIndex();
 					int rindex = rhs.getOriginal().getCommandIndex();
 					return new Integer(lindex).compareTo(rindex);

@@ -11,7 +11,7 @@ import org.eclipse.jface.text.IDocument;
 import org.junit.Before;
 import org.junit.Test;
 
-import edu.cmu.scs.azurite.commands.runtime.BaseRuntimeDocumentChange;
+import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.fluorite.commands.AbstractCommand;
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
@@ -76,7 +76,7 @@ public class SelectiveUndoRandomTest {
 						ids.add(k);
 					}
 					
-					List<BaseRuntimeDocumentChange> toBeUndone = 
+					List<RuntimeDC> toBeUndone = 
 							manager.filterDocumentChangesByIds(ids);
 					
 					// Do the selective undo.

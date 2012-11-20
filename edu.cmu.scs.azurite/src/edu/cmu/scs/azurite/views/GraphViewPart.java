@@ -24,7 +24,7 @@ import org.eclipse.zest.core.widgets.GraphNode;
 import org.eclipse.zest.core.widgets.ZestStyles;
 import org.eclipse.zest.layouts.algorithms.HorizontalLayoutAlgorithm;
 
-import edu.cmu.scs.azurite.commands.runtime.BaseRuntimeDocumentChange;
+import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDelete;
 import edu.cmu.scs.azurite.commands.runtime.RuntimeInsert;
 import edu.cmu.scs.azurite.commands.runtime.RuntimeReplace;
@@ -32,13 +32,13 @@ import edu.cmu.scs.azurite.compare.CompareInput;
 import edu.cmu.scs.azurite.compare.HistoryCompareItem;
 import edu.cmu.scs.azurite.compare.SimpleCompareItem;
 import edu.cmu.scs.azurite.jface.widgets.NonMovableGraph;
-import edu.cmu.scs.azurite.model.RuntimeDocumentChangeListener;
+import edu.cmu.scs.azurite.model.RuntimeDCListener;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 import edu.cmu.scs.fluorite.util.Utilities;
 
-public class GraphViewPart extends ViewPart implements RuntimeDocumentChangeListener, MouseListener {
+public class GraphViewPart extends ViewPart implements RuntimeDCListener, MouseListener {
 	
 	private Graph mGraph;
 	private List<GraphNode> mNodes;
@@ -111,18 +111,18 @@ public class GraphViewPart extends ViewPart implements RuntimeDocumentChangeList
 		@SuppressWarnings("rawtypes")
 		List selection = mGraph.getSelection();
 		
-		List<BaseRuntimeDocumentChange> selectedChanges =
-				new ArrayList<BaseRuntimeDocumentChange>();
+		List<RuntimeDC> selectedChanges =
+				new ArrayList<RuntimeDC>();
 		
 		for (Object obj : selection) {
 			GraphNode node = (GraphNode) obj;
-			BaseRuntimeDocumentChange docChange = (BaseRuntimeDocumentChange)node.getData();
+			RuntimeDC docChange = (RuntimeDC)node.getData();
 			
 			selectedChanges.add(docChange);
 		}
 		
 		SelectiveUndoEngine.getInstance().doSelectiveUndo(
-				selectedChanges.toArray(new BaseRuntimeDocumentChange[0]));
+				selectedChanges.toArray(new RuntimeDC[0]));
 	}
 
 	@Override
@@ -142,13 +142,13 @@ public class GraphViewPart extends ViewPart implements RuntimeDocumentChangeList
 	}
 	
 	private void updateGraph() {
-		List<BaseRuntimeDocumentChange> docChanges = RuntimeHistoryManager.getInstance()
+		List<RuntimeDC> docChanges = RuntimeHistoryManager.getInstance()
 				.getRuntimeDocumentChanges();
 		
 		clearGraph();
 		
 		// Add new nodes.
-		for (BaseRuntimeDocumentChange docChange : docChanges) {
+		for (RuntimeDC docChange : docChanges) {
 			appendNode(docChange, false);
 		}
 		
@@ -191,11 +191,11 @@ public class GraphViewPart extends ViewPart implements RuntimeDocumentChangeList
 		}
 	}
 */	
-	private void appendNode(BaseRuntimeDocumentChange docChange) {
+	private void appendNode(RuntimeDC docChange) {
 		appendNode(docChange, true);
 	}
 	
-	private void appendNode(BaseRuntimeDocumentChange docChange, boolean applyLayoutImmediately) {
+	private void appendNode(RuntimeDC docChange, boolean applyLayoutImmediately) {
 		// Determine the type (Insert / Delete / Replace)
 		String typeName = docChange.getClass().getSimpleName();
 		if (typeName.startsWith("Runtime")) {
@@ -220,7 +220,7 @@ public class GraphViewPart extends ViewPart implements RuntimeDocumentChangeList
 	}
 	
 	private void setColor(GraphNode node) {
-		BaseRuntimeDocumentChange docChange = (BaseRuntimeDocumentChange)node.getData();
+		RuntimeDC docChange = (RuntimeDC)node.getData();
 		if (docChange == null) return;
 
 		if (docChange instanceof RuntimeInsert) {
@@ -235,7 +235,7 @@ public class GraphViewPart extends ViewPart implements RuntimeDocumentChangeList
 	}
 	
 	private void setTooltip(GraphNode node) {
-		BaseRuntimeDocumentChange docChange = (BaseRuntimeDocumentChange)node.getData();
+		RuntimeDC docChange = (RuntimeDC)node.getData();
 		if (docChange == null) return;
 		
 		if (docChange instanceof RuntimeInsert) {
@@ -308,7 +308,7 @@ public class GraphViewPart extends ViewPart implements RuntimeDocumentChangeList
 	}
 
 	@Override
-	public void runtimeDocumentChangeAdded(final BaseRuntimeDocumentChange docChange) {
+	public void runtimeDCAdded(final RuntimeDC docChange) {
 		Display.getDefault().syncExec(new Runnable() {
 			public void run() {
 				appendNode(docChange);

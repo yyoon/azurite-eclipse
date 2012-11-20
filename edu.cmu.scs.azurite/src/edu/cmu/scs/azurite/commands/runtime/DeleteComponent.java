@@ -42,7 +42,7 @@ public class DeleteComponent implements EditComponent {
 		return applyHelper(replace.getDeleteSegment(), insertSegments.get(0), replace);
 	}
 	
-	private boolean applyHelper(Segment deleteSegment, Segment insertSegment, BaseRuntimeDocumentChange docChange) {
+	private boolean applyHelper(Segment deleteSegment, Segment insertSegment, RuntimeDC docChange) {
 		int lengthDiff = insertSegment.getLength() - deleteSegment.getLength();
 		Segment segment = getDeleteSegment();
 		

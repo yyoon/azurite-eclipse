@@ -9,7 +9,7 @@ import edu.cmu.scs.fluorite.commands.Replace;
  * @author YoungSeok Yoon
  * 
  */
-public class RuntimeReplace extends BaseRuntimeDocumentChange {
+public class RuntimeReplace extends RuntimeDC {
 	
 	private DeleteComponent mDeleteComponent;
 	private InsertComponent mInsertComponent;
@@ -69,7 +69,7 @@ public class RuntimeReplace extends BaseRuntimeDocumentChange {
 	}
 
 	@Override
-	public void applyTo(BaseRuntimeDocumentChange docChange) {
+	public void applyTo(RuntimeDC docChange) {
 		docChange.applyReplace(this);
 	}
 	

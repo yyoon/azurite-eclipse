@@ -9,7 +9,7 @@ import edu.cmu.scs.fluorite.commands.Delete;
  * @author YoungSeok Yoon
  * 
  */
-public class RuntimeDelete extends BaseRuntimeDocumentChange {
+public class RuntimeDelete extends RuntimeDC {
 
 	private DeleteComponent mDeleteComponent;
 	
@@ -62,7 +62,7 @@ public class RuntimeDelete extends BaseRuntimeDocumentChange {
 	}
 
 	@Override
-	public void applyTo(BaseRuntimeDocumentChange docChange) {
+	public void applyTo(RuntimeDC docChange) {
 		docChange.applyDelete(this);
 	}
 

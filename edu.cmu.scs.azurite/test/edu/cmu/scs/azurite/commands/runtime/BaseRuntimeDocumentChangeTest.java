@@ -25,7 +25,7 @@ public class BaseRuntimeDocumentChangeTest {
 	@Test
 	public void testCreateInsert() {
 		Insert original = new Insert(0, "", null);
-		BaseRuntimeDocumentChange runtime = BaseRuntimeDocumentChange
+		RuntimeDC runtime = RuntimeDC
 				.createRuntimeDocumentChange(original);
 		
 		assertEquals(
@@ -38,7 +38,7 @@ public class BaseRuntimeDocumentChangeTest {
 	@Test
 	public void testCreateDelete() {
 		Delete original = new Delete(0, 0, 0, 0, "", null);
-		BaseRuntimeDocumentChange runtime = BaseRuntimeDocumentChange
+		RuntimeDC runtime = RuntimeDC
 				.createRuntimeDocumentChange(original);
 		
 		assertEquals(
@@ -51,7 +51,7 @@ public class BaseRuntimeDocumentChangeTest {
 	@Test
 	public void testCreateReplace() {
 		Replace original = new Replace(0, 0, 0, 0, 0, "", "", null);
-		BaseRuntimeDocumentChange runtime = BaseRuntimeDocumentChange
+		RuntimeDC runtime = RuntimeDC
 				.createRuntimeDocumentChange(original);
 		
 		assertEquals(
@@ -79,6 +79,6 @@ public class BaseRuntimeDocumentChangeTest {
 		};
 		
 		exception.expect(IllegalArgumentException.class);
-		BaseRuntimeDocumentChange.createRuntimeDocumentChange(event);
+		RuntimeDC.createRuntimeDocumentChange(event);
 	}
 }

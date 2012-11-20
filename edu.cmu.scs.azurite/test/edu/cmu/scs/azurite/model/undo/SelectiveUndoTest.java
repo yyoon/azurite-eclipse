@@ -10,7 +10,7 @@ import org.eclipse.jface.text.IDocument;
 import org.junit.Before;
 import org.junit.Test;
 
-import edu.cmu.scs.azurite.commands.runtime.BaseRuntimeDocumentChange;
+import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.fluorite.commands.AbstractCommand;
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
@@ -101,7 +101,7 @@ public class SelectiveUndoTest {
 	}
 	
 	private void undo(Integer ... indices) {
-		List<BaseRuntimeDocumentChange> runtimeDocChanges = manager
+		List<RuntimeDC> runtimeDocChanges = manager
 				.filterDocumentChangesByIds(Arrays.asList(indices));
 		
 		engine.doSelectiveUndo(runtimeDocChanges, document);

@@ -22,7 +22,7 @@ public class Segment {
 	private boolean mDeletion;
 
 	private String mBelongsTo;
-	private BaseRuntimeDocumentChange mOwner;
+	private RuntimeDC mOwner;
 	
 	// Related to D->D conflict.
 	private int mRelativeOffset;
@@ -44,7 +44,7 @@ public class Segment {
 	 * @param deletion
 	 *            true if this segment represents deletion.
 	 */
-	public Segment(int offset, int length, String text, String belongsTo, BaseRuntimeDocumentChange owner, boolean deletion) {
+	public Segment(int offset, int length, String text, String belongsTo, RuntimeDC owner, boolean deletion) {
 		mOffset = offset;
 		mLength = length;
 		mText = text;
@@ -65,7 +65,7 @@ public class Segment {
 	 *            The insert object.
 	 * @return Newly created segment using the insert object.
 	 */
-	public static Segment createInitialSegmentFromInsert(Insert insert, BaseRuntimeDocumentChange owner) {
+	public static Segment createInitialSegmentFromInsert(Insert insert, RuntimeDC owner) {
 		return new Segment(insert.getOffset(), insert.getLength(),
 				insert.getText(), RuntimeHistoryManager.getInstance()
 						.getCurrentFile(), owner, false);
@@ -78,7 +78,7 @@ public class Segment {
 	 *            The delete object.
 	 * @return Newly created segment using the insert object.
 	 */
-	public static Segment createInitialSegmentFromDelete(Delete delete, BaseRuntimeDocumentChange owner) {
+	public static Segment createInitialSegmentFromDelete(Delete delete, RuntimeDC owner) {
 		return new Segment(delete.getOffset(), delete.getLength(),
 				delete.getText(), RuntimeHistoryManager.getInstance()
 						.getCurrentFile(), owner, true);
@@ -91,7 +91,7 @@ public class Segment {
 	 *            The replace object.
 	 * @return Newly created segment using the insert object.
 	 */
-	public static Segment createInitialDeleteSegmentFromReplace(Replace replace, BaseRuntimeDocumentChange owner) {
+	public static Segment createInitialDeleteSegmentFromReplace(Replace replace, RuntimeDC owner) {
 		return new Segment(replace.getOffset(), replace.getLength(),
 				replace.getDeletedText(), RuntimeHistoryManager.getInstance()
 						.getCurrentFile(), owner, true);
@@ -104,7 +104,7 @@ public class Segment {
 	 *            The replace object.
 	 * @return Newly created segment using the insert object.
 	 */
-	public static Segment createInitialInsertSegmentFromReplace(Replace replace, BaseRuntimeDocumentChange owner) {
+	public static Segment createInitialInsertSegmentFromReplace(Replace replace, RuntimeDC owner) {
 		return new Segment(replace.getOffset(), replace.getInsertionLength(),
 				replace.getInsertedText(), RuntimeHistoryManager.getInstance()
 						.getCurrentFile(), owner, false);
@@ -313,7 +313,7 @@ public class Segment {
 	 * Returns the runtime object which holds this segment.
 	 * @return the runtime object.
 	 */
-	public BaseRuntimeDocumentChange getOwner() {
+	public RuntimeDC getOwner() {
 		return mOwner;
 	}
 	
@@ -321,7 +321,7 @@ public class Segment {
 	 * Sets the runtime object which holds this segment.
 	 * @param owner the runtime object.
 	 */
-	public void setOwner(BaseRuntimeDocumentChange owner) {
+	public void setOwner(RuntimeDC owner) {
 		mOwner = owner;
 	}
 	

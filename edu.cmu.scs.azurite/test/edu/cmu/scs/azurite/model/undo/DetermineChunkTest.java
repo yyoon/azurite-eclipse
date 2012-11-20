@@ -7,7 +7,7 @@ import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
 
-import edu.cmu.scs.azurite.commands.runtime.BaseRuntimeDocumentChange;
+import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDelete;
 import edu.cmu.scs.azurite.commands.runtime.RuntimeInsert;
 import edu.cmu.scs.fluorite.commands.Delete;
@@ -33,7 +33,7 @@ public class DetermineChunkTest {
 		rd.applyTo(ri);
 		
 		List<Chunk> chunks = mEngine.determineChunks(mEngine
-				.getAllSegments(new BaseRuntimeDocumentChange[] { ri, rd }));
+				.getAllSegments(new RuntimeDC[] { ri, rd }));
 		
 		assertEquals(1, chunks.size());
 	}

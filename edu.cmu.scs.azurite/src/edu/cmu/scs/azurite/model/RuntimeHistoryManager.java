@@ -7,7 +7,7 @@ import java.util.Map;
 
 import org.eclipse.core.runtime.ListenerList;
 
-import edu.cmu.scs.azurite.commands.runtime.BaseRuntimeDocumentChange;
+import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 import edu.cmu.scs.fluorite.commands.FileOpenCommand;
 import edu.cmu.scs.fluorite.model.DocumentChangeListener;
@@ -62,7 +62,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		
 	}
 	
-	private Map<FileKey, List<BaseRuntimeDocumentChange>> mDocumentChanges;
+	private Map<FileKey, List<RuntimeDC>> mDocumentChanges;
 	private FileKey mCurrentFileKey;
 	
 	private ListenerList mRuntimeDocumentChangeListeners;
@@ -76,7 +76,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 	 * Otherwise, use <code>getInstance</code> static method instead.
 	 */
 	public RuntimeHistoryManager() {
-		mDocumentChanges = new HashMap<FileKey, List<BaseRuntimeDocumentChange>>();
+		mDocumentChanges = new HashMap<FileKey, List<RuntimeDC>>();
 		mCurrentFileKey = null;
 		
 		mRuntimeDocumentChangeListeners = new ListenerList();
@@ -127,7 +127,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 	 * Add runtime document change listener
 	 * @param listener
 	 */
-	public void addRuntimeDocumentChangeListener(RuntimeDocumentChangeListener listener) {
+	public void addRuntimeDocumentChangeListener(RuntimeDCListener listener) {
 		mRuntimeDocumentChangeListeners.add(listener);
 	}
 	
@@ -135,26 +135,26 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 	 * Remove runtime document change listener
 	 * @param listener
 	 */
-	public void removeRuntimeDocumentChangeListener(RuntimeDocumentChangeListener listener) {
+	public void removeRuntimeDocumentChangeListener(RuntimeDCListener listener) {
 		mRuntimeDocumentChangeListeners.remove(listener);
 	}
 	
 	private void fireActiveFileChangedEvent(String projectName, String filePath) {
 		for (Object listenerObj : mRuntimeDocumentChangeListeners.getListeners()) {
-			((RuntimeDocumentChangeListener)listenerObj).activeFileChanged(projectName, filePath);
+			((RuntimeDCListener)listenerObj).activeFileChanged(projectName, filePath);
 		}
 	}
 	
-	private void fireDocumentChangedEvent(BaseRuntimeDocumentChange docChange) {
+	private void fireDocumentChangedEvent(RuntimeDC docChange) {
 		for (Object listenerObj : mRuntimeDocumentChangeListeners.getListeners()) {
-			((RuntimeDocumentChangeListener)listenerObj).runtimeDocumentChangeAdded(docChange);
+			((RuntimeDCListener)listenerObj).runtimeDCAdded(docChange);
 		}
 	}
 	/**
 	 * Returns all the runtime document changes associated with the current file.
 	 * @return all the runtime document changes associated with the current file.
 	 */
-	public List<BaseRuntimeDocumentChange> getRuntimeDocumentChanges() {
+	public List<RuntimeDC> getRuntimeDocumentChanges() {
 		return getRuntimeDocumentChanges(getCurrentFileKey());
 	}
 	
@@ -163,7 +163,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 	 * @param filePath Fullpath to the source file
 	 * @return all the runtime document changes associated with the given file.
 	 */
-	public List<BaseRuntimeDocumentChange> getRuntimeDocumentChanges(FileKey key) {
+	public List<RuntimeDC> getRuntimeDocumentChanges(FileKey key) {
 		if (mDocumentChanges.containsKey(key)) {
 			return mDocumentChanges.get(key);
 		}
@@ -215,7 +215,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		setCurrentFileKey(key);
 		
 		if (!mDocumentChanges.containsKey(key)) {
-			mDocumentChanges.put(key, new ArrayList<BaseRuntimeDocumentChange>());
+			mDocumentChanges.put(key, new ArrayList<RuntimeDC>());
 		}
 		
 		fireActiveFileChangedEvent(key.getProjectName(), key.getFilePath());
@@ -226,10 +226,10 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 	}
 	
 	public void documentChangeFinalized(BaseDocumentChangeEvent docChange) {
-		BaseRuntimeDocumentChange runtimeDocChange = BaseRuntimeDocumentChange.createRuntimeDocumentChange(docChange);
+		RuntimeDC runtimeDocChange = RuntimeDC.createRuntimeDocumentChange(docChange);
 		
-		List<BaseRuntimeDocumentChange> list = mDocumentChanges.get(getCurrentFileKey());
-		for (BaseRuntimeDocumentChange existingDocChange : list) {
+		List<RuntimeDC> list = mDocumentChanges.get(getCurrentFileKey());
+		for (RuntimeDC existingDocChange : list) {
 			runtimeDocChange.applyTo(existingDocChange);
 		}
 		
@@ -239,18 +239,18 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		fireDocumentChangedEvent(runtimeDocChange);
 	}
 	
-	public List<BaseRuntimeDocumentChange> filterDocumentChangesByIds(List<Integer> ids) {
+	public List<RuntimeDC> filterDocumentChangesByIds(List<Integer> ids) {
 		if (ids == null) {
 			throw new IllegalArgumentException();
 		}
 		
-		List<BaseRuntimeDocumentChange> list = mDocumentChanges.get(getCurrentFileKey());
+		List<RuntimeDC> list = mDocumentChanges.get(getCurrentFileKey());
 		if (list == null) {
 			throw new IllegalStateException();
 		}
 		
-		List<BaseRuntimeDocumentChange> result = new ArrayList<BaseRuntimeDocumentChange>();
-		for (BaseRuntimeDocumentChange docChange : list) {
+		List<RuntimeDC> result = new ArrayList<RuntimeDC>();
+		for (RuntimeDC docChange : list) {
 			if (ids.contains(docChange.getOriginal().getCommandIndex())) {
 				result.add(docChange);
 			}

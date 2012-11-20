@@ -13,7 +13,7 @@ import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.widgets.Shell;
 
-import edu.cmu.scs.azurite.commands.runtime.BaseRuntimeDocumentChange;
+import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.commands.runtime.Segment;
 import edu.cmu.scs.fluorite.model.EventRecorder;
 import edu.cmu.scs.fluorite.util.Utilities;
@@ -39,27 +39,27 @@ public class SelectiveUndoEngine {
 	}
 
 	public void doSelectiveUndo(
-			List<BaseRuntimeDocumentChange> runtimeDocChanges) {
+			List<RuntimeDC> runtimeDocChanges) {
 		if (runtimeDocChanges == null) {
 			throw new IllegalArgumentException();
 		}
 		
 		doSelectiveUndo(runtimeDocChanges
-				.toArray(new BaseRuntimeDocumentChange[runtimeDocChanges.size()]));
+				.toArray(new RuntimeDC[runtimeDocChanges.size()]));
 	}
 
 	public void doSelectiveUndo(
-			List<BaseRuntimeDocumentChange> runtimeDocChanges, IDocument document) {
+			List<RuntimeDC> runtimeDocChanges, IDocument document) {
 		if (runtimeDocChanges == null || document == null) {
 			throw new IllegalArgumentException();
 		}
 		
 		doSelectiveUndo(runtimeDocChanges
-				.toArray(new BaseRuntimeDocumentChange[runtimeDocChanges.size()]),
+				.toArray(new RuntimeDC[runtimeDocChanges.size()]),
 				document);
 	}
 
-	public void doSelectiveUndo(BaseRuntimeDocumentChange[] runtimeDocChanges) {
+	public void doSelectiveUndo(RuntimeDC[] runtimeDocChanges) {
 		if (runtimeDocChanges == null) {
 			throw new IllegalArgumentException();
 		}
@@ -85,7 +85,7 @@ public class SelectiveUndoEngine {
 	/**
 	 * @param runtimeDocChanges
 	 */
-	public void doSelectiveUndo(BaseRuntimeDocumentChange[] runtimeDocChanges, IDocument document) {
+	public void doSelectiveUndo(RuntimeDC[] runtimeDocChanges, IDocument document) {
 		if (runtimeDocChanges == null || document == null) {
 			throw new IllegalArgumentException();
 		}
@@ -139,9 +139,9 @@ public class SelectiveUndoEngine {
 
 	// Sort the runtimeDocChanges by their original command IDs.
 	private void sortRuntimeDocumentChanges(
-			BaseRuntimeDocumentChange[] runtimeDocChanges) {
+			RuntimeDC[] runtimeDocChanges) {
 		Arrays.sort(runtimeDocChanges,
-				BaseRuntimeDocumentChange.getCommandIDComparator());
+				RuntimeDC.getCommandIDComparator());
 	}
 	
 	private String doSelectiveUndoChunkWithoutConflicts(
@@ -196,10 +196,10 @@ public class SelectiveUndoEngine {
 	}
 
 	List<Segment> getAllSegments(
-			BaseRuntimeDocumentChange[] runtimeDocChanges) {
+			RuntimeDC[] runtimeDocChanges) {
 		ArrayList<Segment> segments = new ArrayList<Segment>();
 		
-		for (BaseRuntimeDocumentChange runtimeDocChange : runtimeDocChanges) {
+		for (RuntimeDC runtimeDocChange : runtimeDocChanges) {
 			segments.addAll(runtimeDocChange.getAllSegments());
 		}
 		return segments;
