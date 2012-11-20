@@ -4,6 +4,7 @@ import static org.junit.Assert.*;
 
 import java.util.Map;
 
+import org.eclipse.jface.text.IDocument;
 import org.eclipse.ui.IEditorPart;
 import org.junit.Rule;
 import org.junit.Test;
@@ -74,6 +75,7 @@ public class BaseRuntimeDocumentChangeTest {
 			public String getCategory() { return null; }
 			public String getCategoryID() { return null; }
 			public boolean combine(ICommand anotherCommand) { return false; }
+			public void applyToDocument(IDocument doc) {}
 		};
 		
 		exception.expect(IllegalArgumentException.class);
