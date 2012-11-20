@@ -140,17 +140,8 @@ public class SelectiveUndoEngine {
 	// Sort the runtimeDocChanges by their original command IDs.
 	private void sortRuntimeDocumentChanges(
 			BaseRuntimeDocumentChange[] runtimeDocChanges) {
-		Arrays.sort(runtimeDocChanges, new Comparator<BaseRuntimeDocumentChange>() {
-
-			@Override
-			public int compare(BaseRuntimeDocumentChange lhs,
-					BaseRuntimeDocumentChange rhs) {
-				int lindex = lhs.getOriginal().getCommandIndex();
-				int rindex = rhs.getOriginal().getCommandIndex();
-				return new Integer(lindex).compareTo(rindex);
-			}
-			
-		});
+		Arrays.sort(runtimeDocChanges,
+				BaseRuntimeDocumentChange.getCommandIDComparator());
 	}
 	
 	private String doSelectiveUndoChunkWithoutConflicts(
