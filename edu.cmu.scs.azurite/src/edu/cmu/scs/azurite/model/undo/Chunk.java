@@ -2,6 +2,7 @@ package edu.cmu.scs.azurite.model.undo;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.TreeSet;
 
 import edu.cmu.scs.azurite.commands.runtime.BaseRuntimeDocumentChange;
 import edu.cmu.scs.azurite.commands.runtime.Segment;
@@ -32,14 +33,7 @@ public class Chunk extends ArrayList<Segment> {
 	
 	public boolean hasConflictOutsideThisChunk() {
 		// Determine all the runtime docChanges.
-		List<BaseRuntimeDocumentChange> involvedDocChanges =
-				new ArrayList<BaseRuntimeDocumentChange>();
-		
-		for (Segment segment : this) {
-			if (!involvedDocChanges.contains(segment.getOwner())) {
-				involvedDocChanges.add(segment.getOwner());
-			}
-		}
+		List<BaseRuntimeDocumentChange> involvedDocChanges = getInvolvedChanges();
 		
 		// Iterate through the docChanges,
 		// and see if there are any conflicts outside of this chunk.
@@ -56,5 +50,16 @@ public class Chunk extends ArrayList<Segment> {
 		
 		// If nothing is found.
 		return false;
+	}
+	
+	public List<BaseRuntimeDocumentChange> getInvolvedChanges() {
+		TreeSet<BaseRuntimeDocumentChange> set = new TreeSet<BaseRuntimeDocumentChange>(
+				BaseRuntimeDocumentChange.getCommandIDComparator());
+
+		for (Segment segment : this) {
+			set.add(segment.getOwner());
+		}
+
+		return new ArrayList<BaseRuntimeDocumentChange>(set);
 	}
 }
