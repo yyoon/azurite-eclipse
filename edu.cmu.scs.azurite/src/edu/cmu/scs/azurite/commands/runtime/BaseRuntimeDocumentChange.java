@@ -1,6 +1,7 @@
 package edu.cmu.scs.azurite.commands.runtime;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
@@ -75,4 +76,29 @@ public abstract class BaseRuntimeDocumentChange {
 	 * @return 0 if insertion, 1 if deletion, and 2 if replacement.
 	 */
 	public abstract int getTypeIndex();
+	
+	private static Comparator<BaseRuntimeDocumentChange> commandIDComparator;
+	
+	/**
+	 * Returns the singleton comparator objects which compares the runtime
+	 * document changes based on the command IDs of their original events.
+	 * @return comparator object.
+	 */
+	public static Comparator<BaseRuntimeDocumentChange> getCommandIDComparator() {
+		if (commandIDComparator == null) {
+			commandIDComparator = new Comparator<BaseRuntimeDocumentChange>() {
+
+				@Override
+				public int compare(BaseRuntimeDocumentChange lhs,
+						BaseRuntimeDocumentChange rhs) {
+					int lindex = lhs.getOriginal().getCommandIndex();
+					int rindex = rhs.getOriginal().getCommandIndex();
+					return new Integer(lindex).compareTo(rindex);
+				}
+				
+			};
+		}
+		
+		return commandIDComparator;
+	}
 }
