@@ -8,7 +8,7 @@ var lastWindowWidth = null, lastWindowHeight = null;
 // left, right, top, bottom
 var menu_panel_height = 75;
 var menu_margins = {left: 5, top: 5};
-var chart_margins = {left: 5, right:5, top: 15, bottom: 30};
+var chart_margins = {left: 5, right:5, top: 15, bottom: 50};
 
 
 // Constants
@@ -16,7 +16,7 @@ var INSERTION = 0;
 var DELETION = 1;
 var REPLACEMENT = 2;
 
-var LOCAL_MODE = false;
+var LOCAL_MODE = true;
 
 var files = [];
 var blocks_to_draw = [];
@@ -31,6 +31,10 @@ var max_timestamp = -1;
 
 // starting timestamp (offset)
 var startTimestamp;
+
+// context menu
+var div_context;
+var isRightClicked;
 
 /**
 *	An object that keeps track of insertion, deletion and replacement for each file.
@@ -90,9 +94,10 @@ function loadFile() {
 		xmlhttp.send();
 		xmlDoc = xmlhttp.responseXML; 
 	} else {
-    // disable this block temporarily.
-    return;
-    
+		 // disable this block temporarily.
+		return;
+
+	
 		var log = readLog();
 
 		if(log == "") {
@@ -221,7 +226,7 @@ var width_ratio = [0.2, 0.8];
 var x_bar, x_rule;
 var num_x_ticks;
 
-var svg = d3.select('body')
+var svg = d3.select('#main_panel')
 	.append('svg')
 	.attr('class', 'svg')
 	.attr('id', 'svg');
@@ -235,13 +240,20 @@ var sub_file = svg.append('g')
 var sub_bar = svg.append('g')
 	.attr('id', 'sub_bar');
 	
+var blocks = sub_bar.append('g')
+	.attr('class', 'blocks');
+	
 var fileLines = sub_bar.append('g')
 	.attr('class', 'fileLines');
 
+var scrollbar_x = sub_bar.append('g')
+	.attr('class', 'scrollbar_x');
+	
 var rules = sub_bar.append('g')
 	.attr('class', 'rules');
 
 var brush = d3.svg.brush()
+	.on("brushstart", brushstart)
 	.on("brushend", brushend);
 
 
@@ -269,10 +281,10 @@ function set_start_timestamp(timestamp) {
   redraw();
 }
 
+
 /**
  * Add an event to the end of the file
  */
-// function add_block(parameter) {
 function add_block(id, timestamp1, timestamp2, type) {
 //	alert(typeof parameter);
 //	alert(parameter);
@@ -290,7 +302,7 @@ function add_block(id, timestamp1, timestamp2, type) {
 	if(file_index == -1)
 		return;
 	
-  /*
+	/*
 	// If not drawn here, it will be drawn in redraw()
 	for(var i = min_to_show; i <= max_to_show; i++) {
 		var event = current_file.event[i];
@@ -306,21 +318,19 @@ function add_block(id, timestamp1, timestamp2, type) {
 			break;
 		}
 	}
-  
-  alert('before push');
 	current_file.event.push(newEvent);
-  alert('after push');
 	*/
+	
 	current_file.event.push(newEvent);
   
-  // update max_timestamp if necessary
-  if(timestamp2 == null && timestamp > max_timestamp) {
-    max_timestamp = timestamp;
-  } else if(timestamp2 != null && timestamp2 > max_timestamp) {
-    max_timestamp = timestamp2;
-  }
+	// update max_timestamp if necessary
+	if(timestamp2 == null && timestamp > max_timestamp) {
+		max_timestamp = timestamp;
+	} else if(timestamp2 != null && timestamp2 > max_timestamp) {
+		max_timestamp = timestamp2;
+	}
 
-  redraw();
+	redraw();
 }
 
 function redraw() {
@@ -346,16 +356,19 @@ function redraw() {
 	svg_element.style.top = menu_panel_height + 'px';
 	
 
-	bar_max_page_index = Math.ceil(max_timestamp / bar_zoom_levels[bar_zoom_index]);
+	bar_max_page_index = Math.ceil(max_timestamp / bar_zoom_levels[bar_zoom_index])-1;
+	
+	if(bar_cur_index > bar_max_page_index)
+		bar_cur_index = bar_max_page_index;
+	
 	min_to_show = bar_cur_index * bar_zoom_levels[bar_zoom_index];
 	max_to_show = min_to_show + bar_zoom_levels[bar_zoom_index];
 
 	// using the current svg height, determine the number of files to draw
 	var num_file_to_show = Math.floor(chart_height / file_zoom_levels[file_zoom_index]);
-	file_max_page_index = Math.ceil(files.length / num_file_to_show);
+	file_max_page_index = Math.ceil(files.length / num_file_to_show) - 1;
 	
 	// calculate the number of files to draw
-	var marin_top
 	var files_to_draw = [];
 	var offset = num_file_to_show * file_cur_index;
 	
@@ -364,9 +377,14 @@ function redraw() {
 	
 	draw_menu();
 	draw_chart(files_to_draw, chart_width, chart_height);
+	draw_rule(chart_width, chart_height);
+	draw_scrollbar(chart_width, chart_height);
+	
 	//debugger;
 	
 	console.log("CHART HEIGHT " + chart_height);
+	
+
 }
 
 function draw_menu() {
@@ -498,22 +516,6 @@ function draw_chart(files_to_draw, chart_width, chart_height) {
 	
 	
 	
-	rules.selectAll(".rule")
-		.data(x_rule.ticks(5))
-		.enter().append("text")
-		.attr("x", function(d,i) { return x_bar(x_rule(i)); })
-		.attr("y", chart_height + file_zoom_levels[file_zoom_index]/2)
-		.attr("text-anchor", function(d,i) {
-			if(i == 0)
-				return "start";
-			else if(i == 4)
-				return "end";
-			else 
-				return "middle";
-		})
-		.attr('fill', 'white')
-		.text(function(d,i) { return (new Time(startTimestamp + x_rule(i))).toString(); });
-	
 	// select blocks to draw
 	blocks_to_draw = [];
 	var min_width = bar_width * 0.005;
@@ -587,7 +589,7 @@ function draw_chart(files_to_draw, chart_width, chart_height) {
 	}
 	
 	
-	sub_bar.selectAll("rect")
+	blocks.selectAll("rect")
 		.data(blocks_to_draw).enter().append("rect")
 		.attr("width", function(d) { return d.width; })
 		.attr("height", function(d) { return d.height; })
@@ -596,11 +598,103 @@ function draw_chart(files_to_draw, chart_width, chart_height) {
 		.style("fill", function(d) { return d.color; });
 	
 	
-	sub_bar.call(brush.x(x_bar).y(y));
+	blocks.call(brush.x(x_bar).y(y));
 }
 
 
+function draw_rule(chart_width, chart_height) {
+	rules.selectAll(".rule")
+		.data(x_rule.ticks(5))
+		.enter().append("text")
+		.attr("x", function(d,i) { return x_bar(x_rule(i)); })
+		.attr("y", chart_height + 15)
+		.attr("text-anchor", function(d,i) {
+			if(i == 0)
+				return "start";
+			else if(i == 4)
+				return "end";
+			else 
+				return "middle";
+		})
+		.attr('fill', 'white')
+		.text(function(d,i) { return (new Time(startTimestamp + x_rule(i))).toString(); });
+}
 
+function draw_scrollbar(chart_width, chart_height) {
+	
+	
+	
+	$('#scrollbar_x_wrapper').css({
+		"position": 'absolute',
+		"left": (chart_width * 0.15 + 10) + "px",
+		"top": chart_height + menu_panel_height + 40 + "px",
+		'width': (chart_width * 0.85 - 15) + 'px'
+	})
+	
+	scroll_x = $('#scrollbar_x').slider({
+		value: bar_cur_index,
+		min: 0,
+		max: bar_max_page_index,
+		step: 1,
+		orientation: 'horizontal',
+
+		slide: function(event, ui) {
+			console.log('slide');
+			//debugger;
+			bar_cur_index = ui.value;
+			redraw();
+		},
+		
+		change: function(event, ui) {
+			console.log('change');
+			
+			//bar_cur_index = ui.value;
+			//redraw();
+		}
+	})
+	
+	
+	var handleSize = scroll_x.width() / (bar_max_page_index + 1);
+	scroll_x.find('.ui-slider-handle').css({
+		width: handleSize,
+		'margin-left': -handleSize / 2
+	});
+	/*
+	scrollbar_x.append('rect')
+		.attr('x', button_width)
+		.attr('y', chart_height)
+		.attr('width', width - 2* button_width)
+		.attr('height', height)
+		.attr('fill', 'grey');
+		
+	scrollbar_x.append('rect')
+		.attr('x', button_width)
+		.attr('y', chart_height)
+		.attr('width', 100)
+		.attr('height', height)
+		.attr('fill', '#2F4F4F');
+		
+	scrollbar_x.append("svg:image")
+      .attr("xlink:href", "./img/left.png")
+	  .attr('x', 0)
+	  .attr('y', chart_height)
+      .attr("width", button_width)
+      .attr("height", height)
+	  .on('click', function() { console.log("left")});
+	  
+	scrollbar_x.append("svg:image")
+      .attr("xlink:href", "./img/right.png")
+	  .attr('x', width - button_width)
+	  .attr('y', chart_height)
+      .attr("width", button_width)
+      .attr("height", height)
+	  .on('click', function() { console.log("right")});*/
+}
+
+
+function test() {
+	console.log("HHHHHHHHHHHHHHHHHHHHHHH");
+}
 /*
  * When the page loads, load a log file
  */
@@ -608,13 +702,11 @@ window.onload = function () {
 	console.log("ON LOAD");
 	console.log(window.innerWidth);
 	console.log(window.innerHeight);
-	var a = 1;
-	var c = 2;
-	var b = 4;
-	console.log(a|b|c);
+
 	
 	loadFile();
 	parseXml();
+	initContextMenu();
 	
 	if(lastWindowWidth != window.innerWidth || lastWindowHeight != window.innerHeight) {
 		lastWindowWidth = window.innerWidth;
@@ -625,6 +717,7 @@ window.onload = function () {
 		
 		redraw();
 	}
+	
 }
 
 window.onresize = function(event) {
@@ -642,13 +735,75 @@ window.onresize = function(event) {
 		
 		redraw();
 	}
+	
+	
 }
 
 /******************************************************************
- SELECTOR FUNCTIONS
+ MOUSE EVENT FUNCTIONS
  ******************************************************************/
+ 
+function initContextMenu() {
+	div_context = document.getElementById('context_menu');
+	
+	div_context.onmouseover = function() { mouseOverContext = true; };
+	div_context.onmouseout = function(e) {
+		e = event.toElement || event.relatedTarget;
+		
+		while(e && e.parentNode && e.parentNode != window) {
+			if(e.parentNode == this || e == this) {
+				return;
+			}
+			e = e.parentNode;
+		}
+		
+		hideContextMenu();
+	};
+}
+ 
+function showContextMenu(event) {
+	var offset_x = 0, offset_y = 0;
+	
+	if(event.clientX + parseInt(div_context.style.width) > lastWindowWidth) {
+		offset_x = event.clientX + parseInt(div_context.style.width) - lastWindowWidth
+	}
+	
+	if(event.clientY + parseInt(div_context.style.height) > lastWindowHeight) {
+		offset_y = event.clientY + parseInt(div_context.style.height) - lastWindowHeight;
+	}
+	
+	div_context.style.left = event.clientX - offset_x -10 + 'px';
+	div_context.style.top = event.clientY -offset_y -10 + 'px';
+	div_context.style.display = 'block';
+}
 
+function hideContextMenu() {
+	div_context.style.display = 'none';
+}
+ 
+function brushstart() {
+	var event = d3.event.sourceEvent;
+	//debugger;
+	if ("which" in event) { // Gecko (Firefox), WebKit (Safari/Chrome) & Opera
+		isRightClicked = event.which == 3; 
+	} else if ("button" in event) { // IE, Opera 
+		isRightClicked = event.button == 2; 
+	}	
+	
+	
+	if(isRightClicked) {
+		console.log("Right Clicked");
+		d3.select('.extent').remove();
+		showContextMenu(event);
+	}
+}
+ 
 function brushend() {
+	if(isRightClicked) {
+		blocks.call(brush.clear());
+		return;
+	}
+	
 	selected = [];
 	sub_bar.selectAll('polygon').remove();
 	
@@ -667,7 +822,7 @@ function brushend() {
 	}
 	
 	console.log(selected);
-	sub_bar.call(brush.clear());
+	blocks.call(brush.clear());
 	
 	// check overlapping blocks decide width and height of highlight boxes
 	var itemsToHighlight = [];
@@ -702,18 +857,8 @@ function brushend() {
 		console.log(itemsToHighlight);
 		
 		var highlight_width = 3;
-		/*
-		sub_bar.append("polygon")
-			.attr("points", (d.x-highlight_width) + "," + (d.y-highlight_width) + " \ " + 
-			(d.x+d.width+highlight_width) + "," + (d.y-highlight_width) + " \ " +
-			(d.x+d.width+highlight_width) + "," + (d.y+d.height+highlight_width) + " \ " +
-			(d.x-highlight_width) + "," + (d.y+d.height+highlight_width))
-			.style("stroke", "yellow")
-			.style("stroke-width", highlight_width)
-			.style("fill-opacity", 0);
-		*/
 		
-		sub_bar.selectAll('polygon')
+		blocks.selectAll('polygon')
 			.data(itemsToHighlight).enter().append('polygon')
 			.attr("points", function(d) { return ((d.startX) + "," + (d.startY) + " \ " + 
 			(d.endX) + "," + (d.startY) + " \ " +
@@ -775,6 +920,7 @@ function bar_zoom_in() {
 function bar_zoom_out() {
 	if(bar_zoom_index != (bar_zoom_levels.length - 1)) {
 		bar_zoom_index++;
+		
 		redraw();
 	}
 }
@@ -824,7 +970,6 @@ function show_down() {
 function undo() {
 	if(selected.length > 0) {
 		var result = [];
-		
 		
 		for(var i = 0; i < selected.length; i++) {
 			result.push(selected[i].id);
