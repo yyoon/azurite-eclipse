@@ -50,14 +50,22 @@ public class ReplaceDeleteTest {
 
 		assertTrue(checkSegmentEquals(r.getDeleteSegment(), 18, OLDLEN,
 				OLD_TEXT));
-		assertEquals(1, r.getInsertSegments().size());
-		assertTrue(checkSegmentEquals(r.getInsertSegments().get(0), 18, 1, "D"));
+		assertEquals(2, r.getInsertSegments().size());
+		assertTrue(checkSegmentEquals(r.getInsertSegments().get(0), 18, 0, "ABC"));
+		assertTrue(checkSegmentEquals(r.getInsertSegments().get(1), 18, 1, "D"));
 
 		assertTrue(checkSegmentEquals(d.getDeleteSegment(), 18, 5, "....."));
 		
 		assertEquals(1, r.getConflicts().size());
 		assertEquals(d, r.getConflicts().get(0));
 		assertEquals(2, r.getDeleteSegment().getRelativeOffset());
+		
+		assertEquals(2, r.getInsertSegments().get(0).getRelativeOffset());
+		assertEquals(3, r.getInsertSegments().get(0).getOriginalLength());
+		
+		assertEquals(2, d.getDeleteSegment().getSegmentsClosedByMe().size());
+		assertEquals(r.getDeleteSegment(), d.getDeleteSegment().getSegmentsClosedByMe().get(0));
+		assertEquals(r.getInsertSegments().get(0), d.getDeleteSegment().getSegmentsClosedByMe().get(1));
 	}
 
 	//        | existing replace |
@@ -72,13 +80,22 @@ public class ReplaceDeleteTest {
 
 		assertTrue(checkSegmentEquals(r.getDeleteSegment(), 15, OLDLEN,
 				OLD_TEXT));
-		assertEquals(0, r.getInsertSegments().size());
+		assertEquals(1, r.getInsertSegments().size());
+		assertTrue(checkSegmentEquals(r.getInsertSegments().get(0),
+				15, 0, NEW_TEXT));
 
 		assertTrue(checkSegmentEquals(d.getDeleteSegment(), 15, 10, ".....ABCD."));
 		
 		assertEquals(1, r.getConflicts().size());
 		assertEquals(d, r.getConflicts().get(0));
 		assertEquals(5, r.getDeleteSegment().getRelativeOffset());
+		
+		assertEquals(5, r.getInsertSegments().get(0).getRelativeOffset());
+		assertEquals(NEWLEN, r.getInsertSegments().get(0).getOriginalLength());
+		
+		assertEquals(2, d.getDeleteSegment().getSegmentsClosedByMe().size());
+		assertEquals(r.getDeleteSegment(), d.getDeleteSegment().getSegmentsClosedByMe().get(0));
+		assertEquals(r.getInsertSegments().get(0), d.getDeleteSegment().getSegmentsClosedByMe().get(1));
 	}
 
 	// | existing replace |
@@ -92,14 +109,21 @@ public class ReplaceDeleteTest {
 
 		assertTrue(checkSegmentEquals(r.getDeleteSegment(), 20, OLDLEN,
 				OLD_TEXT));
-		assertEquals(2, r.getInsertSegments().size());
+		assertEquals(3, r.getInsertSegments().size());
 		assertTrue(checkSegmentEquals(r.getInsertSegments().get(0), 20, 1, "A"));
-		assertTrue(checkSegmentEquals(r.getInsertSegments().get(1), 21, 1, "D"));
+		assertTrue(checkSegmentEquals(r.getInsertSegments().get(1), 21, 0, "BC"));
+		assertTrue(checkSegmentEquals(r.getInsertSegments().get(2), 21, 1, "D"));
 
 		assertTrue(checkSegmentEquals(d.getDeleteSegment(), 21, 2, "BC"));
 		
 		assertEquals(1, r.getConflicts().size());
 		assertEquals(d, r.getConflicts().get(0));
+		
+		assertEquals(0, r.getInsertSegments().get(1).getRelativeOffset());
+		assertEquals(2, r.getInsertSegments().get(1).getOriginalLength());
+		
+		assertEquals(1, d.getDeleteSegment().getSegmentsClosedByMe().size());
+		assertEquals(r.getInsertSegments().get(1), d.getDeleteSegment().getSegmentsClosedByMe().get(0));
 	}
 
 	// | existing replace |
@@ -113,13 +137,20 @@ public class ReplaceDeleteTest {
 
 		assertTrue(checkSegmentEquals(r.getDeleteSegment(), 20, OLDLEN,
 				OLD_TEXT));
-		assertEquals(1, r.getInsertSegments().size());
+		assertEquals(2, r.getInsertSegments().size());
 		assertTrue(checkSegmentEquals(r.getInsertSegments().get(0), 20, 2, "AB"));
+		assertTrue(checkSegmentEquals(r.getInsertSegments().get(1), 22, 0, "CD"));
 
 		assertTrue(checkSegmentEquals(d.getDeleteSegment(), 22, 6, "CD...."));
 		
 		assertEquals(1, r.getConflicts().size());
 		assertEquals(d, r.getConflicts().get(0));
+		
+		assertEquals(0, r.getInsertSegments().get(1).getRelativeOffset());
+		assertEquals(2, r.getInsertSegments().get(1).getOriginalLength());
+		
+		assertEquals(1, d.getDeleteSegment().getSegmentsClosedByMe().size());
+		assertEquals(r.getInsertSegments().get(1), d.getDeleteSegment().getSegmentsClosedByMe().get(0));
 	}
 
 	// | existing replace |

@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.ListIterator;
 
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.swt.SWT;
@@ -148,50 +149,82 @@ public class SelectiveUndoEngine {
 			Chunk chunk, String initialContent) {
 		
 		int initialOffset = chunk.getStartOffset();
-		
-		// Copy the segments, and reverse them!
-		List<Segment> chunkSegments = new ArrayList<Segment>(chunk);
-		Collections.reverse(chunkSegments);
-
 		StringBuffer buffer = new StringBuffer(initialContent);
-
-		for (int i = 0; i < chunkSegments.size(); ++i) {
-			Segment chunkSegment = chunkSegments.get(i);
-
-			// TODO maybe let this algorithm be part of Segment.
-			if (chunkSegment.isDeletion()) {
-				// Insert the text back at the offset.
-				buffer.replace(
-						chunkSegment.getOffset() - initialOffset,
-						chunkSegment.getOffset() - initialOffset,
-						chunkSegment.getText());
-
-				// re-adjust all the segment offsets closed by this segment.
-				for (Segment closedSegment : chunkSegment
-						.getSegmentsClosedByMe()) {
-					closedSegment.reopen(chunkSegment.getOffset());
+		
+		// Copy the chunk.
+		Chunk copyChunk = chunk.copyChunk();
+		
+		// Get all the involved changes and reverse them.
+		List<RuntimeDC> involvedDCs = new ArrayList<RuntimeDC>(chunk.getInvolvedChanges());
+		Collections.reverse(involvedDCs);
+		
+		// Undo from the end.
+		for (RuntimeDC change : involvedDCs) {
+			
+			// Collect all copy segments associated with this change.
+			List<Segment> segments = new ArrayList<Segment>();
+			for (Segment copySegment : copyChunk) {
+				if (copySegment.getOwner().equals(change)) {
+					segments.add(copySegment);
 				}
-			} else {
-				// Find the last insert segment with the same owner.
-				Segment lastInsertSegment = chunkSegment;
-				for (int j = i + 1; j < chunkSegments.size(); ++j) {
-					Segment temp = chunkSegments.get(j);
-					if (!temp.isDeletion()
-							&& temp.getOwner() == chunkSegment.getOwner()) {
-						lastInsertSegment = temp;
-						i = j; // This is important. Ignore everything
-								// in-between.
+			}
+			
+			// Undo each segment.
+			ListIterator<Segment> it = segments.listIterator();
+			while (it.hasNext()) {
+				Segment segmentUnderUndo = it.next();
+				
+				if (segmentUnderUndo.isDeletion()) {
+					// Insert the text back at the offset.
+					buffer.replace(
+							segmentUnderUndo.getOffset() - initialOffset,
+							segmentUnderUndo.getOffset() - initialOffset,
+							segmentUnderUndo.getText());
+					
+					// Re-adjust all the following segments' offsets.
+					for (Segment chunkSegment : copyChunk) {
+						if (chunkSegment.equals(segmentUnderUndo)) {
+							continue;
+						}
+						if (chunkSegment.getOffset() < segmentUnderUndo.getOffset()) {
+							continue;
+						}
+
+						chunkSegment.incrementOffset(segmentUnderUndo.getLength());
+					}
+					
+					// Re-open all the closed segments.
+					for (Segment closedSegment : segmentUnderUndo.getSegmentsClosedByMe()) {
+						if (copyChunk.contains(closedSegment)) {
+							closedSegment.reopen(segmentUnderUndo.getOffset());
+						}
+					}
+				}	// if(segmentUnderUndo.isDeletion())
+				else {
+					// Delete this segment.
+					buffer.replace(
+							segmentUnderUndo.getOffset() - initialOffset,
+							segmentUnderUndo.getEndOffset() - initialOffset,
+							"");
+					
+					// Re-adjust all the following segments' offsets.
+					for (Segment chunkSegment : copyChunk) {
+						if (chunkSegment.equals(segmentUnderUndo)) {
+							continue;
+						}
+						if (chunkSegment.getOffset() < segmentUnderUndo.getOffset()) {
+							continue;
+						}
+						
+						chunkSegment.decrementOffset(segmentUnderUndo.getLength());
 					}
 				}
-
-				// Delete the whole insert range.
-				buffer.replace(
-						lastInsertSegment.getOffset() - initialOffset,
-						chunkSegment.getEndOffset() - initialOffset,
-						"");
+				
+				it.remove();
+				copyChunk.remove(segmentUnderUndo);
 			}
 		}
-		
+
 		return buffer.toString();
 	}
 

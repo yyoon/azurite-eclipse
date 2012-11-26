@@ -24,8 +24,9 @@ public class Segment {
 	private String mBelongsTo;
 	private RuntimeDC mOwner;
 	
-	// Related to D->D conflict.
+	// Related to D->D & I->D conflict.
 	private int mRelativeOffset;
+	private int mOriginalLength;
 	private List<Segment> mSegmentsClosedByMe;
 
 	/**
@@ -55,6 +56,7 @@ public class Segment {
 		mDeletion = deletion;
 		
 		mRelativeOffset = -1;
+		mOriginalLength = -1;
 		mSegmentsClosedByMe = new ArrayList<Segment>();
 	}
 
@@ -350,12 +352,60 @@ public class Segment {
 	}
 	
 	/**
+	 * Set the original length (only valid on a deleted insertion segment)
+	 * @param originalLength the original length value
+	 */
+	public void setOriginalLength(int originalLength) {
+		mOriginalLength = originalLength;
+	}
+	
+	/**
+	 * Get the original length of a deleted insertion segment.
+	 * @return the original length;
+	 */
+	public int getOriginalLength() {
+		return mOriginalLength;
+	}
+	
+	public void close(int relativeOffset) {
+		if (relativeOffset < 0) {
+			throw new IllegalArgumentException("relative offset should be no less than zero!");
+		}
+		setRelativeOffset(relativeOffset);
+		if (!isDeletion()) {
+			setOriginalLength(getLength());
+			setLength(0);
+		}
+	}
+	
+	/**
 	 * Should be called when the closing segment is being undone.
 	 * @param baseOffset offset of the closing segment.
 	 */
 	public void reopen(int baseOffset) {
-		setOffset(baseOffset + mRelativeOffset);
+		if (getRelativeOffset() == -1) {
+			throw new IllegalStateException("Segment must be closed when reopen method is called");
+		}
+		
+		setOffset(baseOffset + getRelativeOffset());
 		setRelativeOffset(-1);
+		if (!isDeletion()) {
+			setLength(getOriginalLength());
+			setOriginalLength(-1);
+		}
+	}
+	
+	/**
+	 * Close another segment by me.
+	 * @param toBeClosed the segment to be closed by me.
+	 */
+	public void closeSegment(Segment toBeClosed) {
+		if (toBeClosed.getRelativeOffset() == -1) {
+			toBeClosed.close(toBeClosed.getOffset() - getOffset());
+			addSegmentClosedByMe(toBeClosed);
+		}
+		
+		toBeClosed.setOffset(getOffset());
 	}
 	
 	/**
@@ -376,5 +426,22 @@ public class Segment {
 	 */
 	public List<Segment> getSegmentsClosedByMe() {
 		return Collections.unmodifiableList(mSegmentsClosedByMe);
+	}
+	
+	/**
+	 * Make a copy of this segment and return it.
+	 * Note that this method doesn't copy the mSegmentsClosedByMe contents.
+	 * (Because this list should be reconstructed using the copy objects)
+	 * @return copy of this segment.
+	 */
+	public Segment copySegment() {
+		Segment copy = new Segment(mOffset, mLength, mText, mBelongsTo, mOwner, mDeletion);
+		copy.mRelativeOffset = mRelativeOffset;
+		copy.mOriginalLength = mOriginalLength;
+		
+		// Don't fill this out just yet...
+		copy.mSegmentsClosedByMe = new ArrayList<Segment>();
+		
+		return copy;
 	}
 }

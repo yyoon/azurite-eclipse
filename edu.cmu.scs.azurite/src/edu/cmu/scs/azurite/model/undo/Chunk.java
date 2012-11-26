@@ -1,6 +1,7 @@
 package edu.cmu.scs.azurite.model.undo;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.TreeSet;
 
@@ -60,6 +61,28 @@ public class Chunk extends ArrayList<Segment> {
 			set.add(segment.getOwner());
 		}
 
-		return new ArrayList<RuntimeDC>(set);
+		return Collections.unmodifiableList(new ArrayList<RuntimeDC>(set));
+	}
+	
+	public Chunk copyChunk() {
+		Chunk copyChunk = new Chunk();
+		for (Segment originalSegment : this) {
+			copyChunk.add(originalSegment.copySegment());
+		}
+
+		// Reconstruct the "segmentsClosedByMe" list
+		for (int i = 0; i < this.size(); ++i) {
+			Segment originalSegment = this.get(i);
+			Segment copySegment = copyChunk.get(i);
+			
+			for (Segment closedSegment : originalSegment.getSegmentsClosedByMe()) {
+				int closedSegmentIndex = this.indexOf(closedSegment);
+				if (closedSegmentIndex != -1) {
+					copySegment.addSegmentClosedByMe(copyChunk.get(closedSegmentIndex));
+				}
+			}
+		}
+		
+		return copyChunk;
 	}
 }

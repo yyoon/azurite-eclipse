@@ -58,8 +58,10 @@ public class ReplaceReplaceTest {
 		
 		assertTrue(checkSegmentEquals(r1.getDeleteSegment(), 16, OLDLEN1,
 				OLD_TEXT1));
-		assertEquals(1, r1.getInsertSegments().size());
+		assertEquals(2, r1.getInsertSegments().size());
 		assertTrue(checkSegmentEquals(r1.getInsertSegments().get(0),
+				16, 0, "ABCDEF"));
+		assertTrue(checkSegmentEquals(r1.getInsertSegments().get(1),
 				16 + NEWLEN2, 2, "GH"));
 
 		assertTrue(checkSegmentEquals(r2.getDeleteSegment(), 16, OLDLEN2,
@@ -71,6 +73,13 @@ public class ReplaceReplaceTest {
 		assertEquals(1, r1.getConflicts().size());
 		assertEquals(r2, r1.getConflicts().get(0));
 		assertEquals(4, r1.getDeleteSegment().getRelativeOffset());
+		
+		assertEquals(4, r1.getInsertSegments().get(0).getRelativeOffset());
+		assertEquals(6, r1.getInsertSegments().get(0).getOriginalLength());
+		
+		assertEquals(2, r2.getDeleteSegment().getSegmentsClosedByMe().size());
+		assertEquals(r1.getDeleteSegment(), r2.getDeleteSegment().getSegmentsClosedByMe().get(0));
+		assertEquals(r1.getInsertSegments().get(0), r2.getDeleteSegment().getSegmentsClosedByMe().get(1));
 	}
 
 	//        | existing replace |
@@ -85,7 +94,9 @@ public class ReplaceReplaceTest {
 		
 		assertTrue(checkSegmentEquals(r1.getDeleteSegment(), 15, OLDLEN1,
 				OLD_TEXT1));
-		assertEquals(0, r1.getInsertSegments().size());
+		assertEquals(1, r1.getInsertSegments().size());
+		assertTrue(checkSegmentEquals(r1.getInsertSegments().get(0),
+				15, 0, NEW_TEXT1));
 
 		assertTrue(checkSegmentEquals(r2.getDeleteSegment(), 15, 15,
 				".....ABCDEFGH.."));
@@ -96,6 +107,13 @@ public class ReplaceReplaceTest {
 		assertEquals(1, r1.getConflicts().size());
 		assertEquals(r2, r1.getConflicts().get(0));
 		assertEquals(5, r1.getDeleteSegment().getRelativeOffset());
+		
+		assertEquals(5, r1.getInsertSegments().get(0).getRelativeOffset());
+		assertEquals(NEWLEN1, r1.getInsertSegments().get(0).getOriginalLength());
+		
+		assertEquals(2, r2.getDeleteSegment().getSegmentsClosedByMe().size());
+		assertEquals(r1.getDeleteSegment(), r2.getDeleteSegment().getSegmentsClosedByMe().get(0));
+		assertEquals(r1.getInsertSegments().get(0), r2.getDeleteSegment().getSegmentsClosedByMe().get(1));
 	}
 
 	// | existing  replace |
@@ -110,10 +128,12 @@ public class ReplaceReplaceTest {
 		
 		assertTrue(checkSegmentEquals(r1.getDeleteSegment(), 20, OLDLEN1,
 				OLD_TEXT1));
-		assertEquals(2, r1.getInsertSegments().size());
+		assertEquals(3, r1.getInsertSegments().size());
 		assertTrue(checkSegmentEquals(r1.getInsertSegments().get(0), 20, 3,
 				"ABC"));
 		assertTrue(checkSegmentEquals(r1.getInsertSegments().get(1),
+				23, 0, "DEF"));
+		assertTrue(checkSegmentEquals(r1.getInsertSegments().get(2),
 				20 + 3 + NEWLEN2, 2, "GH"));
 
 		assertTrue(checkSegmentEquals(r2.getDeleteSegment(), 23, 3, "DEF"));
@@ -123,6 +143,12 @@ public class ReplaceReplaceTest {
 		
 		assertEquals(1, r1.getConflicts().size());
 		assertEquals(r2, r1.getConflicts().get(0));
+		
+		assertEquals(0, r1.getInsertSegments().get(1).getRelativeOffset());
+		assertEquals(3, r1.getInsertSegments().get(1).getOriginalLength());
+		
+		assertEquals(1, r2.getDeleteSegment().getSegmentsClosedByMe().size());
+		assertEquals(r1.getInsertSegments().get(1), r2.getDeleteSegment().getSegmentsClosedByMe().get(0));
 	}
 
 	// | existing replace |
@@ -137,9 +163,11 @@ public class ReplaceReplaceTest {
 		
 		assertTrue(checkSegmentEquals(r1.getDeleteSegment(), 20, OLDLEN1,
 				OLD_TEXT1));
-		assertEquals(1, r1.getInsertSegments().size());
+		assertEquals(2, r1.getInsertSegments().size());
 		assertTrue(checkSegmentEquals(r1.getInsertSegments().get(0), 20, 6,
 				"ABCDEF"));
+		assertTrue(checkSegmentEquals(r1.getInsertSegments().get(1), 
+				26, 0, "GH"));
 
 		assertTrue(checkSegmentEquals(r2.getDeleteSegment(), 26, OLDLEN2,
 				"GH........"));
@@ -149,6 +177,12 @@ public class ReplaceReplaceTest {
 		
 		assertEquals(1, r1.getConflicts().size());
 		assertEquals(r2, r1.getConflicts().get(0));
+		
+		assertEquals(0, r1.getInsertSegments().get(1).getRelativeOffset());
+		assertEquals(2, r1.getInsertSegments().get(1).getOriginalLength());
+		
+		assertEquals(1, r2.getDeleteSegment().getSegmentsClosedByMe().size());
+		assertEquals(r1.getInsertSegments().get(1), r2.getDeleteSegment().getSegmentsClosedByMe().get(0));
 	}
 
 	// | existing replace |

@@ -57,6 +57,46 @@ public class SelectiveUndoTest {
 		assertEquals("JW7qZSQlkvmkyG", document.get());
 	}
 	
+	// This test came from the random test.
+	@Test
+	public void testInsertDeleteReplace() {
+		document.set("iRZdTMEc4W");
+		
+		BaseDocumentChangeEvent[] operations = new BaseDocumentChangeEvent[] {
+				new Insert(9, "s0", null),
+				new Delete(9, 2, 0, 0, "s0", null),
+				new Replace(8, 2, 0, 0, 2, "4W", "lT", null),
+		};
+		
+		applyOperations(operations);
+		
+		assertEquals("iRZdTMEclT", document.get());
+		
+		undo(0, 1, 2);
+		
+		assertEquals("iRZdTMEc4W", document.get());
+	}
+	
+	// This test came from the random test.
+	@Test
+	public void testDeleteDeleteReplace() {
+		document.set("pDarPrLtNF");
+		
+		BaseDocumentChangeEvent[] operations = new BaseDocumentChangeEvent[] {
+				new Delete(3, 1, 0, 0, "r", null),
+				new Delete(5, 4, 0, 0, "LtNF", null),
+				new Replace(3, 2, 0, 0, 5, "Pr", "xIGSe", null),
+		};
+		
+		applyOperations(operations);
+		
+		assertEquals("pDaxIGSe", document.get());
+		
+		undo(1, 2);
+		
+		assertEquals("pDaPrLtNF", document.get());
+	}
+
 	@Test
 	public void testNoConflict() {
 		BaseDocumentChangeEvent[] operations = new BaseDocumentChangeEvent[] {
@@ -98,6 +138,58 @@ public class SelectiveUndoTest {
 		assertEquals("System.out.println(\"Hello, Alice!\");\n"
 				+ "System.out.println(\"Hello, world!\");\n"
 				+ "System.out.println(\"Hello, Charlie!\");\n", document.get());
+	}
+	
+	@Test
+	public void testDeleteOrder01() {
+		BaseDocumentChangeEvent[] operations = new BaseDocumentChangeEvent[] {
+				new Insert(0, "AB", null),
+				new Delete(0, 1, 0, 0, "A", null),
+				new Delete(0, 1, 0, 0, "B", null),
+		};
+		
+		applyOperations(operations);
+		
+		assertEquals("", document.get());
+		
+		undo(1, 2);
+		
+		assertEquals("AB", document.get());
+	}
+	
+	@Test
+	public void testDeleteOrder02() {
+		BaseDocumentChangeEvent[] operations = new BaseDocumentChangeEvent[] {
+				new Insert(0, "AB", null),
+				new Delete(1, 1, 0, 0, "B", null),
+				new Delete(0, 1, 0, 0, "A", null),
+		};
+		
+		applyOperations(operations);
+		
+		assertEquals("", document.get());
+		
+		undo(1, 2);
+		
+		assertEquals("AB", document.get());
+	}
+	
+	@Test
+	public void testIDConflict01() {
+		BaseDocumentChangeEvent[] operations = new BaseDocumentChangeEvent[] {
+				new Insert(0, "AB", null),
+				new Insert(2, "CD", null),
+				new Insert(4, "EF", null),
+				new Delete(3, 2, 0, 0, "DE", null),
+		};
+		
+		applyOperations(operations);
+		
+		assertEquals("ABCF", document.get());
+		
+		undo(3);
+		
+		assertEquals("ABCDEF", document.get());
 	}
 	
 	private void undo(Integer ... indices) {

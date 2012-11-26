@@ -47,12 +47,12 @@ public class DeleteComponent implements EditComponent {
 		Segment segment = getDeleteSegment();
 		
 		boolean conflict = false;
-		boolean dummy = deleteSegment.getLength() == 0;
+		boolean dummyDelete = deleteSegment.getLength() == 0;
 		
 		//                                         | existing segment |
 		// |---------- replacement ----------|
 		if (deleteSegment.getEndOffset() < segment.getOffset() ||
-			deleteSegment.getEndOffset() == segment.getOffset() && dummy) {
+			deleteSegment.getEndOffset() == segment.getOffset() && dummyDelete) {
 			// adjust all the subsequent segments' offsets.
 			segment.incrementOffset(lengthDiff);
 		}
@@ -78,7 +78,7 @@ public class DeleteComponent implements EditComponent {
 		// |     existing segment     |
 		//                                |---------- replacement ----------|
 		else if (segment.getOffset() < deleteSegment.getOffset() ||
-				segment.getOffset() == deleteSegment.getOffset() && dummy) {
+				segment.getOffset() == deleteSegment.getOffset() && dummyDelete) {
 			// Do nothing
 		}
 		// Should not fall to this else clause

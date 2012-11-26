@@ -21,9 +21,9 @@ import edu.cmu.scs.fluorite.commands.Replace;
 
 public class SelectiveUndoRandomTest {
 	
-	private static final String RANDOM_TEXT = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz \t\r\n0123456789";
+	private static final String RANDOM_TEXT = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz \t0123456789";
 
-	private static final int LOOP_COUNT = 1;
+	private static final int LOOP_COUNT = 100;
 	private static final int INITIAL_TEXT_LENGTH = 10;
 	private static final int RANDOM_TEXT_MAX_LENGTH = 5;
 	
@@ -34,7 +34,7 @@ public class SelectiveUndoRandomTest {
 
 	@Test
 	public void testRandom10Operations() {
-		testRandomOperations(10);
+		testRandomOperations(3);
 	}
 	
 /*	@Test
@@ -45,10 +45,12 @@ public class SelectiveUndoRandomTest {
 	@Test
 	public void testRandom1000Operations() {
 		testRandomOperations(1000);
-	}
-*/
+	}*/
+
 	public void testRandomOperations(int numOperations) {
 		for (int trial = 0; trial < LOOP_COUNT; ++trial) {
+			AbstractCommand.resetCommandID();
+
 			RuntimeHistoryManager manager = new RuntimeHistoryManager();
 			manager.activeFileChanged("dummyProject", "dummyFile");
 			

@@ -64,10 +64,12 @@ public class InsertReplaceTest {
 				".....", NEW_TEXT, null));
 		r.applyTo(i);
 
-		assertEquals(2, i.getInsertSegments().size());
+		assertEquals(3, i.getInsertSegments().size());
 		assertTrue(checkSegmentEquals(i.getInsertSegments().get(0),
 				10, 2, "Ol"));
 		assertTrue(checkSegmentEquals(i.getInsertSegments().get(1),
+				12, 0, "d Tex"));
+		assertTrue(checkSegmentEquals(i.getInsertSegments().get(2),
 				12 + NEWLEN, 1, "t"));
 
 		assertTrue(checkSegmentEquals(r.getDeleteSegment(), 12, 5, "....."));
@@ -77,6 +79,12 @@ public class InsertReplaceTest {
 		
 		assertEquals(1, i.getConflicts().size());
 		assertEquals(r, i.getConflicts().get(0));
+		
+		assertEquals(0, i.getInsertSegments().get(1).getRelativeOffset());
+		assertEquals(5, i.getInsertSegments().get(1).getOriginalLength());
+		
+		assertEquals(1, r.getDeleteSegment().getSegmentsClosedByMe().size());
+		assertEquals(i.getInsertSegments().get(1), r.getDeleteSegment().getSegmentsClosedByMe().get(0));
 	}
 	
 	// | existing insert |

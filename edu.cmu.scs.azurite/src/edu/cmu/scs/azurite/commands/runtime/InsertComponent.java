@@ -51,7 +51,8 @@ public class InsertComponent implements EditComponent {
 		ListIterator<Segment> it = mInsertSegments.listIterator();
 		
 		boolean conflict = false;
-		
+		boolean dummyDelete = deleteSegment.getLength() == 0;
+
 		while (it.hasNext()) {
 			Segment segment = it.next();
 			
@@ -70,9 +71,17 @@ public class InsertComponent implements EditComponent {
 			else if (deleteSegment.getOffset() <= segment.getOffset()
 					&& segment.getOffset() < deleteSegment.getEndOffset()
 					&& deleteSegment.getEndOffset() < segment.getEndOffset()) {
+				
+				// Split the segment into two and close the first segment.
+				Segment segmentToBeAdded = segment.subSegment(
+						deleteSegment.getEndOffset(), segment.getEndOffset()
+								- deleteSegment.getEndOffset());
+				segmentToBeAdded.incrementOffset(lengthDiff);
+				it.add(segmentToBeAdded);
+				
 				// cut down the current segment, and adjust all the subsequent segments.
-				segment.cutDown(segment.getOffset(), deleteSegment.getEndOffset() - segment.getOffset());
-				segment.setOffset(deleteSegment.getOffset() + insertSegment.getLength());
+				segment.cutDown(deleteSegment.getEndOffset());
+				deleteSegment.closeSegment(segment);
 				
 				while (it.hasNext()) {
 					it.next().incrementOffset(lengthDiff);
@@ -84,8 +93,8 @@ public class InsertComponent implements EditComponent {
 			// |---------- replacement ----------|
 			else if (deleteSegment.getOffset() <= segment.getOffset()
 					&& segment.getEndOffset() <= deleteSegment.getEndOffset()) {
-				// simply remove the current segment and continue the iteration.
-				it.remove();
+				
+				deleteSegment.closeSegment(segment);
 				
 				conflict = true;
 			}
@@ -93,11 +102,19 @@ public class InsertComponent implements EditComponent {
 			//      |--- replacement ---|
 			else if (segment.getOffset() < deleteSegment.getOffset()
 					&& deleteSegment.getEndOffset() < segment.getEndOffset()) {
-				// split the current segment, and adjust all the subsequent segments.
-				Segment segmentToBeAdded = segment.subSegment(deleteSegment.getEndOffset());
-				segmentToBeAdded.incrementOffset(lengthDiff);
-				it.add(segmentToBeAdded);
+				// Split the current segment into three pieces.
+				if (!dummyDelete) {
+					Segment segmentInTheMiddle = segment.subSegment(
+							deleteSegment.getOffset(), deleteSegment.getLength());
+					deleteSegment.closeSegment(segmentInTheMiddle);
+					it.add(segmentInTheMiddle);
+				}
 				
+				Segment segmentAtTheEnd = segment.subSegment(deleteSegment.getEndOffset());
+				segmentAtTheEnd.incrementOffset(lengthDiff);
+				it.add(segmentAtTheEnd);
+				
+				// Cut down the current segment.
 				segment.cutDown(deleteSegment.getOffset());
 				
 				while (it.hasNext()) {
@@ -111,6 +128,11 @@ public class InsertComponent implements EditComponent {
 			else if (segment.getOffset() < deleteSegment.getOffset()
 					&& deleteSegment.getOffset() < segment.getEndOffset()
 					&& segment.getEndOffset() <= deleteSegment.getEndOffset()) {
+				
+				Segment segmentToBeAdded = segment.subSegment(deleteSegment.getOffset());
+				deleteSegment.closeSegment(segmentToBeAdded);
+				it.add(segmentToBeAdded);
+				
 				// cut down the current segment, and continue to loop.
 				segment.cutDown(deleteSegment.getOffset());
 				
@@ -126,8 +148,6 @@ public class InsertComponent implements EditComponent {
 				throw new IllegalStateException();
 			}
 		}// while (it.hasNext())
-		
-		// TODO cleanup the segments! merge subsequent segments, and close out when the array is empty.
 		
 		return conflict;
 	}
