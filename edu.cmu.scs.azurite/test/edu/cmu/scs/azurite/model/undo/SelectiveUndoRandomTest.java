@@ -34,17 +34,14 @@ public class SelectiveUndoRandomTest {
 
 	@Test
 	public void testRandom10Operations() {
-		testRandomOperations(3);
+		testRandomOperations(10);
 	}
 	
+	// This takes about 100 seconds to finish.
+	// Only enable this when an excessive testing is required.
 /*	@Test
 	public void testRandom100Operations() {
 		testRandomOperations(100);
-	}
-	
-	@Test
-	public void testRandom1000Operations() {
-		testRandomOperations(1000);
 	}*/
 
 	public void testRandomOperations(int numOperations) {

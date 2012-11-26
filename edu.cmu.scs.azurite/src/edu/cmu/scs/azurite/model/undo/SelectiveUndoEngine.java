@@ -3,7 +3,6 @@ package edu.cmu.scs.azurite.model.undo;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.ListIterator;
 
@@ -169,6 +168,11 @@ public class SelectiveUndoEngine {
 				}
 			}
 			
+			// Sort and then reverse.
+			// It's different from sorting with the reverseOrder comparator.
+			Collections.sort(segments, Segment.getLocationComparator());
+			Collections.reverse(segments);
+			
 			// Undo each segment.
 			ListIterator<Segment> it = segments.listIterator();
 			while (it.hasNext()) {
@@ -186,7 +190,7 @@ public class SelectiveUndoEngine {
 						if (chunkSegment.equals(segmentUnderUndo)) {
 							continue;
 						}
-						if (chunkSegment.getOffset() < segmentUnderUndo.getOffset()) {
+						if (Segment.getLocationComparator().compare(chunkSegment, segmentUnderUndo) < 0) {
 							continue;
 						}
 
@@ -212,7 +216,7 @@ public class SelectiveUndoEngine {
 						if (chunkSegment.equals(segmentUnderUndo)) {
 							continue;
 						}
-						if (chunkSegment.getOffset() < segmentUnderUndo.getOffset()) {
+						if (Segment.getLocationComparator().compare(chunkSegment, segmentUnderUndo) < 0) {
 							continue;
 						}
 						
@@ -240,24 +244,7 @@ public class SelectiveUndoEngine {
 	
 	List<Chunk> determineChunks(List<Segment> segments) {
 		// Sort! Collections.sort is guaranteed to be *stable*.
-		Collections.sort(segments, new Comparator<Segment>() {
-			public int compare(Segment lhs, Segment rhs) {
-				if (lhs.getOffset() < rhs.getOffset()) {
-					return -1;
-				}
-				else if (lhs.getOffset() > rhs.getOffset()) {
-					return 1;
-				}
-				else if (lhs.getEffectiveEndOffset() < rhs.getEffectiveEndOffset()) {
-					return -1;
-				}
-				else if (lhs.getEffectiveEndOffset() > rhs.getEffectiveEndOffset()) {
-					return 1;
-				}
-				
-				return 0;
-			}
-		});
+		Collections.sort(segments, Segment.getLocationComparator());
 		
 		// List of chunks.
 		ArrayList<Chunk> chunks = new ArrayList<Chunk>();

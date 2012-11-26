@@ -2,6 +2,7 @@ package edu.cmu.scs.azurite.commands.runtime;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 import edu.cmu.scs.fluorite.commands.Delete;
@@ -443,5 +444,40 @@ public class Segment {
 		copy.mSegmentsClosedByMe = new ArrayList<Segment>();
 		
 		return copy;
+	}
+	
+	private static Comparator<Segment> locationComparator;
+	
+	/**
+	 * Returns the singleton comparator objects which compares the runtime
+	 * document changes based on the command IDs of their original events.
+	 * @return comparator object.
+	 */
+	public static Comparator<Segment> getLocationComparator() {
+		if (locationComparator == null) {
+			locationComparator = new Comparator<Segment>() {
+
+				@Override
+				public int compare(Segment lhs, Segment rhs) {
+					if (lhs.getOffset() < rhs.getOffset()) {
+						return -1;
+					}
+					else if (lhs.getOffset() > rhs.getOffset()) {
+						return 1;
+					}
+					else if (lhs.getEffectiveEndOffset() < rhs.getEffectiveEndOffset()) {
+						return -1;
+					}
+					else if (lhs.getEffectiveEndOffset() > rhs.getEffectiveEndOffset()) {
+						return 1;
+					}
+					
+					return 0;
+				}
+				
+			};
+		}
+		
+		return locationComparator;
 	}
 }
