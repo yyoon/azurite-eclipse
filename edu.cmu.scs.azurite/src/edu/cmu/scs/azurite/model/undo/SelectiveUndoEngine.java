@@ -7,11 +7,6 @@ import java.util.List;
 import java.util.ListIterator;
 
 import org.eclipse.jface.text.IDocument;
-import org.eclipse.swt.SWT;
-import org.eclipse.swt.custom.StyleRange;
-import org.eclipse.swt.custom.StyledText;
-import org.eclipse.swt.graphics.Color;
-import org.eclipse.swt.widgets.Shell;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.commands.runtime.Segment;
@@ -104,44 +99,76 @@ public class SelectiveUndoEngine {
 		
 		// For each chunk..
 		for (Chunk chunk : chunks) {
-			// Is there a conflict?
-			if (chunk.hasConflictOutsideThisChunk()) {
-				// Temporarily, just mark the chunks on the styled text!!
-				StyledText styledText = Utilities.getStyledText(EventRecorder
-						.getInstance().getEditor());
-				Shell shell = styledText.getShell();
-				Color foreground = shell.getDisplay().getSystemColor(SWT.COLOR_YELLOW);
-				Color background = shell.getDisplay().getSystemColor(SWT.COLOR_BLACK);
+			try {
+				int initialOffset = chunk.getStartOffset();
+				String initialContent = document.get(initialOffset,
+						chunk.getChunkLength());
 				
-				StyleRange styleRange = new StyleRange(chunk.getStartOffset(),
-						chunk.getChunkLength(), foreground, background);
-				styledText.setStyleRange(styleRange);
-			}
-			// No conflicts. just undo them backwards.
-			else {
-				try {
-					int initialOffset = chunk.getStartOffset();
-					String initialContent = document.get(initialOffset,
-							chunk.getChunkLength());
+				// Is there a conflict?
+				if (chunk.hasConflictOutsideThisChunk()) {
+	/*				// Temporarily, just mark the chunks on the styled text!!
+					StyledText styledText = Utilities.getStyledText(EventRecorder
+							.getInstance().getEditor());
+					Shell shell = styledText.getShell();
+					Color foreground = shell.getDisplay().getSystemColor(SWT.COLOR_YELLOW);
+					Color background = shell.getDisplay().getSystemColor(SWT.COLOR_BLACK);
+					
+					StyleRange styleRange = new StyleRange(chunk.getStartOffset(),
+							chunk.getChunkLength(), foreground, background);
+					styledText.setStyleRange(styleRange);*/
+					
+					List<UndoAlternative> alternatives = doSelectiveUndoChunkWithConflicts(
+							chunk, initialContent);
+					
+					// Just print to the console..
+					System.out.println("====================");
+					System.out.println(chunk);
+					System.out.println("Initial Content:");
+					System.out.println(initialContent);
+					
+					for (int i = 0; i < alternatives.size(); ++i) {
+						UndoAlternative alternative = alternatives.get(i);
+						System.out.println("Alternative #" + (i + 1) + ": "
+								+ alternative.getDescription());
+						System.out.println(alternative.getResultingCode());
+					}
+				}
+				// No conflicts. just undo them backwards.
+				else {
 					String resultingContent = doSelectiveUndoChunkWithoutConflicts(
 							chunk, initialContent);
 
 					document.replace(initialOffset, initialContent.length(),
 							resultingContent);
 				}
-				catch (Exception e) {
-					e.printStackTrace();
-					return;
-				}
+			}
+			catch (Exception e) {
+				e.printStackTrace();
+				return;
 			}
 		}
 	}
 
 	// Sort the runtimeDocChanges by their original command IDs.
-	private void sortRuntimeDocumentChanges(
-			RuntimeDC[] runtimeDocChanges) {
-		Arrays.sort(runtimeDocChanges,
-				RuntimeDC.getCommandIDComparator());
+	private void sortRuntimeDocumentChanges(RuntimeDC[] runtimeDocChanges) {
+		Arrays.sort(runtimeDocChanges, RuntimeDC.getCommandIDComparator());
+	}
+	
+	private List<UndoAlternative> doSelectiveUndoChunkWithConflicts(
+			Chunk chunk, String initialContent) {
+		List<UndoAlternative> result = new ArrayList<UndoAlternative>();
+		
+		// Strictly selectively undo only the selected operations.
+		result.add(new UndoAlternative(
+				"Strictly selectively undo only the selected operations.",
+				doSelectiveUndoChunkWithoutConflicts(chunk, initialContent)));
+		
+		// Add the trivial option at the end.
+		result.add(new UndoAlternative(
+				"Keep the code as it is. Do not perform selective undo for this chunk.", initialContent));
+		
+		// Return the result as an unmodifiable list.
+		return Collections.unmodifiableList(result);
 	}
 	
 	private String doSelectiveUndoChunkWithoutConflicts(
