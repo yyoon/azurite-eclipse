@@ -77,12 +77,14 @@ public class Chunk extends ArrayList<Segment> {
 			RuntimeDC dc = queue.remove();
 			
 			if (isInRange(dc, getStartOffset(), getEndOffset())) {
-				set.add(dc);
-				result.addAll(dc.getAllSegments());
-				
-				for (RuntimeDC conflict : dc.getConflicts()) {
-					if (!set.contains(conflict)) {
-						queue.add(conflict);
+				if (!set.contains(dc)) {
+					set.add(dc);
+					result.addAll(dc.getAllSegments());
+					
+					for (RuntimeDC conflict : dc.getConflicts()) {
+						if (!set.contains(conflict)) {
+							queue.add(conflict);
+						}
 					}
 				}
 			}
