@@ -192,6 +192,24 @@ public class SelectiveUndoTest {
 		assertEquals("ABCDEF", document.get());
 	}
 	
+	@Test
+	public void testComplexConflict() {
+		BaseDocumentChangeEvent[] operations = new BaseDocumentChangeEvent[] {
+				new Insert(0, "ABCD", null),
+				new Insert(2, "abcd", null),
+				new Insert(8, "1234", null),
+				new Replace(7, 3, 0, 0, 4, "D12", "!@#$", null),
+		};
+		
+		applyOperations(operations);
+		
+		assertEquals("ABabcdC!@#$34", document.get());
+		
+		undo(0, 1, 3);
+		
+		assertEquals("1234", document.get());
+	}
+	
 	private void undo(Integer ... indices) {
 		List<RuntimeDC> runtimeDocChanges = manager
 				.filterDocumentChangesByIds(Arrays.asList(indices));
