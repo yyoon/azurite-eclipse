@@ -158,6 +158,12 @@ public class SelectiveUndoEngine {
 			Chunk chunk, String initialContent) {
 		List<UndoAlternative> result = new ArrayList<UndoAlternative>();
 		
+		// Revert this chunk to the way it was before all the selected operations were performed.
+		result.add(new UndoAlternative(
+				"Revert this code to the way it was right before all the selected operations were performed.",
+				doSelectiveUndoChunkWithoutConflicts(
+						chunk.getExpandedChunkInRange(), initialContent)));
+		
 		// Strictly selectively undo only the selected operations.
 		result.add(new UndoAlternative(
 				"Strictly selectively undo only the selected operations.",

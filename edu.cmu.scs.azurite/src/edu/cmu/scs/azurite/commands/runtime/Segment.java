@@ -449,8 +449,8 @@ public class Segment {
 	private static Comparator<Segment> locationComparator;
 	
 	/**
-	 * Returns the singleton comparator objects which compares the runtime
-	 * document changes based on the command IDs of their original events.
+	 * Returns the singleton comparator objects which compares the location
+	 * of the segment. Ties are broken by comparing the operation id.
 	 * @return comparator object.
 	 */
 	public static Comparator<Segment> getLocationComparator() {
@@ -469,6 +469,12 @@ public class Segment {
 						return -1;
 					}
 					else if (lhs.getEffectiveEndOffset() > rhs.getEffectiveEndOffset()) {
+						return 1;
+					}
+					else if (lhs.getOwner().getOriginal().getCommandIndex() < rhs.getOwner().getOriginal().getCommandIndex()) {
+						return -1;
+					}
+					else if (lhs.getOwner().getOriginal().getCommandIndex() > rhs.getOwner().getOriginal().getCommandIndex()) {
 						return 1;
 					}
 					
