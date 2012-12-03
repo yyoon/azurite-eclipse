@@ -1,0 +1,71 @@
+	
+input[type='range'] {
+	-webkit-apperance:none;
+	background-color: #CCCCCC;
+	height: 20px;
+}
+
+input[type='range']::-webkit-slider-thumb {
+	-webkit-apperance:none;
+	background-color: #444;
+	height: 20px;
+}
+
+#sel_box
+{
+display: none;
+position: absolute;
+border: 1px solid #000000;
+background: transparent;
+width: 0;
+height: 0;
+}
+
+
+.extent {
+  stroke: #fff;
+  fill-opacity: .125;
+  fill: blue;
+  shape-rendering: crispEdges;
+}
+
+
+body {
+	background-color:black;
+	font-family:helvetica;
+	font-size:12px;
+}
+
+.fileTitle {
+	
+}
+
+.menu_panel {
+	background-color:grey;
+	position: absolute;
+}
+
+.menu {
+	position: absolute;
+}
+
+.svg {
+	position: absolute;
+	left:0px;
+	top:0px;
+}
+
+<!-- context menu -->
+.cmenu {
+	margin: 0; 
+	
+	list-style-type: none; 
+	
+}
+
+
+#context_menu div:hover {
+
+	background-color:#ADD8E6;
+
+}
