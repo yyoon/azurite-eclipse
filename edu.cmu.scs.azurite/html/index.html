@@ -8,8 +8,12 @@
     <script type="text/javascript" src="scripts/d3.v2.js"></script>
 	<script type="text/javascript" src="scripts/jquery-1.8.2.js"></script>
 	<script type="text/javascript" src="scripts/jquery-ui-1.9.1.custom.js"></script>
+	<script type="text/javascript" src="scripts/jquery.tipsy.js"></script>
+	<script type="text/javascript" src="scripts/tooltipsy.source.js"></script>
 	
 	<LINK href="style/jquery-ui-1.9.1.custom.css" rel="stylesheet" type="text/css">
+	<link href="style/tipsy.css" rel="stylesheet" type="text/css" />
+	
 	<style type="text/css">
 
 #sel_box
@@ -64,9 +68,10 @@ body {
 	
 }
 
+
 #context_menu div:hover {
 
-background-color:#ADD8E6;
+	background-color:#ADD8E6;
 
 }
 
@@ -74,8 +79,8 @@ background-color:#ADD8E6;
 </style>
   </head>
   <body>
-	<div oncontextmenu="return false;">
-		<div class='menu_panel' id='menu_panel'>
+	<div id='main' oncontextmenu="return false;">
+		<div class='menu_panel' id='menu_panel' style='z-index:1000'>
 			<button id='button_before' class='menu' onclick='show_before()'><</button>
 			<button id='button_after' class='menu' onclick='show_after()'>></button>
 			<button id='bar_zoom_in' class='menu' onclick='bar_zoom_in()'>+</button>
@@ -94,19 +99,18 @@ background-color:#ADD8E6;
 		</div>
 		
 		<div id='main_panel'>
-			<div id='scrollbar_x_wrapper' class='scroll-bar-wrap'>
-				<div id='scrollbar_x'></div>
-			</div>
+		
+			<div id='x_scrollbar'></div>
+
 			
 			<div id='scrollbar_y_wrapper'>
 				<div id='scrollbar_y'></div>
 			</div>
 		</div>
 		
-		<div id="context_menu" style="background-color: white; border: 2px solid #FFA500; display: none; position: absolute; width:100px; height:150"> 
-			
-				<div onclick='undo()'>Undo</div>
-				<div>Redo</div>
+		<div id="context_menu" style="z-index: 10000; background-color: white; border: 2px solid #FFA500; display: none; position: absolute; width:100px; height:150"> 
+				<div id='undo' onclick='undo()'>Undo</div>
+				<div id='redo'>Redo</div>
 				
 			
 		</div>
