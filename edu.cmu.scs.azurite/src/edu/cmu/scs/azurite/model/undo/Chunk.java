@@ -13,6 +13,10 @@ import java.util.TreeSet;
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.commands.runtime.Segment;
 
+/**
+ * @author yyoon1
+ *
+ */
 @SuppressWarnings("serial")
 public class Chunk extends ArrayList<Segment> {
 	
@@ -66,6 +70,11 @@ public class Chunk extends ArrayList<Segment> {
 		return false;
 	}
 	
+	/**
+	 * Gets a new chunk which includes all the conflicting operations within
+	 * the same region.
+	 * @return the expanded chunk object.
+	 */
 	public Chunk getExpandedChunkInRange() {
 		Chunk result = new Chunk();
 		
@@ -84,6 +93,47 @@ public class Chunk extends ArrayList<Segment> {
 					for (RuntimeDC conflict : dc.getConflicts()) {
 						if (!set.contains(conflict)) {
 							queue.add(conflict);
+						}
+					}
+				}
+			}
+		}
+		
+		Collections.sort(result, Segment.getLocationComparator());
+		return result;
+	}
+	
+	/**
+	 * Gets a new chunk which includes the conflicting operations up to the
+	 * specified depth.
+	 * 
+	 * @param depth
+	 *            maximum depth to include conflicting operations.
+	 *            -1 if unlimited.
+	 * @return the expanded chunk object.
+	 */
+	public Chunk getExpandedChunkWithDepth(int depth) {
+		Chunk result = new Chunk();
+		
+		// Flood fill.
+		Queue<Pair<RuntimeDC, Integer>> queue = new LinkedList<Pair<RuntimeDC, Integer>>();
+		for (RuntimeDC dc : getInvolvedChanges())
+			queue.add(new Pair<RuntimeDC, Integer>(dc, 0));
+		Set<RuntimeDC> set = new HashSet<RuntimeDC>();
+		
+		while (!queue.isEmpty()) {
+			Pair<RuntimeDC, Integer> pair = queue.remove();
+			RuntimeDC dc = pair.getFirst();
+
+			if (!set.contains(dc)) {
+				set.add(dc);
+				result.addAll(dc.getAllSegments());
+
+				if (depth == -1 || pair.getSecond().compareTo(depth) < 0) {
+					for (RuntimeDC conflict : dc.getConflicts()) {
+						if (!set.contains(conflict)) {
+							queue.add(new Pair<RuntimeDC, Integer>(conflict,
+									pair.getSecond() + 1));
 						}
 					}
 				}

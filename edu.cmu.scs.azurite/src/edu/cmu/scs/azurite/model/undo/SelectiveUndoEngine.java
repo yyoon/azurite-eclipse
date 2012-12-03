@@ -18,6 +18,8 @@ import edu.cmu.scs.fluorite.util.Utilities;
  *
  */
 public class SelectiveUndoEngine {
+	
+	private static final int MAX_EXPANSION_DEPTH = 2;
 
 	// Singleton pattern.
 	private static SelectiveUndoEngine instance = null;
@@ -100,23 +102,13 @@ public class SelectiveUndoEngine {
 		// For each chunk..
 		for (Chunk chunk : chunks) {
 			try {
-				int initialOffset = chunk.getStartOffset();
+				Chunk expandedChunk = chunk.getExpandedChunkWithDepth(MAX_EXPANSION_DEPTH);
+				int initialOffset = expandedChunk.getStartOffset();
 				String initialContent = document.get(initialOffset,
-						chunk.getChunkLength());
+						expandedChunk.getChunkLength());
 				
 				// Is there a conflict?
 				if (chunk.hasConflictOutsideThisChunk()) {
-	/*				// Temporarily, just mark the chunks on the styled text!!
-					StyledText styledText = Utilities.getStyledText(EventRecorder
-							.getInstance().getEditor());
-					Shell shell = styledText.getShell();
-					Color foreground = shell.getDisplay().getSystemColor(SWT.COLOR_YELLOW);
-					Color background = shell.getDisplay().getSystemColor(SWT.COLOR_BLACK);
-					
-					StyleRange styleRange = new StyleRange(chunk.getStartOffset(),
-							chunk.getChunkLength(), foreground, background);
-					styledText.setStyleRange(styleRange);*/
-					
 					List<UndoAlternative> alternatives = doSelectiveUndoChunkWithConflicts(
 							chunk, initialContent);
 					
@@ -163,6 +155,19 @@ public class SelectiveUndoEngine {
 				"Revert this code to the way it was right before all the selected operations were performed.",
 				doSelectiveUndoChunkWithoutConflicts(
 						chunk.getExpandedChunkInRange(), initialContent)));
+		
+		// Revert this chunk to the way it was before, including the unselected conflicting operations.
+		for (int i = 1; i <= MAX_EXPANSION_DEPTH; ++i) {
+			if (i == 0)
+				continue;
+			
+			result.add(new UndoAlternative(
+					"Revert this code including the non-selected conflicting operations with depth "
+							+ i + ".",
+					doSelectiveUndoChunkWithoutConflicts(chunk
+							.getExpandedChunkWithDepth(MAX_EXPANSION_DEPTH),
+							initialContent)));
+		}
 		
 		// Strictly selectively undo only the selected operations.
 		result.add(new UndoAlternative(
