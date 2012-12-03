@@ -178,6 +178,21 @@ public class SelectiveUndoEngine {
 		result.add(new UndoAlternative(
 				"Keep the code as it is. Do not perform selective undo for this chunk.", initialContent));
 		
+		// Merge the same results.
+		for (int i = 1; i < result.size(); ++i) {
+			UndoAlternative cur = result.get(i);
+
+			for (int j = 0; j < i; ++j) {
+				UndoAlternative prev = result.get(j);
+				// TODO maybe ignore the whitespaces / indentations in the future.
+				if (prev.getResultingCode().equals(cur.getResultingCode())) {
+					result.remove(i);
+					--i;
+					break;
+				}
+			}
+		}
+		
 		// Return the result as an unmodifiable list.
 		return Collections.unmodifiableList(result);
 	}
