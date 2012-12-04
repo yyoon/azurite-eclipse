@@ -391,12 +391,23 @@ function redraw() {
 
 	d3.select('.indicator').remove();
 	
+	/*
 	sub_bar.append('line')
 		.attr('class', 'indicator')
 		.attr('x1', x_bar(max_timestamp))
 		.attr('y1', 0)
 		.attr('x2', x_bar(max_timestamp))
 		.attr('y2', (files_to_draw.length * file_zoom_levels[file_zoom_index]))
+		.attr('stroke', 'yellow' )
+		.style('stroke-width', 2);
+	*/
+	
+	sub_bar.append('line')
+		.attr('class', 'indicator')
+		.attr('x1', x_bar(max_timestamp))
+		.attr('y1', 0)
+		.attr('x2', x_bar(max_timestamp))
+		.attr('y2', y(chart_height))
 		.attr('stroke', 'yellow' )
 		.style('stroke-width', 2);
 	
