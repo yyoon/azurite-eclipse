@@ -19,7 +19,7 @@ var INSERTION = 0;
 var DELETION = 1;
 var REPLACEMENT = 2;
 
-var LOCAL_MODE = true;
+var LOCAL_MODE = false;
 
 var files = [];
 var blocks_to_draw = [];
@@ -1126,17 +1126,15 @@ function show_down() {
 function undo() {
 	// close context menu if there is any
 	hideContextMenu();
-
-	console.log('selected length : ' + selected.length);
-	if(selected.length > 0) {
-		var result = [];
-		
-		for(var i = 0; i < selected.length; i++) {
-			result.push(selected[i].id);
-		}
+	console.log('undo');
+	var result = [];
 	
+	for(var i in selected) {
+		result.push(selected[i].id);
+	}
+	
+	if(result.length > 0)
 		doUndo(result);
 	
-	}
 
 }
