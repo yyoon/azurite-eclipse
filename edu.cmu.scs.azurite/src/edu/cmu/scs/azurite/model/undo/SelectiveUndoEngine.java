@@ -7,9 +7,12 @@ import java.util.List;
 import java.util.ListIterator;
 
 import org.eclipse.jface.text.IDocument;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Shell;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.commands.runtime.Segment;
+import edu.cmu.scs.azurite.jface.dialogs.ConflictDialog;
 import edu.cmu.scs.fluorite.model.EventRecorder;
 import edu.cmu.scs.fluorite.util.Utilities;
 
@@ -77,7 +80,7 @@ public class SelectiveUndoEngine {
 		
 		doSelectiveUndo(runtimeDocChanges, document);
 	}
-		
+
 
 	/**
 	 * @param runtimeDocChanges
@@ -109,8 +112,21 @@ public class SelectiveUndoEngine {
 				
 				// Is there a conflict?
 				if (chunk.hasConflictOutsideThisChunk()) {
+					
 					List<UndoAlternative> alternatives = doSelectiveUndoChunkWithConflicts(
 							chunk, initialContent);
+					
+					final Shell parentShell = Display.getDefault().getActiveShell();
+					final Shell shell = new ConflictDialog(parentShell,
+							document, initialOffset, initialContent.length(),
+							alternatives);
+
+					// Open up the shell and run the event loop. (cause it's modal!)
+					shell.open();
+					while (!shell.isDisposed()) {
+						if (!Display.getDefault().readAndDispatch())
+							Display.getDefault().sleep();
+					}
 					
 					// Just print to the console..
 					System.out.println("====================");
