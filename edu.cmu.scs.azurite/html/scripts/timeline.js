@@ -19,11 +19,11 @@ var INSERTION = 0;
 var DELETION = 1;
 var REPLACEMENT = 2;
 
-var LOCAL_MODE = false;
+var LOCAL_MODE = true;
 
 var files = [];
 var blocks_to_draw = [];
-var selected = [];
+var selected = {};
 var xmlDoc = null;
 
 // last file opened
@@ -36,11 +36,11 @@ var max_timestamp = -1;
 var startTimestamp;
 
 // context menu
-var div_context;
+var isShowingContextMenu = false;
 var isRightClicked;
+var isCtrlPressed;
 
 var dragging = false, dragStart = [];
-var shifted = false;
 
 var temp = -1;
 
@@ -242,7 +242,6 @@ var svg = d3.select('#main_panel')
 
 var svg_element = document.getElementById('svg');
 
-	
 var sub_file = svg.append('g')
 	.attr('class', 'sub_file')
 	
@@ -330,6 +329,7 @@ function add_block(id, timestamp1, timestamp2, type) {
 		max_timestamp = timestamp2;
 	}
 
+	
 	redraw();
 }
 
@@ -347,7 +347,7 @@ function redraw() {
 	sub_bar.selectAll('rect').remove();
 	
 	// remove highlights
-	selected = [];
+	selected = {};
 	sub_bar.selectAll('polygon').remove();
 	
 	// reset svg width and height;
@@ -358,8 +358,11 @@ function redraw() {
 	// recalculate page index and number of files to draw
 	bar_max_page_index = Math.ceil(max_timestamp / bar_zoom_levels[bar_zoom_index])-1;
 	
-	if(bar_cur_index > bar_max_page_index)
+	if(bar_cur_index > bar_max_page_index) 
 		bar_cur_index = bar_max_page_index;
+
+	if(bar_cur_index < 0)
+		bar_cur_index = 0;
 	
 	min_to_show = bar_cur_index * bar_zoom_levels[bar_zoom_index];
 	max_to_show = min_to_show + bar_zoom_levels[bar_zoom_index];
@@ -386,6 +389,26 @@ function redraw() {
 	draw_rule(chart_height);
 	draw_scrollbar(title_width, bar_width, chart_height);
 
+	d3.select('.indicator').remove();
+	
+	sub_bar.append('line')
+		.attr('class', 'indicator')
+		.attr('x1', x_bar(max_timestamp))
+		.attr('y1', 0)
+		.attr('x2', x_bar(max_timestamp))
+		.attr('y2', (files_to_draw.length * file_zoom_levels[file_zoom_index]))
+		.attr('stroke', 'yellow' )
+		.style('stroke-width', 2);
+	
+	$('.block').tipsy({ 
+        gravity: 'se', 
+        html: true, 
+        title: function() {
+			  var d = this.__data__;
+			  return 'id: ' + d.id;
+		}
+	});
+	
 	
 	var draggable_area = {
 		top: (menu_panel_height + chart_margins.top),
@@ -395,14 +418,32 @@ function redraw() {
 	};
 	
 	
+	document.addEventListener("keydown", function(e) {
+		if(e.keyCode == 17) 
+			isCtrlPressed = true;
+		
+	}
+	, false);
+	
+	document.addEventListener("keyup", function(e) {
+		if(e.keyCode == 17)
+			isCtrlPressed = false;
+	
+	}
+	, false);
+	
+	
 	document.onmousedown =  function(e) {
+		console.log('down');
+		
+		if(isShowingContextMenu)
+			return;
 		
 		if ("which" in event) { // Gecko (Firefox), WebKit (Safari/Chrome) & Opera
 			isRightClicked = event.which == 3; 
 		} else if ("button" in event) { // IE, Opera 
 			isRightClicked = event.button == 2; 
 		}
-		
 		
 		if(isRightClicked || e.clientX < draggable_area.left || e.clientX > draggable_area.right || e.clientY < draggable_area.top || e.clientY > draggable_area.bottom) {
 			return;
@@ -413,7 +454,11 @@ function redraw() {
 		
 		dragging = true;
 		
-		sub_bar.selectAll('polygon').remove();
+		console.log(isCtrlPressed);
+		if(!isCtrlPressed) {
+			selected = {};
+			sub_bar.selectAll('polygon').remove();
+		}
 		
 		d3.select('.selection_box')
 			.attr('x', e.clientX)
@@ -470,6 +515,7 @@ function redraw() {
 	
 	document.onmouseup = function(e) {
 		if(isRightClicked) {
+			console.log('up');
 			showContextMenu(e);
 			return;
 		}
@@ -477,12 +523,10 @@ function redraw() {
 		if(!dragging)
 			return;
 		
-	
 		d3.select('.selection_box')
 			.attr('display', 'none');
 		
 		var x1, y1, x2, y2;
-		selected = [];
 	
 		if(dragStart[0] <= e.clientX) {
 			x1 = dragStart[0];
@@ -851,10 +895,6 @@ function initContextMenu() {
 }
  
 function showContextMenu(event) {	
-	if(selected == []) {
-		console.log('aaa');
-		return;
-	}
 
 	var offset_x = 0, offset_y = 0;
 	
@@ -870,20 +910,82 @@ function showContextMenu(event) {
 	div_context.style.top = event.clientY -offset_y -10 + 'px';
 	div_context.style.display = 'block';
 	
-	
+	isShowingContextMenu = true;
 }
 
 function hideContextMenu() {
 	div_context.style.display = 'none';
+	isShowingContextMenu = false;
 }
 
+
 function draw_highlight(x1, y1, x2, y2, offsetX, offsetY) {
-	var blockLength = blocks_to_draw.length;
+	sub_bar.selectAll('polygon').remove();
 	
-	console.log(x1, y1, x2, y2);
+	var count = 0;
+	var blockLength = blocks_to_draw.length;
 	
 	for(var i = 0; i < blockLength; i++) {
 		if(trivial_reject_test(x1, y1, x2, y2, offsetX, offsetY, blocks_to_draw[i]) == 0) {
+			selected[i] = blocks_to_draw[i];
+		}
+	}
+	
+	var itemsToHighlight = [];
+	var prev = null;
+	var item;
+	
+	for(i in selected) 
+		count++;
+	
+	
+	console.log("COUNT" + count);
+	
+	
+	if(count > 0) {
+		for(i in selected) {
+			
+			if(prev == null) {
+				prev = selected[i]
+				item = {startX: prev.x, startY: prev.y, endX: prev.x + prev.width, endY: prev.y + prev.height};
+			} else {
+				if(item.startY == selected[i].y &&  Math.abs(item.endX - selected[i].x) <= 8) {
+					item.endX = (item.endX > (selected[i].x + selected[i].width)) ? item.endX : (selected[i].x + selected[i].width);
+				} else {
+					itemsToHighlight.push(item);
+					item = {startX: selected[i].x, startY: selected[i].y, endX: selected[i].x + selected[i].width, endY: selected[i].y + selected[i].height};
+				}
+				prev = selected[i];
+			}
+		}
+		itemsToHighlight.push(item);
+			
+		var highlight_width = 3;
+		
+		if(itemsToHighlight != []) {
+			blocks.selectAll('polygon')
+				.data(itemsToHighlight).enter().append('polygon')
+				.attr("points", function(d) { return ((d.startX) + "," + (d.startY) + " \ " + 
+				(d.endX) + "," + (d.startY) + " \ " +
+				(d.endX) + "," + (d.endY) + " \ " +
+				(d.startX) + "," + (d.endY)) })
+				.style("stroke", "yellow")
+				.style("stroke-width", highlight_width)
+				.style("fill-opacity", 0);
+		}
+	}
+}
+
+/*
+function draw_highlight(x1, y1, x2, y2, offsetX, offsetY) {
+	var blockLength = blocks_to_draw.length;
+	
+	for(var i = 0; i < blockLength; i++) {
+		if(trivial_reject_test(x1, y1, x2, y2, offsetX, offsetY, blocks_to_draw[i]) == 0) {
+			if(selected[blocks_to_draw[i]] == false) {
+				selected[blocks_to_draw[i]] = true;
+			}
+		
 			selected.push(blocks_to_draw[i]);
 		}
 	}
@@ -924,7 +1026,7 @@ function draw_highlight(x1, y1, x2, y2, offsetX, offsetY) {
 			
 	}
 }
-	
+*/
 function trivial_reject_test(x1, y1, x2, y2, offsetX, offsetY, block) {
 	var result0 = 0, result1= 0;
 	var left = 1;
@@ -1025,6 +1127,7 @@ function undo() {
 	// close context menu if there is any
 	hideContextMenu();
 
+	console.log('selected length : ' + selected.length);
 	if(selected.length > 0) {
 		var result = [];
 		

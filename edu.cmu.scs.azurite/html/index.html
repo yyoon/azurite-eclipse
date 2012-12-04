@@ -70,9 +70,8 @@ body {
 
 
 #context_menu div:hover {
-
+	cursor:pointer;
 	background-color:#ADD8E6;
-
 }
 
 
@@ -109,10 +108,8 @@ body {
 		</div>
 		
 		<div id="context_menu" style="z-index: 10000; background-color: white; border: 2px solid #FFA500; display: none; position: absolute; width:100px; height:150"> 
-				<div id='undo' onclick='undo()'>Undo</div>
-				<div id='redo'>Redo</div>
-				
-			
+			<div id='undo' onclick='undo()'>Undo</div>
+			<div id='redo'>Redo</div>
 		</div>
 		
 		<script type="text/javascript" src="scripts/timeline.js"></script>
