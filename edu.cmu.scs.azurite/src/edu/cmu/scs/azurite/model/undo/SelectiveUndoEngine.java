@@ -126,7 +126,7 @@ public class SelectiveUndoEngine {
 						
 						ConflictDialog conflictDialog = new ConflictDialog(
 								parentShell, document, initialOffset,
-								initialContent.length(), alternatives);
+								initialContent.length(), alternatives, chunk);
 						conflictDialog.create();
 						conflictDialog.open();
 					}

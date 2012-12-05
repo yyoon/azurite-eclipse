@@ -102,4 +102,11 @@ public class RuntimeReplace extends RuntimeDC {
 		return 2;
 	}
 
+	@Override
+	public String toString() {
+		return "[Replace:" + getOriginal().getCommandIndex() + "] \""
+				+ getOriginal().getDeletedText() + "\" -> \""
+				+ getOriginal().getInsertedText() + "\"";
+	}
+
 }

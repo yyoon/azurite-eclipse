@@ -82,5 +82,11 @@ public class RuntimeInsert extends RuntimeDC {
 	public int getTypeIndex() {
 		return 0;
 	}
+
+	@Override
+	public String toString() {
+		return "[Insert:" + getOriginal().getCommandIndex() + "] \""
+				+ getOriginal().getText() + "\"";
+	}
 	
 }

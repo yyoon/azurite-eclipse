@@ -21,38 +21,49 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
-import org.eclipse.swt.layout.RowData;
 import org.eclipse.swt.layout.RowLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Group;
+import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
 
+import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
+import edu.cmu.scs.azurite.model.undo.Chunk;
 import edu.cmu.scs.azurite.model.undo.UndoAlternative;
 import edu.cmu.scs.fluorite.util.Utilities;
 
 @SuppressWarnings("restriction")
 public class ConflictDialog extends TitleAreaDialog {
 	
-	private static final int MINIMUM_HEIGHT = 500;
+	private static final int MINIMUM_OPERATIONS_HEIGHT = 50;
+	
+	private static final int MINIMUM_PREVIEW_WIDTH = 700;
+	private static final int MINIMUM_PREVIEW_HEIGHT = 500;
+	
+	private static final int MARGIN_WIDTH = 10;
+	private static final int MARGIN_HEIGHT = 10;
+	
+	private static final int SPACING = 10;
 	
 	private static final String TEXT = "Selective Undo";
 	private static final String TITLE = "Conflict Detected";
 	private static final String DEFAULT_MESSAGE = "One or more conflicts were detected while performing selective undo.";
-
+			
 	private IDocument mOriginalDoc;
 	private IDocument mCopyDoc;
 	private int mOffset;
 	private int mLength;
 	private int mOriginalLength;
 	private List<UndoAlternative> mAlternatives;
+	private Chunk mChunk;
 	
 	private ISourceViewer mCodePreview;
 	private Color mBackground;
 
 	public ConflictDialog(Shell parent, IDocument originalDoc,
-			int offset, int length, List<UndoAlternative> alternatives) {
+			int offset, int length, List<UndoAlternative> alternatives, Chunk chunk) {
 		super(parent);
 		
 		mOriginalDoc = originalDoc;
@@ -61,6 +72,7 @@ public class ConflictDialog extends TitleAreaDialog {
 		mLength = length;
 		mOriginalLength = length;
 		mAlternatives = alternatives;
+		mChunk = chunk;
 		
 		mBackground = new Color(parent.getDisplay(), 186, 205, 224);
 		
@@ -80,7 +92,15 @@ public class ConflictDialog extends TitleAreaDialog {
 	@Override
 	protected Control createDialogArea(Composite parent) {
 		// Use GridLayout.
-		parent.setLayout(new GridLayout(3, true));
+		GridLayout gridLayout = new GridLayout(3, false);
+		gridLayout.marginWidth = MARGIN_WIDTH;
+		gridLayout.marginHeight = MARGIN_HEIGHT;
+		gridLayout.horizontalSpacing = SPACING;
+		gridLayout.verticalSpacing = SPACING;
+		parent.setLayout(gridLayout);
+		
+		// Involved Operations Group
+		createInvolvedOperationsGroup(parent);
 		
 		// Code Preview Group
 		createCodePreviewGroup(parent);
@@ -91,17 +111,45 @@ public class ConflictDialog extends TitleAreaDialog {
 		return parent;
 	}
 
+	private void createInvolvedOperationsGroup(Composite parent) {
+		Composite groupOperations = new Composite(parent, SWT.NONE);
+		
+		GridLayout gridLayout = new GridLayout();
+		gridLayout.marginWidth = 0;
+		gridLayout.marginHeight = 0;
+		groupOperations.setLayout(gridLayout);
+		
+		GridData gridData = new GridData(GridData.FILL, GridData.FILL, true, true, 3, 1);
+		gridData.minimumHeight = MINIMUM_OPERATIONS_HEIGHT;
+		groupOperations.setLayoutData(gridData);
+		
+		
+		// Add the label.
+		Label label = new Label(groupOperations, SWT.NONE);
+		label.setText("The following operations were selected but had some conflicts outside of the selection.");
+		label.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+		
+		// Add the list.
+		org.eclipse.swt.widgets.List list = new org.eclipse.swt.widgets.List(groupOperations, SWT.V_SCROLL);
+		list.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
+		
+		for (RuntimeDC dc : mChunk.getInvolvedChanges()) {
+			list.add(dc.toString());
+		}
+	}
+
 	private void createCodePreviewGroup(Composite parent) {
 		Group groupPreview = new Group(parent, SWT.NONE);
 		groupPreview.setText("Code Preview");
 		
 		FillLayout fillLayout = new FillLayout();
-		fillLayout.marginWidth = 10;
-		fillLayout.marginHeight = 10;
+		fillLayout.marginWidth = MARGIN_WIDTH;
+		fillLayout.marginHeight = MARGIN_HEIGHT;
 		groupPreview.setLayout(fillLayout);
 		
 		GridData gridData = new GridData(GridData.FILL, GridData.FILL, true, true, 2, 1);
-		gridData.minimumHeight = MINIMUM_HEIGHT;
+		gridData.minimumWidth = MINIMUM_PREVIEW_WIDTH;
+		gridData.minimumHeight = MINIMUM_PREVIEW_HEIGHT;
 		groupPreview.setLayoutData(gridData);
 		
 		
@@ -139,9 +187,9 @@ public class ConflictDialog extends TitleAreaDialog {
 		RowLayout rowLayout = new RowLayout(SWT.VERTICAL);
 		rowLayout.fill = true;
 		rowLayout.pack = false;
-		rowLayout.spacing = 10;
-		rowLayout.marginWidth = 10;
-		rowLayout.marginHeight = 10;
+		rowLayout.spacing = SPACING;
+		rowLayout.marginWidth = MARGIN_WIDTH;
+		rowLayout.marginHeight = MARGIN_HEIGHT;
 		
 		groupAlternatives.setLayout(rowLayout);
 		groupAlternatives.setLayoutData(new GridData(GridData.FILL, GridData.FILL, true, true, 1, 1));

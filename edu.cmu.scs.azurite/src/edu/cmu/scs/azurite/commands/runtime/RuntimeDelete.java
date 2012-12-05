@@ -86,4 +86,10 @@ public class RuntimeDelete extends RuntimeDC {
 		return 1;
 	}
 
+	@Override
+	public String toString() {
+		return "[Delete:" + getOriginal().getCommandIndex() + "] \""
+				+ getOriginal().getText() + "\"";
+	}
+
 }
