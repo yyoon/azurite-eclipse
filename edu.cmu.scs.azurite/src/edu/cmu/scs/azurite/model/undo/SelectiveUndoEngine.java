@@ -116,29 +116,24 @@ public class SelectiveUndoEngine {
 					List<UndoAlternative> alternatives = doSelectiveUndoChunkWithConflicts(
 							chunk, initialContent);
 					
-					final Shell parentShell = Display.getDefault().getActiveShell();
-					final Shell shell = new ConflictDialog(parentShell,
-							document, initialOffset, initialContent.length(),
-							alternatives);
-
-					// Open up the shell and run the event loop. (cause it's modal!)
-					shell.open();
-					while (!shell.isDisposed()) {
-						if (!Display.getDefault().readAndDispatch())
-							Display.getDefault().sleep();
+					// If the result is obvious, don't bother to ask the user.
+					if (alternatives.size() <= 2) {
+						document.replace(initialOffset, initialContent.length(),
+								alternatives.get(0).getResultingCode());
 					}
-					
-					// Just print to the console..
-					System.out.println("====================");
-					System.out.println(chunk);
-					System.out.println("Initial Content:");
-					System.out.println(initialContent);
-					
-					for (int i = 0; i < alternatives.size(); ++i) {
-						UndoAlternative alternative = alternatives.get(i);
-						System.out.println("Alternative #" + (i + 1) + ": "
-								+ alternative.getDescription());
-						System.out.println(alternative.getResultingCode());
+					else {
+						final Shell parentShell = Display.getDefault().getActiveShell();
+						final Shell shell = new ConflictDialog(parentShell,
+								document, initialOffset, initialContent.length(),
+								alternatives);
+	
+						// Open up the shell and run the event loop. (cause it's modal!)
+						// The ConflictDialog will take care of actually replacing the document content.
+						shell.open();
+						while (!shell.isDisposed()) {
+							if (!Display.getDefault().readAndDispatch())
+								Display.getDefault().sleep();
+						}
 					}
 				}
 				// No conflicts. just undo them backwards.
