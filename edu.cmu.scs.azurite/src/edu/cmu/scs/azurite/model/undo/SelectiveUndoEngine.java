@@ -123,17 +123,12 @@ public class SelectiveUndoEngine {
 					}
 					else {
 						final Shell parentShell = Display.getDefault().getActiveShell();
-						final Shell shell = new ConflictDialog(parentShell,
-								document, initialOffset, initialContent.length(),
-								alternatives);
-	
-						// Open up the shell and run the event loop. (cause it's modal!)
-						// The ConflictDialog will take care of actually replacing the document content.
-						shell.open();
-						while (!shell.isDisposed()) {
-							if (!Display.getDefault().readAndDispatch())
-								Display.getDefault().sleep();
-						}
+						
+						ConflictDialog conflictDialog = new ConflictDialog(
+								parentShell, document, initialOffset,
+								initialContent.length(), alternatives);
+						conflictDialog.create();
+						conflictDialog.open();
 					}
 				}
 				// No conflicts. just undo them backwards.

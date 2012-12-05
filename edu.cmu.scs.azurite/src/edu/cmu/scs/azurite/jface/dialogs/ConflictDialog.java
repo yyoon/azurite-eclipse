@@ -5,6 +5,7 @@ import java.util.List;
 import org.eclipse.jdt.internal.ui.JavaPlugin;
 import org.eclipse.jdt.ui.text.JavaSourceViewerConfiguration;
 import org.eclipse.jdt.ui.text.JavaTextTools;
+import org.eclipse.jface.dialogs.TitleAreaDialog;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IDocument;
@@ -24,22 +25,21 @@ import org.eclipse.swt.layout.RowData;
 import org.eclipse.swt.layout.RowLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Group;
-import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Shell;
 
 import edu.cmu.scs.azurite.model.undo.UndoAlternative;
 import edu.cmu.scs.fluorite.util.Utilities;
 
 @SuppressWarnings("restriction")
-public class ConflictDialog extends Shell {
+public class ConflictDialog extends TitleAreaDialog {
 	
-	private static final int WIDTH = 1024;
-	private static final int HEIGHT = 768;
+	private static final int MINIMUM_HEIGHT = 500;
 	
-	private static final int BUTTON_WIDTH = 92;
-	private static final int BUTTON_HEIGHT = 25;
+	private static final String TEXT = "Selective Undo";
+	private static final String TITLE = "Conflict Detected";
+	private static final String DEFAULT_MESSAGE = "One or more conflicts were detected while performing selective undo.";
 
 	private IDocument mOriginalDoc;
 	private IDocument mCopyDoc;
@@ -53,7 +53,7 @@ public class ConflictDialog extends Shell {
 
 	public ConflictDialog(Shell parent, IDocument originalDoc,
 			int offset, int length, List<UndoAlternative> alternatives) {
-		super(parent, SWT.SHELL_TRIM | SWT.APPLICATION_MODAL);
+		super(parent);
 		
 		mOriginalDoc = originalDoc;
 		mCopyDoc = new Document(originalDoc.get());
@@ -62,39 +62,47 @@ public class ConflictDialog extends Shell {
 		mOriginalLength = length;
 		mAlternatives = alternatives;
 		
-		mBackground = new Color(getDisplay(), 186, 205, 224);
+		mBackground = new Color(parent.getDisplay(), 186, 205, 224);
 		
-		setImage(parent.getImage());
-		setText("Selective Undo - Conflict Detected");
-		setSize(WIDTH, HEIGHT);
-		
-		// Enable ESC key.
-		enableEscapeKey();
-		
-		// Use GridLayout.
-		setLayout(new GridLayout(3, true));
-		
-		// Code Preview Group
-		createCodePreviewGroup();
-		
-		// Alternatives Group
-		createAlternativesGroup();
-		
-		// Buttons
-		createButtonPanel();
-	}
-	
-	@Override
-	protected void checkSubclass() {
-		// Do nothing here so that I can subclass without getting an Exception.
-		// super.checkSubclass();
+		setHelpAvailable(false);
 	}
 
-	private void createCodePreviewGroup() {
-		Group groupPreview = new Group(this, SWT.NONE);
+	@Override
+	public void create() {
+		super.create();
+		
+		getShell().setText(TEXT);
+		
+		setTitle(TITLE);
+		setMessage(DEFAULT_MESSAGE);
+	}
+
+	@Override
+	protected Control createDialogArea(Composite parent) {
+		// Use GridLayout.
+		parent.setLayout(new GridLayout(3, true));
+		
+		// Code Preview Group
+		createCodePreviewGroup(parent);
+		
+		// Alternatives Group
+		createAlternativesGroup(parent);
+		
+		return parent;
+	}
+
+	private void createCodePreviewGroup(Composite parent) {
+		Group groupPreview = new Group(parent, SWT.NONE);
 		groupPreview.setText("Code Preview");
-		groupPreview.setLayout(new FillLayout());
-		groupPreview.setLayoutData(new GridData(GridData.FILL, GridData.FILL, true, true, 2, 1));
+		
+		FillLayout fillLayout = new FillLayout();
+		fillLayout.marginWidth = 10;
+		fillLayout.marginHeight = 10;
+		groupPreview.setLayout(fillLayout);
+		
+		GridData gridData = new GridData(GridData.FILL, GridData.FILL, true, true, 2, 1);
+		gridData.minimumHeight = MINIMUM_HEIGHT;
+		groupPreview.setLayoutData(gridData);
 		
 		
 		// Create the Java Source Viewer.
@@ -124,14 +132,16 @@ public class ConflictDialog extends Shell {
 		mCodePreview.getTextWidget().setFont(Utilities.getFont());
 	}
 
-	private void createAlternativesGroup() {
-		Group groupAlternatives = new Group(this, SWT.NONE);
+	private void createAlternativesGroup(Composite parent) {
+		Group groupAlternatives = new Group(parent, SWT.NONE);
 		groupAlternatives.setText("Alternatives");
 		
 		RowLayout rowLayout = new RowLayout(SWT.VERTICAL);
 		rowLayout.fill = true;
 		rowLayout.pack = false;
 		rowLayout.spacing = 10;
+		rowLayout.marginWidth = 10;
+		rowLayout.marginHeight = 10;
 		
 		groupAlternatives.setLayout(rowLayout);
 		groupAlternatives.setLayoutData(new GridData(GridData.FILL, GridData.FILL, true, true, 1, 1));
@@ -161,49 +171,6 @@ public class ConflictDialog extends Shell {
 		selectAlternative(0);
 	}
 
-	private void createButtonPanel() {
-		Composite buttonPanel = new Composite(this, SWT.NONE);
-		RowLayout rowLayout = new RowLayout();
-		rowLayout.pack = false;
-		buttonPanel.setLayout(rowLayout);
-		buttonPanel.setLayoutData(new GridData(GridData.END, GridData.CENTER, true, false, 3, 1));
-		
-		Button buttonOK = new Button(buttonPanel, SWT.PUSH);
-		buttonOK.setText("OK");
-		buttonOK.setLayoutData(new RowData(BUTTON_WIDTH, BUTTON_HEIGHT));
-		buttonOK.addSelectionListener(new SelectionAdapter() {
-			@Override
-			public void widgetSelected(SelectionEvent e) {
-				handleOK();
-			}
-		});
-		setDefaultButton(buttonOK);
-		
-		Button buttonCancel = new Button(buttonPanel, SWT.PUSH);
-		buttonCancel.setText("Cancel");
-		buttonCancel.setLayoutData(new RowData(BUTTON_WIDTH, BUTTON_HEIGHT));
-		buttonCancel.addSelectionListener(new SelectionAdapter() {
-			@Override
-			public void widgetSelected(SelectionEvent e) {
-				handleCancel();
-			}
-		});
-	}
-
-	private void enableEscapeKey() {
-		addListener (SWT.Traverse, new Listener () {
-			public void handleEvent (Event event) {
-				switch (event.detail) {
-					case SWT.TRAVERSE_ESCAPE:
-						handleCancel();
-						event.detail = SWT.TRAVERSE_NONE;
-						event.doit = false;
-						break;
-				}
-			}
-		});
-	}
-	
 	private void selectAlternative(int index) {
 		if (index < 0 || index >= mAlternatives.size()) {
 			throw new IllegalArgumentException();
@@ -225,20 +192,25 @@ public class ConflictDialog extends Shell {
 		mCodePreview.getTextWidget().setStyleRange(range);
 	}
 	
-	private void handleCancel() {
-		// Simply close this dialog without doing anything.
-		close();
+	@Override
+	protected void cancelPressed() {
+		super.cancelPressed();
 	}
-	
-	private void handleOK() {
-		// Apply the change.
+
+	@Override
+	protected void okPressed() {
 		try {
 			mOriginalDoc.replace(mOffset, mOriginalLength, mCopyDoc.get(mOffset, mLength));
 		} catch (BadLocationException e) {
 			e.printStackTrace();
 		}
 		
-		// And then close this dialog.
-		close();
+		super.okPressed();
 	}
+
+	@Override
+	protected boolean isResizable() {
+		return true;
+	}
+	
 }
