@@ -37,7 +37,7 @@ import edu.cmu.scs.fluorite.util.Utilities;
 @SuppressWarnings("restriction")
 public class ConflictDialog extends TitleAreaDialog {
 	
-	private static final int MINIMUM_OPERATIONS_HEIGHT = 50;
+	private static final int MINIMUM_OPERATIONS_HEIGHT = 100;
 	
 	private static final int MINIMUM_PREVIEW_WIDTH = 700;
 	private static final int MINIMUM_PREVIEW_HEIGHT = 500;
@@ -47,7 +47,7 @@ public class ConflictDialog extends TitleAreaDialog {
 	
 	private static final int SPACING = 10;
 	
-	private static final String TEXT = "Selective Undo";
+	private static final String TEXT = "Azurite - Selective Undo";
 	private static final String TITLE = "Conflict Detected";
 	private static final String DEFAULT_MESSAGE = "One or more conflicts were detected while performing selective undo.";
 			
@@ -91,24 +91,34 @@ public class ConflictDialog extends TitleAreaDialog {
 
 	@Override
 	protected Control createDialogArea(Composite parent) {
+		Composite composite = createMainArea(parent);
+		
+		// Involved Operations Group
+		createInvolvedOperationsGroup(composite);
+		
+		// Code Preview Group
+		createCodePreviewGroup(composite);
+		
+		// Alternatives Group
+		createAlternativesGroup(composite);
+		
+		return parent;
+	}
+
+	private Composite createMainArea(Composite parent) {
+		Composite composite = new Composite(parent, SWT.NONE);
+		
 		// Use GridLayout.
 		GridLayout gridLayout = new GridLayout(3, false);
 		gridLayout.marginWidth = MARGIN_WIDTH;
-		gridLayout.marginHeight = MARGIN_HEIGHT;
+		gridLayout.marginHeight = 0;
+		gridLayout.marginTop = MARGIN_HEIGHT;
 		gridLayout.horizontalSpacing = SPACING;
 		gridLayout.verticalSpacing = SPACING;
-		parent.setLayout(gridLayout);
+		composite.setLayout(gridLayout);
+		composite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 		
-		// Involved Operations Group
-		createInvolvedOperationsGroup(parent);
-		
-		// Code Preview Group
-		createCodePreviewGroup(parent);
-		
-		// Alternatives Group
-		createAlternativesGroup(parent);
-		
-		return parent;
+		return composite;
 	}
 
 	private void createInvolvedOperationsGroup(Composite parent) {
