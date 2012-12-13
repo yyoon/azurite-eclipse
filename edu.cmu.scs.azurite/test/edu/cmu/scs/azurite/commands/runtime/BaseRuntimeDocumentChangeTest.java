@@ -1,6 +1,6 @@
 package edu.cmu.scs.azurite.commands.runtime;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import java.util.Map;
 
@@ -9,7 +9,6 @@ import org.eclipse.ui.IEditorPart;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.w3c.dom.Element;
 
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 import edu.cmu.scs.fluorite.commands.Delete;
@@ -69,7 +68,6 @@ public class BaseRuntimeDocumentChangeTest {
 			public Map<String, String> getAttributesMap() { return null; }
 			public Map<String, String> getDataMap() { return null; }
 			public String getCommandType() { return null; }
-			public ICommand createFrom(Element commandElement) { return null; }
 			public String getName() { return null; }
 			public String getDescription() { return null; }
 			public String getCategory() { return null; }

@@ -27,7 +27,7 @@ public class SelectiveUndoTest {
 	@Before
 	public void setUp() {
 		manager = new RuntimeHistoryManager();
-		manager.activeFileChanged("dummyProject", "dummyFile");
+		manager.activeFileChanged("dummyProject", "dummyFile", null);
 		
 		engine = SelectiveUndoEngine.getInstance();
 		

@@ -8,8 +8,11 @@ import java.util.Map;
 import org.eclipse.core.runtime.ListenerList;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
+import edu.cmu.scs.azurite.commands.runtime.Segment;
+import edu.cmu.scs.fluorite.commands.AbstractCommand;
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 import edu.cmu.scs.fluorite.commands.FileOpenCommand;
+import edu.cmu.scs.fluorite.commands.Replace;
 import edu.cmu.scs.fluorite.model.DocumentChangeListener;
 import edu.cmu.scs.fluorite.model.EventRecorder;
 
@@ -204,13 +207,13 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 	}
 	
 	public void activeFileChanged(FileOpenCommand foc) {
-		activeFileChanged(foc.getProjectName(), foc.getFilePath());
+		activeFileChanged(foc.getProjectName(), foc.getFilePath(), foc.getSnapshot());
 	}
 
 	/**
 	 * Simply updates the current file path.
 	 */
-	public void activeFileChanged(String projectName, String filePath) {
+	public void activeFileChanged(String projectName, String filePath, String snapshot) {
 		FileKey key = new FileKey(projectName, filePath);
 		setCurrentFileKey(key);
 		
@@ -219,6 +222,30 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		}
 		
 		fireActiveFileChangedEvent(key.getProjectName(), key.getFilePath());
+		
+		// TODO extract diff.
+		if (snapshot != null) {
+			int maxLength = 0;
+			for (RuntimeDC dc : getRuntimeDocumentChanges()) {
+				for (Segment segment : dc.getAllSegments()) {
+					int end = segment.getEffectiveEndOffset();
+					if (end > maxLength) {
+						maxLength = end;
+					}
+				}
+			}
+			
+			String dummyDeletedText = new String(new char[maxLength]);
+			
+			boolean prevState = AbstractCommand.getIncrementCommandID();
+			AbstractCommand.setIncrementCommandID(false);
+			
+			Replace replace = new Replace(0, maxLength, 0, 0, snapshot.length(), dummyDeletedText, snapshot, null);
+			
+			AbstractCommand.setIncrementCommandID(prevState);
+			
+			documentChangeFinalized(replace);
+		}
 	}
 
 	public void documentChanged(BaseDocumentChangeEvent docChange) {

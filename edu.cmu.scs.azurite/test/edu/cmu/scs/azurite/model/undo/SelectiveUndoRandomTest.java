@@ -49,7 +49,7 @@ public class SelectiveUndoRandomTest {
 			AbstractCommand.resetCommandID();
 
 			RuntimeHistoryManager manager = new RuntimeHistoryManager();
-			manager.activeFileChanged("dummyProject", "dummyFile");
+			manager.activeFileChanged("dummyProject", "dummyFile", null);
 			
 			Document doc = new Document(
 					randomStringOfLength(INITIAL_TEXT_LENGTH));
