@@ -9,10 +9,8 @@ import org.eclipse.core.runtime.ListenerList;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.commands.runtime.Segment;
-import edu.cmu.scs.fluorite.commands.AbstractCommand;
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 import edu.cmu.scs.fluorite.commands.FileOpenCommand;
-import edu.cmu.scs.fluorite.commands.Replace;
 import edu.cmu.scs.fluorite.model.DocumentChangeListener;
 import edu.cmu.scs.fluorite.model.EventRecorder;
 
@@ -224,7 +222,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		fireActiveFileChangedEvent(key.getProjectName(), key.getFilePath());
 		
 		// TODO extract diff.
-		if (snapshot != null) {
+/*		if (snapshot != null) {
 			int maxLength = 0;
 			for (RuntimeDC dc : getRuntimeDocumentChanges()) {
 				for (Segment segment : dc.getAllSegments()) {
@@ -246,7 +244,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 			
 			documentChangeFinalized(replace);
 		}
-	}
+*/	}
 
 	public void documentChanged(BaseDocumentChangeEvent docChange) {
 		// Do nothing here.
@@ -266,20 +264,51 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		fireDocumentChangedEvent(runtimeDocChange);
 	}
 	
-	public List<RuntimeDC> filterDocumentChangesByIds(List<Integer> ids) {
+	public List<RuntimeDC> filterDocumentChangesByIds(final List<Integer> ids) {
 		if (ids == null) {
 			throw new IllegalArgumentException();
 		}
 		
-		List<RuntimeDC> list = mDocumentChanges.get(getCurrentFileKey());
+		return filterDocumentChanges(new IRuntimeDCFilter() {
+			@Override
+			public boolean filter(RuntimeDC runtimeDC) {
+				return ids.contains(runtimeDC.getOriginal().getCommandIndex());
+			}
+		});
+	}
+	
+	public List<RuntimeDC> filterDocumentChangesByRegion(final int startOffset, final int endOffset) {
+		return filterDocumentChanges(new IRuntimeDCFilter() {
+			@Override
+			public boolean filter(RuntimeDC runtimeDC) {
+				List<Segment> segments = runtimeDC.getAllSegments();
+				
+				for (Segment segment : segments) {
+					if (startOffset < segment.getEffectiveEndOffset() &&
+						segment.getOffset() < endOffset) {
+						return true;
+					}
+				}
+				
+				return false;
+			}
+		});
+	}
+	
+	public List<RuntimeDC> filterDocumentChanges(IRuntimeDCFilter filter) {
+		if (filter == null) {
+			throw new IllegalArgumentException();
+		}
+		
+		List<RuntimeDC> list = getRuntimeDocumentChanges();
 		if (list == null) {
 			throw new IllegalStateException();
 		}
 		
 		List<RuntimeDC> result = new ArrayList<RuntimeDC>();
-		for (RuntimeDC docChange : list) {
-			if (ids.contains(docChange.getOriginal().getCommandIndex())) {
-				result.add(docChange);
+		for (RuntimeDC dc : list) {
+			if (filter.filter(dc)) {
+				result.add(dc);
 			}
 		}
 		

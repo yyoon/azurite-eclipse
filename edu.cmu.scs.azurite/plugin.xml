@@ -30,5 +30,41 @@
             class="edu.cmu.scs.azurite.plugin.AzuriteStartup">
       </startup>
    </extension>
+   <extension
+         point="org.eclipse.ui.menus">
+      <menuContribution
+            allPopups="false"
+            locationURI="popup:#CompilationUnitEditorContext?after=additions">
+         <menu
+               label="Azurite">
+            <command
+                  commandId="edu.cmu.scs.azurite.ui.commands.undoInRegionCommand"
+                  icon="icons/undo_in_region.png"
+                  style="push">
+            </command>
+         </menu>
+      </menuContribution>
+      <menuContribution
+            allPopups="false"
+            locationURI="toolbar:org.eclipse.ui.main.toolbar">
+         <toolbar
+               id="edu.cmu.scs.azurite.toolbar1"
+               label="Azurite Toolbar">
+            <command
+                  commandId="edu.cmu.scs.azurite.ui.commands.undoInRegionCommand"
+                  icon="icons/undo_in_region.png"
+                  style="push">
+            </command>
+         </toolbar>
+      </menuContribution>
+   </extension>
+   <extension
+         point="org.eclipse.ui.commands">
+      <command
+            defaultHandler="edu.cmu.scs.azurite.ui.handlers.UndoInRegionHandler"
+            id="edu.cmu.scs.azurite.ui.commands.undoInRegionCommand"
+            name="Undo Everything in Region">
+      </command>
+   </extension>
 
 </plugin>
