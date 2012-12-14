@@ -9,8 +9,10 @@ import org.eclipse.core.runtime.ListenerList;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.commands.runtime.Segment;
+import edu.cmu.scs.fluorite.commands.AbstractCommand;
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 import edu.cmu.scs.fluorite.commands.FileOpenCommand;
+import edu.cmu.scs.fluorite.commands.Replace;
 import edu.cmu.scs.fluorite.model.DocumentChangeListener;
 import edu.cmu.scs.fluorite.model.EventRecorder;
 
@@ -21,7 +23,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 	 * 
 	 * A FileKey class is composed of a project name and a file name.
 	 */
-	private class FileKey {
+	public static class FileKey {
 		
 		private final String mProjectName;
 		private final String mFilePath;
@@ -38,27 +40,43 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		public String getFilePath() {
 			return mFilePath;
 		}
-		
-		@Override
-		public boolean equals(Object obj) {
-			if (!(obj instanceof FileKey)) {
-				return false;
-			}
-			
-			return	mProjectName.equals(((FileKey)obj).mProjectName) &&
-					mFilePath.equals(((FileKey)obj).mFilePath);
-		}
-		
+
 		@Override
 		public int hashCode() {
-			if (mProjectName == null && mFilePath == null)
-				return 0;
-			else if (mProjectName == null)
-				return mFilePath.hashCode();
-			else if (mFilePath == null)
-				return mProjectName.hashCode();
-			else
-				return this.mProjectName.hashCode() ^ this.mFilePath.hashCode();
+			final int prime = 31;
+			int result = 1;
+			result = prime * result
+					+ ((mFilePath == null) ? 0 : mFilePath.hashCode());
+			result = prime * result
+					+ ((mProjectName == null) ? 0 : mProjectName.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			FileKey other = (FileKey) obj;
+			if (mFilePath == null) {
+				if (other.mFilePath != null)
+					return false;
+			} else if (!mFilePath.equals(other.mFilePath))
+				return false;
+			if (mProjectName == null) {
+				if (other.mProjectName != null)
+					return false;
+			} else if (!mProjectName.equals(other.mProjectName))
+				return false;
+			return true;
+		}
+
+		@Override
+		public String toString() {
+			return "ProjectName: " + getProjectName() + "\tFilePath: " + getFilePath();
 		}
 		
 	}
@@ -71,6 +89,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 	private List<Runnable> mScheduledTasks;
 	
 	private boolean mStarted;
+	private boolean mHandlingSnapshots;
 	
 	/**
 	 * Basic constructor. Only use this public constructor for testing purposes!
@@ -85,6 +104,15 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		mScheduledTasks = new ArrayList<Runnable>();
 		
 		mStarted = false;
+		mHandlingSnapshots = false;
+	}
+
+	public boolean isHandlingSnapshots() {
+		return mHandlingSnapshots;
+	}
+
+	public void setHandlingSnapshots(boolean handlingSnapshots) {
+		this.mHandlingSnapshots = handlingSnapshots;
 	}
 
 	public void scheduleTask(Runnable runnable) {
@@ -222,8 +250,9 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		fireActiveFileChangedEvent(key.getProjectName(), key.getFilePath());
 		
 		// TODO extract diff.
-/*		if (snapshot != null) {
-			int maxLength = 0;
+		if (isHandlingSnapshots() && snapshot != null) {
+			getRuntimeDocumentChanges().clear();
+/*			int maxLength = 0;
 			for (RuntimeDC dc : getRuntimeDocumentChanges()) {
 				for (Segment segment : dc.getAllSegments()) {
 					int end = segment.getEffectiveEndOffset();
@@ -243,8 +272,8 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 			AbstractCommand.setIncrementCommandID(prevState);
 			
 			documentChangeFinalized(replace);
-		}
-*/	}
+*/		}
+	}
 
 	public void documentChanged(BaseDocumentChangeEvent docChange) {
 		// Do nothing here.
