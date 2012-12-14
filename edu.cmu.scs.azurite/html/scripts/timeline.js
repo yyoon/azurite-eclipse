@@ -21,6 +21,8 @@ var REPLACEMENT = 2;
 
 var LOCAL_MODE = false;
 
+var NUM_TIMESTAMPS = 3;
+
 var files = [];
 var blocks_to_draw = [];
 var selected = {};
@@ -692,7 +694,7 @@ function draw_bars(files_to_draw, width, height) {
 	}
 	
 	x_rule = d3.scale.linear()
-		.domain([0, 4])
+		.domain([0, NUM_TIMESTAMPS - 1])
 		.range([min_to_show, max_to_show]);
 	
 	x_bar = d3.time.scale()
@@ -782,17 +784,25 @@ function draw_bars(files_to_draw, width, height) {
 	console.log(blocks_to_draw.length);
 }
 
+function range(begin, end) {
+	var result = new Array();
+	for (var i = begin; i < end; ++i) {
+		result[i - begin] = i;
+	}
+	
+	return result;
+}
 
 function draw_rule(chart_height) {
 	rules.selectAll(".rule")
-		.data(x_rule.ticks(5))
+		.data(range(0, NUM_TIMESTAMPS))
 		.enter().append("text")
 		.attr("x", function(d,i) { return x_bar(x_rule(i)); })
 		.attr("y", chart_height + 15)
 		.attr("text-anchor", function(d,i) {
 			if(i == 0)
 				return "start";
-			else if(i == 4)
+			else if(i == NUM_TIMESTAMPS - 1)
 				return "end";
 			else 
 				return "middle";
@@ -957,7 +967,7 @@ function draw_highlight(x1, y1, x2, y2, offsetX, offsetY) {
 		for(i in selected) {
 			
 			if(prev == null) {
-				prev = selected[i]
+				prev = selected[i];
 				item = {startX: prev.x, startY: prev.y, endX: prev.x + prev.width, endY: prev.y + prev.height};
 			} else {
 				if(item.startY == selected[i].y &&  Math.abs(item.endX - selected[i].x) <= 8) {
