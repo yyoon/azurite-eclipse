@@ -14,6 +14,7 @@ import java.io.Writer;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import org.eclipse.core.runtime.FileLocator;
@@ -39,8 +40,22 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 
 	private Browser browser;
 	
+	private static TimelineViewPart me = null;
+	
+	/**
+	 * Not a singleton pattern per se.
+	 * This object keeps the reference of itself upon GUI element creation.
+	 * Provided just for convenience.
+	 * @return The timelineviewpart's object. Could be null, if the view is not shown.
+	 */
+	public static TimelineViewPart getInstance() {
+		return me;
+	}
+	
 	@Override
 	public void createPartControl(Composite parent) {
+		
+		me = this;
 		
 		browser = new Browser(parent, SWT.NONE);
 		new ReadFileFunction(browser, "readLog");
@@ -89,6 +104,8 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 	@Override
 	public void dispose() {
 		RuntimeHistoryManager.getInstance().removeRuntimeDocumentChangeListener(this);
+		
+		me = null;
 		
 		super.dispose();
 	}
@@ -220,5 +237,29 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 				docChange.getOriginal().getTimestamp2(),
 				docChange.getTypeIndex());
 		browser.execute(executeStr);
+	}
+	
+	/**
+	 * Add selections to the timeline view. Must be called from the SWT EDT.
+	 * @param ids list of ids to be selected
+	 * @param clearSelection indicates whether the existing selections should be discarded before adding new selections.
+	 */
+	public void addSelection(List<Integer> ids, boolean clearSelection) {
+		StringBuffer buffer = new StringBuffer();
+		buffer.append("add_selections_by_ids([");
+		
+		Iterator<Integer> it = ids.iterator();
+		if (it.hasNext()) {
+			Integer first = it.next();
+			buffer.append(first.toString());
+			
+			while (it.hasNext()) {
+				buffer.append(", " + it.next());
+			}
+		}
+		
+		buffer.append("], " + Boolean.toString(clearSelection) + ");");
+		
+		browser.execute(buffer.toString());
 	}
 }

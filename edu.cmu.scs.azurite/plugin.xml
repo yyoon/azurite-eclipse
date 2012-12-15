@@ -42,6 +42,10 @@
                   icon="icons/undo_in_region.png"
                   style="push">
             </command>
+            <command
+                  commandId="edu.cmu.scs.azurite.ui.commands.selectOperationsInRegionCommand"
+                  style="push">
+            </command>
          </menu>
       </menuContribution>
       <menuContribution
@@ -64,6 +68,11 @@
             defaultHandler="edu.cmu.scs.azurite.ui.handlers.UndoInRegionHandler"
             id="edu.cmu.scs.azurite.ui.commands.undoInRegionCommand"
             name="Undo Everything in Region">
+      </command>
+      <command
+            defaultHandler="edu.cmu.scs.azurite.ui.handlers.SelectOperationsInRegion"
+            id="edu.cmu.scs.azurite.ui.commands.selectOperationsInRegionCommand"
+            name="Select Operations in Region">
       </command>
    </extension>
 

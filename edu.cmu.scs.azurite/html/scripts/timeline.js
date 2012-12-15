@@ -390,6 +390,7 @@ function redraw() {
 	draw_bars(files_to_draw, bar_width, chart_height);
 	draw_rule(chart_height);
 	draw_scrollbar(title_width, bar_width, chart_height);
+	draw_highlight();
 
 	d3.select('.indicator').remove();
 	
@@ -557,7 +558,7 @@ function redraw() {
 			y2 = dragStart[1];
 		}
 		console.log(x1, y1, x2, y2);
-		draw_highlight(x1, y1, x2, y2, (chart_margins.left + title_width), (chart_margins.top + menu_panel_height));
+		add_selections(x1, y1, x2, y2, (chart_margins.left + title_width), (chart_margins.top + menu_panel_height));
 	
 		dragging = false;	
 		dragStart = [];
@@ -940,18 +941,42 @@ function hideContextMenu() {
 }
 
 
-function draw_highlight(x1, y1, x2, y2, offsetX, offsetY) {
-	sub_bar.selectAll('polygon').remove();
+function add_selections_by_ids(ids, clearPreviousSelection) {
+	if (clearPreviousSelection) {
+		selected = {};
+	}
 	
-	var count = 0;
+	for (var i = 0; i < ids.length; ++i) {
+		var id = ids[i];
+		selected[id] = id;
+	}
+	
+	draw_highlight();
+}
+
+
+function add_selections(x1, y1, x2, y2, offsetX, offsetY) {
 	var blockLength = blocks_to_draw.length;
+	var somethingAdded = false;
 	
 	for(var i = 0; i < blockLength; i++) {
 		if(trivial_reject_test(x1, y1, x2, y2, offsetX, offsetY, blocks_to_draw[i]) == 0) {
-			selected[i] = blocks_to_draw[i];
+			var id = blocks_to_draw[i].id;
+			selected[id] = id;
+			somethingAdded = true;
 		}
 	}
 	
+	if (somethingAdded) {
+		draw_highlight();
+	}
+}
+
+
+function draw_highlight() {
+	sub_bar.selectAll('polygon').remove();
+	
+	var count = 0;
 	var itemsToHighlight = [];
 	var prev = null;
 	var item;
@@ -964,19 +989,24 @@ function draw_highlight(x1, y1, x2, y2, offsetX, offsetY) {
 	
 	
 	if(count > 0) {
-		for(i in selected) {
+		var blockLength = blocks_to_draw.length;
+		for (var i = 0; i < blockLength; ++i) {
+
+			var block = blocks_to_draw[i];
 			
-			if(prev == null) {
-				prev = selected[i];
-				item = {startX: prev.x, startY: prev.y, endX: prev.x + prev.width, endY: prev.y + prev.height};
-			} else {
-				if(item.startY == selected[i].y &&  Math.abs(item.endX - selected[i].x) <= 8) {
-					item.endX = (item.endX > (selected[i].x + selected[i].width)) ? item.endX : (selected[i].x + selected[i].width);
+			if (block.id in selected) {
+				if(prev == null) {
+					prev = block;
+					item = {startX: prev.x, startY: prev.y, endX: prev.x + prev.width, endY: prev.y + prev.height};
 				} else {
-					itemsToHighlight.push(item);
-					item = {startX: selected[i].x, startY: selected[i].y, endX: selected[i].x + selected[i].width, endY: selected[i].y + selected[i].height};
+					if(item.startY == block.y &&  Math.abs(item.endX - block.x) <= 8) {
+						item.endX = (item.endX > (block.x + block.width)) ? item.endX : (block.x + block.width);
+					} else {
+						itemsToHighlight.push(item);
+						item = {startX: block.x, startY: block.y, endX: block.x + block.width, endY: block.y + block.height};
+					}
+					prev = block;
 				}
-				prev = selected[i];
 			}
 		}
 		itemsToHighlight.push(item);
@@ -1151,7 +1181,7 @@ function undo() {
 	var result = [];
 	
 	for(var i in selected) {
-		result.push(selected[i].id);
+		result.push(selected[i]);
 	}
 	
 	if(result.length > 0)
