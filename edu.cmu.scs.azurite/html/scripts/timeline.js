@@ -733,6 +733,10 @@ function draw_bars(files_to_draw, width, height) {
 					
 					if(bar_width < min_bar_width)
 						bar_width = min_bar_width;
+
+					if (timestamp2 >= max_timestamp) {
+						max_timestamp = x_bar.invert( x_bar(timestamp) + bar_width );
+					}
 					
 					draw = true;
 				} else if(timestamp >= min_to_show && timestamp <= max_to_show && timestamp && timestamp2 > max_to_show ) {
@@ -751,6 +755,10 @@ function draw_bars(files_to_draw, width, height) {
 				
 				if(timestamp >= min_to_show && timestamp <= max_to_show) {
 					bar_width = min_bar_width;
+
+					if (timestamp >= max_timestamp) {
+						max_timestamp = x_bar.invert( x_bar(timestamp) + bar_width );
+					}
 					
 					draw = true;
 				}
