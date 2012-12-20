@@ -308,22 +308,8 @@ public class SelectiveUndoEngine {
 		// List of chunks.
 		ArrayList<Chunk> chunks = new ArrayList<Chunk>();
 		
-		Chunk prevChunk = null;
-		
 		// Look from the beginning.
 		for (int i = 0; i < segments.size(); ++i) {
-			Chunk chunk = null;
-			// If this is the first segment or
-			// this segment is within the previous chunk range...
-			if (prevChunk == null
-					|| segments.get(i).getEffectiveEndOffset() < prevChunk
-							.getStartOffset()
-					|| segments.get(i).getOffset() > prevChunk.getEndOffset()) {
-				chunk = new Chunk();
-			} else {
-				chunk = prevChunk;
-			}
-			
 			// See if there's any following segment coming from the same runtime doc change.
 			// Find the last occurrence.
 			int j = segments.size() - 1;
@@ -332,19 +318,16 @@ public class SelectiveUndoEngine {
 					break;
 				}
 			}
-			
+
+			Chunk chunk = new Chunk();
 			// Now add [i, j] elements to the current chunk!
 			for (int k = i; k <= j; ++k) {
 				chunk.add(segments.get(k));
 			}
-			
-			if (chunk != prevChunk)
-				chunks.add(chunk);
+			chunks.add(chunk);
 			
 			// advance the loop index.
 			i = j;
-			
-			prevChunk = chunk;
 		}
 		
 		return chunks;
