@@ -37,10 +37,10 @@ import edu.cmu.scs.fluorite.util.Utilities;
 @SuppressWarnings("restriction")
 public class ConflictDialog extends TitleAreaDialog {
 	
-	private static final int MINIMUM_OPERATIONS_HEIGHT = 100;
+	private static final int MINIMUM_OPERATIONS_HEIGHT = 70;
 	
-	private static final int MINIMUM_PREVIEW_WIDTH = 700;
-	private static final int MINIMUM_PREVIEW_HEIGHT = 500;
+	private static final int MINIMUM_PREVIEW_WIDTH = 500;
+	private static final int MINIMUM_PREVIEW_HEIGHT = 400;
 	
 	private static final int MARGIN_WIDTH = 10;
 	private static final int MARGIN_HEIGHT = 10;
@@ -96,12 +96,15 @@ public class ConflictDialog extends TitleAreaDialog {
 		// Involved Operations Group
 		createInvolvedOperationsGroup(composite);
 		
-		// Code Preview Group
-		createCodePreviewGroup(composite);
-		
 		// Alternatives Group
 		createAlternativesGroup(composite);
 		
+		// Code Preview Group
+		createCodePreviewGroup(composite);
+
+		// Select the first alternative
+		selectAlternative(0);
+
 		return parent;
 	}
 
@@ -225,8 +228,6 @@ public class ConflictDialog extends TitleAreaDialog {
 				}
 			});
 		}
-		
-		selectAlternative(0);
 	}
 
 	private void selectAlternative(int index) {
