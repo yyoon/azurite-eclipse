@@ -29,6 +29,7 @@ public class Segment {
 	private int mRelativeOffset;
 	private int mOriginalLength;
 	private List<Segment> mSegmentsClosedByMe;
+	private List<Segment> mRight;
 
 	/**
 	 * Create a new segment.
@@ -59,6 +60,7 @@ public class Segment {
 		mRelativeOffset = -1;
 		mOriginalLength = -1;
 		mSegmentsClosedByMe = new ArrayList<Segment>();
+		mRight = new ArrayList<Segment>();
 	}
 
 	/**
@@ -427,6 +429,14 @@ public class Segment {
 	 */
 	public List<Segment> getSegmentsClosedByMe() {
 		return Collections.unmodifiableList(mSegmentsClosedByMe);
+	}
+	
+	public void addRight(Segment right) {
+		mRight.add(right);
+	}
+	
+	public List<Segment> getRight() {
+		return Collections.unmodifiableList(mRight);
 	}
 	
 	/**

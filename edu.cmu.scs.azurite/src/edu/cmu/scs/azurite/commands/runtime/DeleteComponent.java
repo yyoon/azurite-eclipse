@@ -51,34 +51,32 @@ public class DeleteComponent implements EditComponent {
 		
 		//                                         | existing segment |
 		// |---------- replacement ----------|
-		if (deleteSegment.getEndOffset() < segment.getOffset() ||
-			deleteSegment.getEndOffset() == segment.getOffset() && dummyDelete) {
+		if (deleteSegment.getEndOffset() <= segment.getOffset()) {
+			if (deleteSegment.getEndOffset() == segment.getOffset() && !dummyDelete) {
+				deleteSegment.addRight(segment);
+			}
+			
 			// adjust all the subsequent segments' offsets.
 			segment.incrementOffset(lengthDiff);
+			
 		}
 		//        | existing segment |
 		// |---------- replacement ----------|
-		else if (deleteSegment.getOffset() <= segment.getOffset()
-				&& segment.getOffset() <= deleteSegment.getEndOffset()) {
+		else if (deleteSegment.getOffset() < segment.getOffset()
+				&& segment.getOffset() < deleteSegment.getEndOffset()) {
 			
 			// In this case, the delete segment should not be a dummy.
 			if (deleteSegment.getLength() == 0) {
 				throw new RuntimeException("delete segment should not be a dummy.");
 			}
 			
-			if (segment.getRelativeOffset() == -1) {
-				segment.setRelativeOffset(segment.getOffset() - deleteSegment.getOffset());
-				deleteSegment.addSegmentClosedByMe(segment);
-			}
-			
-			segment.setOffset(deleteSegment.getOffset());
+			deleteSegment.closeSegment(segment);
 			
 			conflict = true;
 		}
 		// |     existing segment     |
 		//                                |---------- replacement ----------|
-		else if (segment.getOffset() < deleteSegment.getOffset() ||
-				segment.getOffset() == deleteSegment.getOffset() && dummyDelete) {
+		else if (segment.getOffset() <= deleteSegment.getOffset()) {
 			// Do nothing
 		}
 		// Should not fall to this else clause

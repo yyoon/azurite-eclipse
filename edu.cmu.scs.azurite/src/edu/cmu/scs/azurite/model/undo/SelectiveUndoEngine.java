@@ -262,6 +262,12 @@ public class SelectiveUndoEngine {
 							closedSegment.reopen(segmentUnderUndo.getOffset());
 						}
 					}
+					
+					for (Segment right : segmentUnderUndo.getRight()) {
+						if (copyChunk.contains(right)) {
+							right.setOffset(segmentUnderUndo.getOffset() + segmentUnderUndo.getLength());
+						}
+					}
 				}	// if(segmentUnderUndo.isDeletion())
 				else {
 					// Delete this segment.

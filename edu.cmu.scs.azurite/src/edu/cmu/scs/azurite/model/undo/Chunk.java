@@ -190,6 +190,13 @@ public class Chunk extends ArrayList<Segment> {
 					copySegment.addSegmentClosedByMe(copyChunk.get(closedSegmentIndex));
 				}
 			}
+			
+			for (Segment right : originalSegment.getRight()) {
+				int rightIndex = this.indexOf(right);
+				if (rightIndex != -1) {
+					copySegment.addRight(copyChunk.get(rightIndex));
+				}
+			}
 		}
 		
 		return copyChunk;

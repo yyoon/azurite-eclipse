@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.eclipse.core.runtime.ListenerList;
 
@@ -87,7 +88,6 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 	private List<Runnable> mScheduledTasks;
 	
 	private boolean mStarted;
-	private boolean mHandlingSnapshots;
 	
 	/**
 	 * Basic constructor. Only use this public constructor for testing purposes!
@@ -102,15 +102,6 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		mScheduledTasks = new ArrayList<Runnable>();
 		
 		mStarted = false;
-		mHandlingSnapshots = false;
-	}
-
-	public boolean isHandlingSnapshots() {
-		return mHandlingSnapshots;
-	}
-
-	public void setHandlingSnapshots(boolean handlingSnapshots) {
-		this.mHandlingSnapshots = handlingSnapshots;
 	}
 
 	public void scheduleTask(Runnable runnable) {
@@ -177,6 +168,11 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 			((RuntimeDCListener)listenerObj).runtimeDCAdded(docChange);
 		}
 	}
+	
+	public Set<FileKey> getFileKeys() {
+		return mDocumentChanges.keySet();
+	}
+	
 	/**
 	 * Returns all the runtime document changes associated with the current file.
 	 * @return all the runtime document changes associated with the current file.
@@ -222,7 +218,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		return null;
 	}
 	
-	private FileKey getCurrentFileKey() {
+	public FileKey getCurrentFileKey() {
 		return mCurrentFileKey;
 	}
 	
@@ -246,31 +242,14 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		}
 		
 		fireActiveFileChangedEvent(key.getProjectName(), key.getFilePath());
-		
+	}
+	
+	public void handleSnapshot(String snapshot) {
 		// TODO extract diff.
-		if (isHandlingSnapshots() && snapshot != null) {
+		// Apply to the current file.
+		if (snapshot != null) {
 			getRuntimeDocumentChanges().clear();
-/*			int maxLength = 0;
-			for (RuntimeDC dc : getRuntimeDocumentChanges()) {
-				for (Segment segment : dc.getAllSegments()) {
-					int end = segment.getEffectiveEndOffset();
-					if (end > maxLength) {
-						maxLength = end;
-					}
-				}
-			}
-			
-			String dummyDeletedText = new String(new char[maxLength]);
-			
-			boolean prevState = AbstractCommand.getIncrementCommandID();
-			AbstractCommand.setIncrementCommandID(false);
-			
-			Replace replace = new Replace(0, maxLength, 0, 0, snapshot.length(), dummyDeletedText, snapshot, null);
-			
-			AbstractCommand.setIncrementCommandID(prevState);
-			
-			documentChangeFinalized(replace);
-*/		}
+		}
 	}
 
 	public void documentChanged(BaseDocumentChangeEvent docChange) {
