@@ -14,6 +14,7 @@ import org.eclipse.jface.text.source.ISourceViewer;
 import org.eclipse.jface.text.source.LineNumberRulerColumn;
 import org.eclipse.jface.text.source.SourceViewer;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
@@ -39,8 +40,9 @@ public class ConflictDialog extends TitleAreaDialog {
 	
 	private static final int MINIMUM_OPERATIONS_HEIGHT = 70;
 	
-	private static final int MINIMUM_PREVIEW_WIDTH = 500;
-	private static final int MINIMUM_PREVIEW_HEIGHT = 400;
+	private static final int SASH_WIDTH = 10;
+	private static final int MINIMUM_SASHFORM_WIDTH = 700;
+	private static final int MINIMUM_SASHFORM_HEIGHT = 400;
 	
 	private static final int MARGIN_WIDTH = 10;
 	private static final int MARGIN_HEIGHT = 10;
@@ -96,11 +98,18 @@ public class ConflictDialog extends TitleAreaDialog {
 		// Involved Operations Group
 		createInvolvedOperationsGroup(composite);
 		
+		// SashForm which splits the alternatives control panel and the preview
+		SashForm sashForm = createSashForm(composite);
+		
 		// Alternatives Group
-		createAlternativesGroup(composite);
+		createAlternativesGroup(sashForm);
 		
 		// Code Preview Group
-		createCodePreviewGroup(composite);
+		createCodePreviewGroup(sashForm);
+		
+		// Set the sash form parameters.
+		sashForm.setSashWidth(SASH_WIDTH);
+		sashForm.setWeights(new int[] { 1, 2 });
 
 		// Select the first alternative
 		selectAlternative(0);
@@ -151,6 +160,53 @@ public class ConflictDialog extends TitleAreaDialog {
 		}
 	}
 
+	private SashForm createSashForm(Composite parent) {
+		SashForm sashForm = new SashForm(parent, SWT.HORIZONTAL);
+		
+		GridData gridData = new GridData(GridData.FILL, GridData.FILL, true, true, 3, 1);
+		gridData.minimumWidth = MINIMUM_SASHFORM_WIDTH;
+		gridData.minimumHeight = MINIMUM_SASHFORM_HEIGHT;
+		sashForm.setLayoutData(gridData);
+		
+		return sashForm;
+	}
+
+	private void createAlternativesGroup(Composite parent) {
+		Group groupAlternatives = new Group(parent, SWT.NONE);
+		groupAlternatives.setText("Alternatives");
+		
+		RowLayout rowLayout = new RowLayout(SWT.VERTICAL);
+		rowLayout.fill = true;
+		rowLayout.pack = false;
+		rowLayout.spacing = SPACING;
+		rowLayout.marginWidth = MARGIN_WIDTH;
+		rowLayout.marginHeight = MARGIN_HEIGHT;
+		
+		groupAlternatives.setLayout(rowLayout);
+		
+		// Add alternative Buttons
+		// TODO replace the radio buttons with prettier custom buttons.
+		for (int i = 0; i < mAlternatives.size(); ++i) {
+			UndoAlternative alternative = mAlternatives.get(i);
+			
+			Button buttonAlternative = new Button(groupAlternatives, SWT.RADIO);
+			buttonAlternative.setText(alternative.getResultingCode());
+			buttonAlternative.setToolTipText(alternative.getDescription());
+			
+			if (i == 0) {
+				buttonAlternative.setSelection(true);
+			}
+			
+			final int currentIndex = i;
+			buttonAlternative.addSelectionListener(new SelectionAdapter() {
+				@Override
+				public void widgetSelected(SelectionEvent e) {
+					selectAlternative(currentIndex);
+				}
+			});
+		}
+	}
+
 	private void createCodePreviewGroup(Composite parent) {
 		Group groupPreview = new Group(parent, SWT.NONE);
 		groupPreview.setText("Code Preview");
@@ -159,12 +215,6 @@ public class ConflictDialog extends TitleAreaDialog {
 		fillLayout.marginWidth = MARGIN_WIDTH;
 		fillLayout.marginHeight = MARGIN_HEIGHT;
 		groupPreview.setLayout(fillLayout);
-		
-		GridData gridData = new GridData(GridData.FILL, GridData.FILL, true, true, 2, 1);
-		gridData.minimumWidth = MINIMUM_PREVIEW_WIDTH;
-		gridData.minimumHeight = MINIMUM_PREVIEW_HEIGHT;
-		groupPreview.setLayoutData(gridData);
-		
 		
 		// Create the Java Source Viewer.
 		CompositeRuler ruler = new CompositeRuler();
@@ -191,43 +241,6 @@ public class ConflictDialog extends TitleAreaDialog {
 		mCodePreview.setDocument(mCopyDoc);
 		mCodePreview.setEditable(false);
 		mCodePreview.getTextWidget().setFont(Utilities.getFont());
-	}
-
-	private void createAlternativesGroup(Composite parent) {
-		Group groupAlternatives = new Group(parent, SWT.NONE);
-		groupAlternatives.setText("Alternatives");
-		
-		RowLayout rowLayout = new RowLayout(SWT.VERTICAL);
-		rowLayout.fill = true;
-		rowLayout.pack = false;
-		rowLayout.spacing = SPACING;
-		rowLayout.marginWidth = MARGIN_WIDTH;
-		rowLayout.marginHeight = MARGIN_HEIGHT;
-		
-		groupAlternatives.setLayout(rowLayout);
-		groupAlternatives.setLayoutData(new GridData(GridData.FILL, GridData.FILL, true, true, 1, 1));
-		
-		// Add alternative Buttons
-		// TODO replace the radio buttons with prettier custom buttons.
-		for (int i = 0; i < mAlternatives.size(); ++i) {
-			UndoAlternative alternative = mAlternatives.get(i);
-			
-			Button buttonAlternative = new Button(groupAlternatives, SWT.RADIO);
-			buttonAlternative.setText(alternative.getResultingCode());
-			buttonAlternative.setToolTipText(alternative.getDescription());
-			
-			if (i == 0) {
-				buttonAlternative.setSelection(true);
-			}
-			
-			final int currentIndex = i;
-			buttonAlternative.addSelectionListener(new SelectionAdapter() {
-				@Override
-				public void widgetSelected(SelectionEvent e) {
-					selectAlternative(currentIndex);
-				}
-			});
-		}
 	}
 
 	private void selectAlternative(int index) {
