@@ -23,7 +23,6 @@ import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.layout.RowLayout;
-import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Group;
@@ -31,6 +30,7 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
+import edu.cmu.scs.azurite.jface.widgets.AlternativeButton;
 import edu.cmu.scs.azurite.model.undo.Chunk;
 import edu.cmu.scs.azurite.model.undo.UndoAlternative;
 import edu.cmu.scs.fluorite.util.Utilities;
@@ -177,7 +177,7 @@ public class ConflictDialog extends TitleAreaDialog {
 		
 		RowLayout rowLayout = new RowLayout(SWT.VERTICAL);
 		rowLayout.fill = true;
-		rowLayout.pack = false;
+		rowLayout.pack = true;
 		rowLayout.spacing = SPACING;
 		rowLayout.marginWidth = MARGIN_WIDTH;
 		rowLayout.marginHeight = MARGIN_HEIGHT;
@@ -189,12 +189,12 @@ public class ConflictDialog extends TitleAreaDialog {
 		for (int i = 0; i < mAlternatives.size(); ++i) {
 			UndoAlternative alternative = mAlternatives.get(i);
 			
-			Button buttonAlternative = new Button(groupAlternatives, SWT.RADIO);
-			buttonAlternative.setText(alternative.getResultingCode());
+			AlternativeButton buttonAlternative = new AlternativeButton(groupAlternatives, SWT.RADIO);
+			buttonAlternative.setAlternativeCode(alternative.getResultingCode());
 			buttonAlternative.setToolTipText(alternative.getDescription());
 			
 			if (i == 0) {
-				buttonAlternative.setSelection(true);
+				buttonAlternative.setSelected(true);
 			}
 			
 			final int currentIndex = i;
