@@ -70,16 +70,14 @@ public class DeleteReplaceTest {
 				NEWLEN, OLD_TEXT, NEW_TEXT, null));
 		r.applyTo(d);
 
-		assertTrue(checkSegmentEquals(d.getDeleteSegment(), 20 - OLDLEN, 10,
+		assertTrue(checkSegmentEquals(d.getDeleteSegment(), 20 + LENDIFF, 10,
 				".........."));
 		assertTrue(checkSegmentEquals(r.getDeleteSegment(), 20 - OLDLEN, OLDLEN, OLD_TEXT));
 		assertEquals(1, r.getInsertSegments().size());
 		assertTrue(checkSegmentEquals(r.getInsertSegments().get(0), 20 - OLDLEN, NEWLEN,
 				NEW_TEXT));
 		
-		assertEquals(1, d.getConflicts().size());
-		assertEquals(r, d.getConflicts().get(0));
-		assertEquals(OLDLEN, d.getDeleteSegment().getRelativeOffset());
+		assertEquals(0, d.getConflicts().size());
 	}
 	
 	// | existing delete |
@@ -99,9 +97,7 @@ public class DeleteReplaceTest {
 		assertTrue(checkSegmentEquals(r.getInsertSegments().get(0), 20, NEWLEN,
 				NEW_TEXT));
 		
-		assertEquals(1, d.getConflicts().size());
-		assertEquals(r, d.getConflicts().get(0));
-		assertEquals(0, d.getDeleteSegment().getRelativeOffset());
+		assertEquals(0, d.getConflicts().size());
 	}
 	
 	// | existing delete |
