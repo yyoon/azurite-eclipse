@@ -316,4 +316,16 @@ public class GraphViewPart extends ViewPart implements RuntimeDCListener, MouseL
 		});
 	}
 
+	@Override
+	public void documentChangeAdded(BaseDocumentChangeEvent docChange) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void documentChangeUpdated(BaseDocumentChangeEvent docChange) {
+		// TODO Auto-generated method stub
+		
+	}
+
 }

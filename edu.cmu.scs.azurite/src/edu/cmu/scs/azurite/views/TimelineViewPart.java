@@ -31,6 +31,10 @@ import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.model.RuntimeDCListener;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
+import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
+import edu.cmu.scs.fluorite.commands.Delete;
+import edu.cmu.scs.fluorite.commands.Insert;
+import edu.cmu.scs.fluorite.commands.Replace;
 import edu.cmu.scs.fluorite.model.EventRecorder;
 
 public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
@@ -231,14 +235,42 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 
 	@Override
 	public void runtimeDCAdded(RuntimeDC docChange) {
-		String executeStr = String.format("add_block(%1$d, %2$d, %3$d, %4$d);",
-				docChange.getOriginal().getCommandIndex(),
-				docChange.getOriginal().getTimestamp(),
-				docChange.getOriginal().getTimestamp2(),
-				docChange.getTypeIndex());
+		// Do nothing here. Now the blocks are added at real time.
+	}
+	
+	@Override
+	public void documentChangeAdded(BaseDocumentChangeEvent docChange) {
+		String executeStr = String.format("add_event(%1$d, %2$d, %3$d, %4$d);",
+				docChange.getCommandIndex(),
+				docChange.getTimestamp(),
+				docChange.getTimestamp2(),
+				getTypeIndex(docChange));
 		browser.execute(executeStr);
 	}
 	
+	private int getTypeIndex(BaseDocumentChangeEvent docChange) {
+		if (docChange instanceof Insert) {
+			return 0;
+		}
+		else if (docChange instanceof Delete) {
+			return 1;
+		}
+		else if (docChange instanceof Replace) {
+			return 2;
+		}
+		else {
+			return -1;
+		}
+	}
+
+	@Override
+	public void documentChangeUpdated(BaseDocumentChangeEvent docChange) {
+		String executeStr = String.format("update_event(%1$d, %2$d);",
+				docChange.getCommandIndex(),
+				docChange.getTimestamp2());
+		browser.execute(executeStr);
+	}
+
 	/**
 	 * Add selections to the timeline view. Must be called from the SWT EDT.
 	 * @param ids list of ids to be selected

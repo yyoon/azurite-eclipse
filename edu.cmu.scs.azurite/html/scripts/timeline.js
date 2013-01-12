@@ -30,6 +30,7 @@ var xmlDoc = null;
 
 // last file opened
 var current_file = null;
+var last_event = null;
 
 // maximum timestamp so far
 var max_timestamp = -1;
@@ -267,6 +268,8 @@ svg.append('rect')
 function add_file(path) {
 	var fileName = path.match(/[^\\/]+$/)[0];
 	
+	last_event = null;
+	
 	for(var index in files) {
 		if(files[index].path == path) {
 			current_file = files[index];
@@ -289,7 +292,7 @@ function set_start_timestamp(timestamp) {
 /**
  * Add an event to the end of the file
  */
-function add_block(id, timestamp1, timestamp2, type) {
+function add_event(id, timestamp1, timestamp2, type) {
 	var newEvent = new Event(parseInt(id), parseInt(timestamp1), parseInt(timestamp2), parseInt(type));
 	
 	var file_index = -1;
@@ -303,27 +306,9 @@ function add_block(id, timestamp1, timestamp2, type) {
 	if(file_index == -1)
 		return;
 	
-	/*
-	// If not drawn here, it will be drawn in redraw()
-	for(var i = min_to_show; i <= max_to_show; i++) {
-		var event = current_file.event[i];
-		//debugger;
-		if(event == null) {
-			sub_bar.append("rect")
-				.attr("width", bar_size)
-				.attr("height", 80)
-				.attr("x", x_bar(i))
-				.attr("y", file_index * 100 + 10)
-				.style("fill-opacity",0.6)
-				.style("fill", newEvent.color);
-			break;
-		}
-	}
 	current_file.event.push(newEvent);
-	*/
+	last_event = newEvent;
 	
-	current_file.event.push(newEvent);
-  
 	// update max_timestamp if necessary
 	if(timestamp2 == null && timestamp > max_timestamp) {
 		max_timestamp = timestamp;
@@ -331,6 +316,21 @@ function add_block(id, timestamp1, timestamp2, type) {
 		max_timestamp = timestamp2;
 	}
 
+	
+	redraw();
+}
+
+function update_event(id, timestamp2) {
+	if (last_event == null || last_event.id != parseInt(id))
+		return;
+	
+	last_event.timestamp2 = timestamp2;
+	
+	// update max_timestamp if necessary
+	if (timestamp2 > max_timestamp) {
+		max_timestamp = timestamp2;
+	}
+	
 	
 	redraw();
 }

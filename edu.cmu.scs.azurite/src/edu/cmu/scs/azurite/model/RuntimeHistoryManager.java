@@ -163,9 +163,21 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		}
 	}
 	
-	private void fireDocumentChangedEvent(RuntimeDC docChange) {
+	private void fireRuntimeDCAddedEvent(RuntimeDC docChange) {
 		for (Object listenerObj : mRuntimeDocumentChangeListeners.getListeners()) {
 			((RuntimeDCListener)listenerObj).runtimeDCAdded(docChange);
+		}
+	}
+	
+	private void fireDocumentChangeAddedEvent(BaseDocumentChangeEvent docChange) {
+		for (Object listenerObj : mRuntimeDocumentChangeListeners.getListeners()) {
+			((RuntimeDCListener)listenerObj).documentChangeAdded(docChange);
+		}
+	}
+	
+	private void fireDocumentChangeUpdatedEvent(BaseDocumentChangeEvent docChange) {
+		for (Object listenerObj : mRuntimeDocumentChangeListeners.getListeners()) {
+			((RuntimeDCListener)listenerObj).documentChangeUpdated(docChange);
 		}
 	}
 	
@@ -253,7 +265,11 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 	}
 
 	public void documentChanged(BaseDocumentChangeEvent docChange) {
-		// Do nothing here.
+		fireDocumentChangeAddedEvent(docChange);
+	}
+	
+	public void documentChangeUpdated(BaseDocumentChangeEvent docChange) {
+		fireDocumentChangeUpdatedEvent(docChange);
 	}
 	
 	public void documentChangeFinalized(BaseDocumentChangeEvent docChange) {
@@ -267,7 +283,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		list.add(runtimeDocChange);
 		
 		// Fire runtime document change event
-		fireDocumentChangedEvent(runtimeDocChange);
+		fireRuntimeDCAddedEvent(runtimeDocChange);
 	}
 	
 	public List<RuntimeDC> filterDocumentChangesByIds(final List<Integer> ids) {
