@@ -22,7 +22,6 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
-import org.eclipse.swt.layout.RowLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Group;
@@ -175,23 +174,21 @@ public class ConflictDialog extends TitleAreaDialog {
 		Group groupAlternatives = new Group(parent, SWT.NONE);
 		groupAlternatives.setText("Alternatives");
 		
-		RowLayout rowLayout = new RowLayout(SWT.VERTICAL);
-		rowLayout.fill = true;
-		rowLayout.pack = true;
-		rowLayout.spacing = SPACING;
-		rowLayout.marginWidth = MARGIN_WIDTH;
-		rowLayout.marginHeight = MARGIN_HEIGHT;
+		GridLayout gridLayout = new GridLayout(1, true);
+		gridLayout.marginWidth = MARGIN_WIDTH;
+		gridLayout.marginHeight = MARGIN_HEIGHT;
+		gridLayout.verticalSpacing = SPACING;
 		
-		groupAlternatives.setLayout(rowLayout);
+		groupAlternatives.setLayout(gridLayout);
 		
 		// Add alternative Buttons
-		// TODO replace the radio buttons with prettier custom buttons.
 		for (int i = 0; i < mAlternatives.size(); ++i) {
 			UndoAlternative alternative = mAlternatives.get(i);
 			
 			AlternativeButton buttonAlternative = new AlternativeButton(groupAlternatives, SWT.RADIO);
 			buttonAlternative.setAlternativeCode(alternative.getResultingCode());
 			buttonAlternative.setToolTipText(alternative.getDescription());
+			buttonAlternative.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false, 1, 1));
 			
 			if (i == 0) {
 				buttonAlternative.setSelected(true);
