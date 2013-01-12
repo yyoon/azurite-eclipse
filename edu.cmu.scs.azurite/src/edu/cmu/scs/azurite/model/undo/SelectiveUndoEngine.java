@@ -12,7 +12,7 @@ import org.eclipse.swt.widgets.Shell;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.commands.runtime.Segment;
-import edu.cmu.scs.azurite.jface.dialogs.ConflictDialog;
+import edu.cmu.scs.azurite.jface.dialogs.ConflictResolutionDialog;
 import edu.cmu.scs.fluorite.model.EventRecorder;
 import edu.cmu.scs.fluorite.util.Utilities;
 
@@ -124,7 +124,7 @@ public class SelectiveUndoEngine {
 					else {
 						final Shell parentShell = Display.getDefault().getActiveShell();
 						
-						ConflictDialog conflictDialog = new ConflictDialog(
+						ConflictResolutionDialog conflictDialog = new ConflictResolutionDialog(
 								parentShell, document, initialOffset,
 								initialContent.length(), alternatives, chunk);
 						conflictDialog.create();

@@ -35,7 +35,7 @@ import edu.cmu.scs.azurite.model.undo.UndoAlternative;
 import edu.cmu.scs.fluorite.util.Utilities;
 
 @SuppressWarnings("restriction")
-public class ConflictDialog extends TitleAreaDialog {
+public class ConflictResolutionDialog extends TitleAreaDialog {
 	
 	private static final int MINIMUM_OPERATIONS_HEIGHT = 70;
 	
@@ -63,7 +63,7 @@ public class ConflictDialog extends TitleAreaDialog {
 	private ISourceViewer mCodePreview;
 	private Color mBackground;
 
-	public ConflictDialog(Shell parent, IDocument originalDoc,
+	public ConflictResolutionDialog(Shell parent, IDocument originalDoc,
 			int offset, int length, List<UndoAlternative> alternatives, Chunk chunk) {
 		super(parent);
 		
