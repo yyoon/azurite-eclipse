@@ -8,7 +8,7 @@ interface,
 developers can select multiple operations performed in the past
 and undo them selectively.
    </description>
-   <feature url="features/edu.cmu.scs.azurite_0.1.0.201301122219.jar" id="edu.cmu.scs.azurite" version="0.1.0.201301122219">
+   <feature url="features/edu.cmu.scs.azurite_0.1.0.201301122224.jar" id="edu.cmu.scs.azurite" version="0.1.0.201301122224">
       <category name="Azurite"/>
    </feature>
    <category-def name="Azurite" label="Azurite"/>
