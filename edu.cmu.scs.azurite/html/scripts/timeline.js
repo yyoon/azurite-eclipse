@@ -218,7 +218,7 @@ var bar_zoom_index = 0, file_zoom_index = 0;
 // Page index to show based on currrent zoom level
 // eg. If zoom level is 0, and if page index is 0, show from 0 to 49. If index is 2, show from 100 to 149
 var bar_cur_index = 0, file_cur_index = 0;
-var bar_max_page_index, file_max_page_index;
+var bar_max_page_index = 0, file_max_page_index = 0;
 
 // 5 min, 20 min, 1 hour, 4 hour
 var bar_zoom_levels = [300000,1200000,3600000,14400000000];
@@ -405,14 +405,17 @@ function redraw() {
 		.style('stroke-width', 2);
 	*/
 	
-	sub_bar.append('line')
-		.attr('class', 'indicator')
-		.attr('x1', x_bar(max_timestamp))
-		.attr('y1', 0)
-		.attr('x2', x_bar(max_timestamp))
-		.attr('y2', y(chart_height))
-		.attr('stroke', 'yellow' )
-		.style('stroke-width', 2);
+	// draw the "now" indicator only when needed.
+	if (min_to_show <= max_timestamp && max_timestamp <= max_to_show) {
+		sub_bar.append('line')
+			.attr('class', 'indicator')
+			.attr('x1', x_bar(max_timestamp))
+			.attr('y1', 0)
+			.attr('x2', x_bar(max_timestamp))
+			.attr('y2', y(chart_height))
+			.attr('stroke', 'yellow' )
+			.style('stroke-width', 2);
+	}
 	
 	$('.block').tipsy({ 
         gravity: 'se', 
@@ -747,6 +750,7 @@ function draw_bars(files_to_draw, width, height) {
 				} else if(timestamp < min_to_show && timestamp2 >= min_to_show && timestamp2 <= max_to_show) {
 					// case 1.2: only timestamp2 is visible
 					bar_width = x_bar(timestamp2) - x_bar(min_to_show);
+					timestamp = min_to_show;
 					
 					draw = true;
 				}
@@ -825,11 +829,18 @@ function draw_rule(chart_height) {
 
 function draw_scrollbar(title_width, bar_width, chart_height) {
 
+	// Only show the scrollbar when needed.
+	if (bar_max_page_index == null || bar_max_page_index <= 0) {
+		$('#x_scrollbar').css({"display": "none"});
+		return;
+	}
+
 	$('#x_scrollbar').css({
 		"position": 'absolute',
 		"left": title_width + "px",
 		"top": chart_height + menu_panel_height + 50 + "px",
-		'width': bar_width + 'px'
+		"width": bar_width + "px",
+		"display": "block"
 	});
 	
 	scroll_x = $('#x_scrollbar').slider({
@@ -847,10 +858,14 @@ function draw_scrollbar(title_width, bar_width, chart_height) {
 		}
 	});
 	
-	var handleSize = scroll_x.width() / (bar_max_page_index + 1);
+	var handle_size = scroll_x.width() / (bar_max_page_index + 1);
+	var handle_margin_left = -handle_size * bar_cur_index / bar_max_page_index;
+	if (bar_max_page_index == 0) handle_margin_left = 0;
+	handle_margin_left -= 1;	// I don't know why, but it's off by 1 px by default.
+	
 	scroll_x.find('.ui-slider-handle').css({
-		width: handleSize,
-		'margin-left': 0
+		"width": handle_size + "px",
+		"margin-left": handle_margin_left + "px"
 	});
 	
 }
