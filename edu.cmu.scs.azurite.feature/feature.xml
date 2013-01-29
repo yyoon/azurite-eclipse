@@ -214,6 +214,22 @@ litigation.
       <update label="Azurite for Eclipse Update Site" url="http://azurite-eclipse.googlecode.com/hg/edu.cmu.scs.azurite.update/"/>
    </url>
 
+   <requires>
+      <import plugin="org.eclipse.ui"/>
+      <import plugin="org.eclipse.core.runtime"/>
+      <import plugin="edu.cmu.scs.fluorite" version="0.6.0" match="greaterOrEqual"/>
+      <import plugin="org.eclipse.zest.core" version="1.3.0" match="greaterOrEqual"/>
+      <import plugin="org.eclipse.compare"/>
+      <import plugin="org.eclipse.core.resources"/>
+      <import plugin="org.eclipse.zest.layouts" version="1.1.0" match="greaterOrEqual"/>
+      <import plugin="org.eclipse.ui.ide"/>
+      <import plugin="org.eclipse.jface.text"/>
+      <import plugin="org.eclipse.ui.editors"/>
+      <import plugin="org.eclipse.jdt.core"/>
+      <import plugin="org.eclipse.jdt.ui"/>
+      <import plugin="org.junit" version="4.10.0" match="greaterOrEqual"/>
+   </requires>
+
    <plugin
          id="edu.cmu.scs.azurite"
          download-size="0"
