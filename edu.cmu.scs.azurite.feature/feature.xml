@@ -2,7 +2,7 @@
 <feature
       id="edu.cmu.scs.azurite"
       label="Azurite for Eclipse"
-      version="0.1.1.qualifier"
+      version="0.1.2.qualifier"
       provider-name="School of Computer Science, Carnegie Mellon University">
 
    <description>
@@ -216,6 +216,12 @@ litigation.
 
    <plugin
          id="edu.cmu.scs.azurite"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"/>
+
+   <plugin
+         id="edu.cmu.scs.fluorite"
          download-size="0"
          install-size="0"
          version="0.0.0"/>
