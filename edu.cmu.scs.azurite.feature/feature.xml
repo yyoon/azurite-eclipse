@@ -212,7 +212,13 @@ litigation.
 
    <url>
       <update label="Azurite for Eclipse Update Site" url="http://azurite-eclipse.googlecode.com/hg/edu.cmu.scs.azurite.update/"/>
+      <discovery label="Azurite" url="http://azurite-eclipse.googlecode.com/hg/edu.cmu.scs.azurite.update/"/>
    </url>
+
+   <includes
+         id="edu.cmu.scs.fluorite"
+         version="0.0.0"
+         search-location="both"/>
 
    <requires>
       <import plugin="org.eclipse.ui"/>
