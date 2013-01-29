@@ -80,6 +80,9 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		
 	}
 	
+	// used for keeping track of the last index of the DC
+	private Map<FileKey, Integer> mNextIndexToApply;
+	
 	private Map<FileKey, List<RuntimeDC>> mDocumentChanges;
 	private FileKey mCurrentFileKey;
 	
@@ -95,6 +98,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 	 */
 	public RuntimeHistoryManager() {
 		mDocumentChanges = new HashMap<FileKey, List<RuntimeDC>>();
+		mNextIndexToApply = new HashMap<FileKey, Integer>();
 		mCurrentFileKey = null;
 		
 		mRuntimeDocumentChangeListeners = new ListenerList();
@@ -251,6 +255,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		
 		if (!mDocumentChanges.containsKey(key)) {
 			mDocumentChanges.put(key, new ArrayList<RuntimeDC>());
+			mNextIndexToApply.put(key, 0);
 		}
 		
 		fireActiveFileChangedEvent(key.getProjectName(), key.getFilePath());
@@ -261,6 +266,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		// Apply to the current file.
 		if (snapshot != null) {
 			getRuntimeDocumentChanges().clear();
+			mNextIndexToApply.put(getCurrentFileKey(), 0);
 		}
 	}
 
@@ -275,11 +281,13 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 	public void documentChangeFinalized(BaseDocumentChangeEvent docChange) {
 		RuntimeDC runtimeDocChange = RuntimeDC.createRuntimeDocumentChange(docChange);
 		
-		List<RuntimeDC> list = mDocumentChanges.get(getCurrentFileKey());
-		for (RuntimeDC existingDocChange : list) {
+		List<RuntimeDC> list = getRuntimeDocumentChanges();
+		
+		// Now this is done later when the filterDocumentChanges is called.
+/*		for (RuntimeDC existingDocChange : list) {
 			runtimeDocChange.applyTo(existingDocChange);
 		}
-		
+*/		
 		list.add(runtimeDocChange);
 		
 		// Fire runtime document change event
@@ -327,6 +335,15 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 			throw new IllegalStateException();
 		}
 		
+		// Lazy-evaluation of the dynamic segments!
+		for (int i = mNextIndexToApply.get(getCurrentFileKey()); i < list.size(); ++i) {
+			for (int j = 0; j < i; ++j) {
+				list.get(i).applyTo(list.get(j));
+			}
+		}
+		mNextIndexToApply.put(getCurrentFileKey(), list.size());
+		
+		// Then filter the results.
 		List<RuntimeDC> result = new ArrayList<RuntimeDC>();
 		for (RuntimeDC dc : list) {
 			if (filter.filter(dc)) {
