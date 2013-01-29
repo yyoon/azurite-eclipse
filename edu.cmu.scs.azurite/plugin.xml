@@ -61,18 +61,46 @@
             </command>
          </toolbar>
       </menuContribution>
+      <menuContribution
+            allPopups="false"
+            locationURI="menu:org.eclipse.ui.main.menu">
+         <menu
+               id="Azurite Menu"
+               label="Azurite"
+               mnemonic="z">
+            <command
+                  commandId="edu.cmu.scs.azurite.ui.commands.undoInRegionCommand"
+                  icon="icons/undo_in_region.png"
+                  style="push">
+            </command>
+            <command
+                  commandId="edu.cmu.scs.azurite.ui.commands.selectOperationsInRegionCommand"
+                  style="push">
+            </command>
+            <separator
+                  name="edu.cmu.scs.azurite.separator1"
+                  visible="true">
+            </separator>
+            <command
+                  commandId="edu.cmu.scs.fluorite.annotateCommand"
+                  icon="icons/annotation.png"
+                  style="push"
+                  tooltip="Add an annotation to describe the current backtracking intention">
+            </command>
+         </menu>
+      </menuContribution>
    </extension>
    <extension
          point="org.eclipse.ui.commands">
       <command
             defaultHandler="edu.cmu.scs.azurite.ui.handlers.UndoInRegionHandler"
             id="edu.cmu.scs.azurite.ui.commands.undoInRegionCommand"
-            name="Undo Everything in Region">
+            name="Undo Everything in Selected Region">
       </command>
       <command
             defaultHandler="edu.cmu.scs.azurite.ui.handlers.SelectOperationsInRegion"
             id="edu.cmu.scs.azurite.ui.commands.selectOperationsInRegionCommand"
-            name="Select Operations in Region">
+            name="Select Operations in Selected Region">
       </command>
    </extension>
 
