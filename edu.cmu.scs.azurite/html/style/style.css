@@ -1,18 +1,4 @@
-	
-input[type='range'] {
-	-webkit-apperance:none;
-	background-color: #CCCCCC;
-	height: 20px;
-}
-
-input[type='range']::-webkit-slider-thumb {
-	-webkit-apperance:none;
-	background-color: #444;
-	height: 20px;
-}
-
-#sel_box
-{
+#sel_box {
 display: none;
 position: absolute;
 border: 1px solid #000000;
@@ -21,51 +7,57 @@ width: 0;
 height: 0;
 }
 
-
 .extent {
-  stroke: #fff;
-  fill-opacity: .125;
-  fill: blue;
-  shape-rendering: crispEdges;
+stroke: #fff;
+fill-opacity: .125;
+fill: blue;
+shape-rendering: crispEdges;
 }
 
-
 body {
-	background-color:black;
-	font-family:helvetica;
-	font-size:12px;
+background-color:black;
+font-family:helvetica;
+font-size:12px;
 }
 
 .fileTitle {
-	
+
 }
 
 .menu_panel {
-	background-color:grey;
-	position: absolute;
+background-color:grey;
+position: absolute;
+padding: 5px;
+}
+
+.menu_subpanel {
+display: inline-block;
+margin-right: 50px;
 }
 
 .menu {
-	position: absolute;
+/*position: absolute;*/
+}
+
+button.menu {
+width: 50px;
+height: 30px;
+margin: 0px;
+padding: 0px;
 }
 
 .svg {
-	position: absolute;
-	left:0px;
-	top:0px;
+position: absolute;
+left:0px;
+top:0px;
 }
 
-<!-- context menu -->
 .cmenu {
-	margin: 0; 
-	
-	list-style-type: none; 
-	
+margin: 0;
+list-style-type: none;
 }
-
 
 #context_menu div:hover {
-
-	background-color:#ADD8E6;
-
+cursor:pointer;
+background-color:#ADD8E6;
 }

@@ -2,120 +2,62 @@
 <html>
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=EmulateIE9">
-	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
     <title>Timeline</title>
-	
+
     <script type="text/javascript" src="scripts/d3.v2.js"></script>
-	<script type="text/javascript" src="scripts/jquery-1.8.2.js"></script>
-	<script type="text/javascript" src="scripts/jquery-ui-1.9.1.custom.js"></script>
-	<script type="text/javascript" src="scripts/jquery.tipsy.js"></script>
-	<script type="text/javascript" src="scripts/tooltipsy.source.js"></script>
-	
-	<LINK href="style/jquery-ui-1.9.1.custom.css" rel="stylesheet" type="text/css">
-	<link href="style/tipsy.css" rel="stylesheet" type="text/css" />
-	
-	<style type="text/css">
+    <script type="text/javascript" src="scripts/jquery-1.8.2.js"></script>
+    <script type="text/javascript" src="scripts/jquery-ui-1.9.1.custom.js"></script>
+    <script type="text/javascript" src="scripts/jquery.tipsy.js"></script>
+    <script type="text/javascript" src="scripts/tooltipsy.source.js"></script>
 
-#sel_box
-{
-display: none;
-position: absolute;
-border: 1px solid #000000;
-background: transparent;
-width: 0;
-height: 0;
-}
-
-
-.extent {
-  stroke: #fff;
-  fill-opacity: .125;
-  fill: blue;
-  shape-rendering: crispEdges;
-}
-
-
-body {
-	background-color:black;
-	font-family:helvetica;
-	font-size:12px;
-}
-
-.fileTitle {
-	
-}
-
-.menu_panel {
-	background-color:grey;
-	position: absolute;
-}
-
-.menu {
-	position: absolute;
-}
-
-.svg {
-	position: absolute;
-	left:0px;
-	top:0px;
-}
-
-<!-- context menu -->
-.cmenu {
-	margin: 0; 
-	
-	list-style-type: none; 
-	
-}
-
-
-#context_menu div:hover {
-	cursor:pointer;
-	background-color:#ADD8E6;
-}
-
-
-</style>
+    <link href="style/jquery-ui-1.9.1.custom.css" rel="stylesheet" type="text/css">
+    <link href="style/tipsy.css" rel="stylesheet" type="text/css">
+    <link href="style/style.css" rel="stylesheet" type="text/css">
   </head>
   <body>
-	<div id='main' oncontextmenu="return false;">
-		<div class='menu_panel' id='menu_panel' style='z-index:1000'>
-			<button id='button_before' class='menu' onclick='show_before()'><</button>
-			<button id='button_after' class='menu' onclick='show_after()'>></button>
-			<button id='bar_zoom_in' class='menu' onclick='bar_zoom_in()'>+</button>
-			<button id='bar_zoom_out' class='menu' onclick='bar_zoom_out()'>-</button>
-			<div id='bar_zoom_level' class='menu' style='color:white'></div>
-			<div id='bar_page_index' class='menu' style='color:white'></div>
-			
-			<button id='button_up' class='menu' onclick='show_up()'>Up</button>
-			<button id='button_down' class='menu' onclick='show_down()'>Down</button>
-			<button id='file_zoom_in' class='menu' onclick='file_zoom_in()'>+</button>
-			<button id='file_zoom_out' class='menu' onclick='file_zoom_out()'>-</button>
-			<div id='file_zoom_level' class='menu' style='color:white'></div>
-			<div id='file_page_index' class='menu' style='color:white'></div>
-			
-			
-		</div>
-		
-		<div id='main_panel'>
-		
-			<div id='x_scrollbar'></div>
+  <div id='main' oncontextmenu="return false;">
+    <div class='menu_panel' id='menu_panel' style='z-index:1000'>
+      <div class='menu_subpanel'>
+        <button class='menu' onclick='show_before()'><</button>
+        <button class='menu' onclick='show_after()'>></button>
+        <button class='menu' onclick='bar_zoom_in()'>+</button>
+        <button class='menu' onclick='bar_zoom_out()'>-</button>
+        <div id='bar_zoom_level' class='menu' style='color:white'></div>
+        <div id='bar_page_index' class='menu' style='color:white'></div>
+      </div>
 
-			
-			<div id='scrollbar_y_wrapper'>
-				<div id='scrollbar_y'></div>
-			</div>
-		</div>
-		
-		<div id="context_menu" style="z-index: 10000; background-color: white; border: 2px solid #FFA500; display: none; position: absolute; width:100px; height:150"> 
-			<div id='undo' onclick='undo()'>Undo</div>
-<!-- 			<div id='redo'>Redo</div> -->
-		</div>
-		
-		<script type="text/javascript" src="scripts/timeline.js"></script>
-		<script type="text/javascript" src="scripts/time.js"></script>
+      <div class='menu_subpanel'>
+        <button class='menu' onclick='show_up()'>Up</button>
+        <button class='menu' onclick='show_down()'>Down</button>
+        <button class='menu' onclick='file_zoom_in()'>+</button>
+        <button class='menu' onclick='file_zoom_out()'>-</button>
+        <div id='file_zoom_level' class='menu' style='color:white'></div>
+        <div id='file_page_index' class='menu' style='color:white'></div>
+      </div>
 
 
-	</div>
+    </div>
+
+    <div id='main_panel'>
+
+      <div id='x_scrollbar'></div>
+
+
+      <div id='scrollbar_y_wrapper'>
+        <div id='scrollbar_y'></div>
+      </div>
+    </div>
+
+    <div id="context_menu" style="z-index: 10000; background-color: white; border: 2px solid #FFA500; display: none; position: absolute; width:100px; height:150">
+      <div id='undo' onclick='undo()'>Undo</div>
+<!--      <div id='redo'>Redo</div> -->
+    </div>
+
+    <script type="text/javascript" src="scripts/timeline.js"></script>
+    <script type="text/javascript" src="scripts/time.js"></script>
+
+
+  </div>
   </body>
 </html>

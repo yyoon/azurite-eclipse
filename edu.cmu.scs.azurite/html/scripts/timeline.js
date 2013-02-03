@@ -597,10 +597,6 @@ function draw_menu() {
 	// draw timeline bar control
 	var bar_zoom_level = document.getElementById('bar_zoom_level');
 	var bar_page_index = document.getElementById('bar_page_index');
-	var button_before = document.getElementById('button_before');
-	var button_after = document.getElementById('button_after');
-	var bar_zoom_in = document.getElementById('bar_zoom_in');
-	var bar_zoom_out = document.getElementById('bar_zoom_out');
 	
 	bar_zoom_level.style.left = menu_margins.left + 'px';
 	bar_zoom_level.style.top = menu_margins.top + button_height + 'px';
@@ -610,33 +606,9 @@ function draw_menu() {
 	bar_page_index.style.top = menu_margins.top + button_height + 20 + 'px';	
 	bar_page_index.innerHTML = "Page Index : " + bar_cur_index + "/" + bar_max_page_index;
 	
-	button_before.style.width = button_width + 'px';
-	button_before.style.height = button_height + 'px';
-	button_before.style.left = menu_margins.left + 'px';
-	button_before.style.top = menu_margins.top + 'px';
-
-	button_after.style.width = button_width + 'px';
-	button_after.style.height = button_height + 'px';
-	button_after.style.left = menu_margins.left + button_width + 'px';
-	button_after.style.top = menu_margins.top + 'px';
-	
-	bar_zoom_in.style.width = button_width + 'px';
-	bar_zoom_in.style.height = button_height + 'px';
-	bar_zoom_in.style.left = menu_margins.left + (button_width*2) + 'px';
-	bar_zoom_in.style.top = menu_margins.top + 'px';
-	
-	bar_zoom_out.style.width = button_width + 'px';
-	bar_zoom_out.style.height = button_height + 'px';
-	bar_zoom_out.style.left = menu_margins.left + (button_width*3) + 'px';
-	bar_zoom_out.style.top = menu_margins.top + 'px';
-	
 	// draw file list control
 	var file_zoom_level = document.getElementById('file_zoom_level');
 	var file_page_index = document.getElementById('file_page_index');
-	var button_up = document.getElementById('button_up');
-	var button_down = document.getElementById('button_down');
-	var file_zoom_in = document.getElementById('file_zoom_in');
-	var file_zoom_out = document.getElementById('file_zoom_out');
 	
 	file_zoom_level.style.left = menu_margins.left + (button_width*5) + 'px';
 	file_zoom_level.style.top = menu_margins.top + button_height + 'px';
@@ -645,27 +617,6 @@ function draw_menu() {
 	file_page_index.style.left = menu_margins.left + (button_width*5) + 'px';
 	file_page_index.style.top = menu_margins.top + button_height + 20 + 'px';	
 	file_page_index.innerHTML = "Page Index : " + file_cur_index + "/" + file_max_page_index;
-	
-	button_up.style.width = button_width + 'px';
-	button_up.style.height = button_height + 'px';
-	button_up.style.left = menu_margins.left + (button_width*5) +'px';
-	button_up.style.top = menu_margins.top + 'px';
-
-	button_down.style.width = button_width + 'px';
-	button_down.style.height = button_height + 'px';
-	button_down.style.left = menu_margins.left + (button_width*6) + 'px';
-	button_down.style.top = menu_margins.top + 'px';
-	
-	file_zoom_in.style.width = button_width + 'px';
-	file_zoom_in.style.height = button_height + 'px';
-	file_zoom_in.style.left = menu_margins.left + (button_width*7) + 'px';
-	file_zoom_in.style.top = menu_margins.top + 'px';
-	
-	file_zoom_out.style.width = button_width + 'px';
-	file_zoom_out.style.height = button_height + 'px';
-	file_zoom_out.style.left = menu_margins.left + (button_width*8) + 'px';
-	file_zoom_out.style.top = menu_margins.top + 'px';
-	
 }
 
 function draw_files(files_to_draw) {
