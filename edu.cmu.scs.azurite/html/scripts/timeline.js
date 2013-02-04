@@ -10,7 +10,6 @@ var lastWindowWidth = null, lastWindowHeight = null;
 
 // left, right, top, bottom
 var menu_panel_height = 75;
-var menu_margins = {left: 5, top: 5};
 var chart_margins = {left: 5, right:5, top: 15, bottom: 30};
 
 
@@ -584,38 +583,21 @@ function getCursorPosition(e) {
 }
 
 function draw_menu() {
-	var button_width = 50, button_height = 30;
-
 	// draw panel
 	var div_menu_panel = document.getElementById('menu_panel');
-
-	div_menu_panel.style.left = 0 + 'px';
-	div_menu_panel.style.top = 0 + 'px';
-	div_menu_panel.style.width = lastWindowWidth + 'px';
-	div_menu_panel.style.height = menu_panel_height + 'px';
 
 	// draw timeline bar control
 	var bar_zoom_level = document.getElementById('bar_zoom_level');
 	var bar_page_index = document.getElementById('bar_page_index');
 	
-	bar_zoom_level.style.left = menu_margins.left + 'px';
-	bar_zoom_level.style.top = menu_margins.top + button_height + 'px';
 	bar_zoom_level.innerHTML = "Zoom Index : " + bar_zoom_index + "/" + (bar_zoom_levels.length-1);
-	
-	bar_page_index.style.left = menu_margins.left + 'px';
-	bar_page_index.style.top = menu_margins.top + button_height + 20 + 'px';	
 	bar_page_index.innerHTML = "Page Index : " + bar_cur_index + "/" + bar_max_page_index;
 	
 	// draw file list control
 	var file_zoom_level = document.getElementById('file_zoom_level');
 	var file_page_index = document.getElementById('file_page_index');
 	
-	file_zoom_level.style.left = menu_margins.left + (button_width*5) + 'px';
-	file_zoom_level.style.top = menu_margins.top + button_height + 'px';
 	file_zoom_level.innerHTML = "Zoom Index : " + file_zoom_index + "/" + (file_zoom_levels.length-1);
-	
-	file_page_index.style.left = menu_margins.left + (button_width*5) + 'px';
-	file_page_index.style.top = menu_margins.top + button_height + 20 + 'px';	
 	file_page_index.innerHTML = "Page Index : " + file_cur_index + "/" + file_max_page_index;
 }
 
@@ -1001,57 +983,6 @@ function draw_highlight() {
 	}
 }
 
-/*
-function draw_highlight(x1, y1, x2, y2, offsetX, offsetY) {
-	var blockLength = blocks_to_draw.length;
-	
-	for(var i = 0; i < blockLength; i++) {
-		if(trivial_reject_test(x1, y1, x2, y2, offsetX, offsetY, blocks_to_draw[i]) == 0) {
-			if(selected[blocks_to_draw[i]] == false) {
-				selected[blocks_to_draw[i]] = true;
-			}
-		
-			selected.push(blocks_to_draw[i]);
-		}
-	}
-	console.log(selected.length);
-	var itemsToHighlight = [];	
-	var selectedLength = selected.length;
-	
-	if(selectedLength > 0) {
-		var prev = selected[0];
-		var item = {startX: prev.x, startY: prev.y, endX: prev.x + prev.width, endY: prev.y + prev.height};
-		
-		for(var i = 1; i < selectedLength; i++) {
-			if(item.startY == selected[i].y &&  Math.abs(item.endX - selected[i].x) <= 8) {
-				item.endX = (item.endX > (selected[i].x + selected[i].width)) ? item.endX : (selected[i].x + selected[i].width);
-			} else {
-				itemsToHighlight.push(item);
-				item = {startX: selected[i].x, startY: selected[i].y, endX: selected[i].x + selected[i].width, endY: selected[i].y + selected[i].height};
-			}
-		
-			prev = selected[i];
-		}
-		
-		itemsToHighlight.push(item);
-		
-		//console.log(itemsToHighlight);
-		
-		var highlight_width = 3;
-		
-		blocks.selectAll('polygon')
-			.data(itemsToHighlight).enter().append('polygon')
-			.attr("points", function(d) { return ((d.startX) + "," + (d.startY) + " \ " + 
-			(d.endX) + "," + (d.startY) + " \ " +
-			(d.endX) + "," + (d.endY) + " \ " +
-			(d.startX) + "," + (d.endY)) })
-			.style("stroke", "yellow")
-			.style("stroke-width", highlight_width)
-			.style("fill-opacity", 0);
-			
-	}
-}
-*/
 function trivial_reject_test(x1, y1, x2, y2, offsetX, offsetY, block) {
 	var result0 = 0, result1= 0;
 	var left = 1;
@@ -1161,5 +1092,4 @@ function undo() {
 	if(result.length > 0)
 		doUndo(result);
 	
-
 }
