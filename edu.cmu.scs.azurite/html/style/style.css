@@ -43,7 +43,13 @@ box-sizing:         border-box;
 
 .menu_subpanel {
 display: inline-block;
+vertical-align: top;
 margin-right: 50px;
+}
+
+.menu_debugpanel {
+display: inline-block;
+float: right;
 }
 
 #main {
@@ -72,14 +78,19 @@ padding-bottom: 30px;
 box-sizing:         border-box;
 }
 
+#svg {
+/*padding: 15px 5px 30px 5px;*/
+
+-moz-box-sizing:    border-box;
+-webkit-box-sizing: border-box;
+box-sizing:         border-box;
+}
+
 button.menu {
 width: 50px;
 height: 30px;
 margin: 0px;
 padding: 0px;
-}
-
-.svg {
 }
 
 .cmenu {

@@ -8,7 +8,7 @@ if (!window.console.log) window.console.log = function () { };
 
 // Disable selection.
 document.unselectable = "on";
-document.onselectstart = function(){return false};
+document.onselectstart = function () { return false };
 
 
 /**
@@ -49,7 +49,7 @@ global.xmlDoc = null;
 
 // last file opened
 global.currentFile = null;
-global.lastEvent = null;
+global.lastOperation = null;
 
 // Timestamps
 global.maxTimestamp = 0;
@@ -135,7 +135,7 @@ svg.main.append('rect')
 function File(path, fileName) {
     this.path = path;
     this.fileName = fileName;
-    this.event = [];
+    this.operations = [];
 }
 
 /**
@@ -266,7 +266,7 @@ function parseXml() {
                     timestamp2 = parseInt(timestamp2);
                 }
                 
-                global.currentFile.event.push(new EditOperation(id, timestamp, timestamp2, type));
+                global.currentFile.operations.push(new EditOperation(id, timestamp, timestamp2, type));
                 
                 updateMaxTimestamp(timestamp, timestamp2);
             }
@@ -299,7 +299,7 @@ function checkFileList(path, fileName) {
 function addFile(path) {
     var fileName = path.match(/[^\\/]+$/)[0];
     
-    global.lastEvent = null;
+    global.lastOperation = null;
     
     for(var index in global.files) {
         if(global.files[index].path == path) {
@@ -311,7 +311,8 @@ function addFile(path) {
     var newFile = new File(path, fileName);
     global.files.push(newFile);
     global.currentFile = newFile;
-    redraw();
+	
+	drawFiles();
 }
 
 /**
@@ -320,13 +321,13 @@ function addFile(path) {
  */
 function setStartTimestamp(timestamp) {
     global.startTimestamp = parseInt(timestamp);
-    redraw();
+    drawRules();
 }
 
 
 /**
  * Called by Azurite.
- * Add an event to the end of the file.
+ * Add an edit operation to the end of the file.
  * Note that this is called immediately after an edit operation is performed.
  */
 function addOperation(id, timestamp1, timestamp2, type) {
@@ -350,12 +351,32 @@ function addOperation(id, timestamp1, timestamp2, type) {
     if(fileIndex == -1)
         return;
     
-    global.currentFile.event.push(newOp);
-    global.lastEvent = newOp;
+    global.currentFile.operations.push(newOp);
+    global.lastOperation = newOp;
     
     updateMaxTimestamp(timestamp1, timestamp2);
-
-    redraw();
+	
+	var numMaxFilesToDraw = getMaxFilesToDraw();
+	var offset = numMaxFilesToDraw * global.fileCurIndex;
+	
+	if (offset <= fileIndex && fileIndex < offset + numMaxFilesToDraw) {
+		var rowIndex = fileIndex - offset;
+		
+		if (createBlockFromOperation(newOp, rowIndex)) {
+			var block = global.blocksToDraw[global.blocksToDraw.length - 1];
+			
+			// This block should be drawn immediately!
+			svg.blocks.append('rect')
+				.attr('class', 'block')
+				.attr('width', block.width)
+				.attr('height', block.height)
+				.attr('x', block.x)
+				.attr('y', block.y)
+				.style('fill', block.color);
+		}
+	}
+	
+	drawIndicator();
 }
 
 /**
@@ -364,10 +385,10 @@ function addOperation(id, timestamp1, timestamp2, type) {
  * operations are merged into one.
  */
 function updateOperationTimestamp2(id, timestamp2) {
-    if (global.lastEvent == null || global.lastEvent.id != parseInt(id))
+    if (global.lastOperation == null || global.lastOperation.id != parseInt(id))
         return;
     
-    global.lastEvent.timestamp2 = timestamp2;
+    global.lastOperation.timestamp2 = timestamp2;
     
     updateMaxTimestamp(timestamp2, null);
     
@@ -377,44 +398,26 @@ function updateOperationTimestamp2(id, timestamp2) {
 function redraw() {
     var svgWidth = parseInt(svg.main.style('width'));
     var svgHeight = parseInt(svg.main.style('height'));
-    var chartWidth = svgWidth - CHART_MARGINS.left - CHART_MARGINS.right;
-    var chartHeight = svgHeight - CHART_MARGINS.top - CHART_MARGINS.bottom;
-    var titleWidth = (chartWidth) * 0.15;
-    var barWidth = (chartWidth) * 0.85;
     
-    svg.subFile.selectAll('text').remove();
-    svg.fileLines.selectAll('line').remove();
-    svg.rules.selectAll('text').remove();
     svg.subBar.selectAll('rect').remove();
     
     // remove highlights
     global.selected = [];
     svg.subBar.selectAll('polygon').remove();
 
-    // using the current svg height, determine the number of global.files to draw
-    var numMaxFilesToShow = Math.floor(chartHeight / FILE_ZOOM_LEVELS[global.fileZoomIndex]);
-    global.fileMaxPageIndex = Math.ceil(global.files.length / numMaxFilesToShow) - 1;
-    
-    // calculate the number of global.files to draw
-    var filesToDraw = [];
-    var offset = numMaxFilesToShow * global.fileCurIndex;
-    
-    for(var i = 0; i < numMaxFilesToShow && global.files[offset+i] != null; i++)
-        filesToDraw.push(global.files[offset+i]);
-    
-    
     // translate subFile and subBar
     svg.subFile.attr('transform', 'translate(' + CHART_MARGINS.left + ',' + CHART_MARGINS.top + ')');
-    svg.subBar.attr('transform', 'translate(' + (CHART_MARGINS.left + titleWidth) + ',' + CHART_MARGINS.top + ')');
+    svg.subBar.attr('transform', 'translate(' + (CHART_MARGINS.left + global.titleWidth) + ',' + CHART_MARGINS.top + ')');
+	
+	var filesToDraw = getFilesToDraw();
     
     drawMenu();
     drawFiles(filesToDraw);
-    drawFileLines(filesToDraw.length, barWidth);
-    drawBars(filesToDraw, barWidth, chartHeight);
-    drawRules(chartHeight);
-    drawScrollbar(titleWidth, barWidth, chartHeight);
+    drawBars(filesToDraw);
+    drawRules();
+    drawScrollbar();
     drawHighlight();
-    drawIndicator(chartHeight);
+    drawIndicator();
     
     $('.block').tipsy({ 
         gravity: 'se', 
@@ -424,13 +427,338 @@ function redraw() {
               return 'id: ' + d.id;
         }
     });
+}
+
+function getFilesToDraw() {
+    // using the current svg height, determine the number of global.files to draw
+    var numMaxFilesToDraw = getMaxFilesToDraw();
+    global.fileMaxPageIndex = Math.ceil(global.files.length / numMaxFilesToDraw) - 1;
+	if (global.fileMaxPageIndex < 0) {
+		global.fileMaxPageIndex = 0;
+	}
     
+    // calculate the number of global.files to draw
+    var filesToDraw = [];
+    var offset = numMaxFilesToDraw * global.fileCurIndex;
     
+    for(var i = 0; i < numMaxFilesToDraw && global.files[offset+i] != null; i++)
+        filesToDraw.push(global.files[offset+i]);
+	
+	return filesToDraw;
+}
+
+function getMaxFilesToDraw() {
+	return Math.floor((parseInt(svg.main.style('height')) - CHART_MARGINS.top - CHART_MARGINS.bottom) / FILE_ZOOM_LEVELS[global.fileZoomIndex]);
+}
+
+function getCursorPosition(e) {
+    e = e || window.event;
+    
+    if(e) {
+        if (e.pageX || e.pageX == 0) return [e.pageX,e.pageY];
+            var dE = document.documentElement || {};
+        
+        var dB = document.body || {};
+        if ((e.clientX || e.clientX == 0) && ((dB.scrollLeft || dB.scrollLeft == 0) || (dE.clientLeft || dE.clientLeft == 0))) 
+            return [e.clientX + (dE.scrollLeft || dB.scrollLeft || 0) - (dE.clientLeft || 0),e.clientY + (dE.scrollTop || dB.scrollTop || 0) - (dE.clientTop || 0)];
+    }
+    
+    return null;
+}
+
+function drawMenu() {
+    // draw timeline bar control
+    var barZoomLevel = document.getElementById('bar_zoom_level');
+    var barPageIndex = document.getElementById('bar_page_index');
+    
+    barZoomLevel.innerHTML = "Zoom Index : " + global.barZoomIndex + "/" + (BAR_ZOOM_LEVELS.length-1);
+    barPageIndex.innerHTML = "Page Index : " + global.barCurIndex + "/" + global.barMaxPageIndex;
+    
+    // draw file list control
+    var fileZoomLevel = document.getElementById('file_zoom_level');
+    var filePageIndex = document.getElementById('file_page_index');
+    
+    fileZoomLevel.innerHTML = "Zoom Index : " + global.fileZoomIndex + "/" + (FILE_ZOOM_LEVELS.length-1);
+    filePageIndex.innerHTML = "Page Index : " + global.fileCurIndex + "/" + global.fileMaxPageIndex;
+}
+
+function drawFiles(filesToDraw) {
+    svg.subFile.selectAll('text').remove();
+	
+	if (filesToDraw == null) {
+		filesToDraw = getFilesToDraw();
+	}
+	
+    // draw file titles.
+    svg.subFile.selectAll('.fileTitles')
+        .data(filesToDraw)
+        .enter().append('text')
+        .text(function(d) { return d.fileName; })
+        .attr('x', 0)
+        .attr('y', function(d,i) { return (FILE_ZOOM_LEVELS[global.fileZoomIndex] * i) +  FILE_ZOOM_LEVELS[global.fileZoomIndex]/2} )
+        .attr('dy', '0.5ex')
+        .attr('text-anchor', 'start')
+        .attr('class', 'file_title')
+        .attr('fill', 'white')
+        .style('-moz-user-select', 'none')
+        .style('-webkit-user-select', 'none')
+        .attr('onselectstart', false);
+	
+	// Lines
+    svg.fileLines.selectAll('line').remove();
+	
+    // if there's no file, then don't draw a line.
+    if (filesToDraw.length == 0) {
+        return;
+    }
+    
+    // draw file lines
+    for(var i = 0; i < filesToDraw.length + 1; i++) {
+        svg.fileLines.append('line')
+            .attr('x1', 0)
+            .attr('y1', FILE_ZOOM_LEVELS[global.fileZoomIndex] * i)
+            .attr('x2', parseInt(svg.main.style('width')) * 0.85)
+            .attr('y2', FILE_ZOOM_LEVELS[global.fileZoomIndex] * i)
+            .attr('stroke', 'lightgray' )
+            .style('stroke-width', 1);
+    }
+}
+
+function drawBars(filesToDraw) {
+    global.xRule = d3.scale.linear()
+        .domain([0, NUM_TIMESTAMPS - 1])
+        .range([global.minToShow, global.maxToShow]);
+    
+    global.xBar = d3.time.scale()
+        .domain([global.minToShow, global.maxToShow])
+        .range([0, global.barWidth]);
+    
+    // filter blocks to draw
+    global.blocksToDraw = [];
+    
+    for(var i = 0; i < filesToDraw.length; i++) {
+        var file = filesToDraw[i];
+        var operations = file.operations;
+        var length = operations.length;
+        
+        for(var j = 0; j < length; j++) {
+			createBlockFromOperation(operations[j], i);
+        }
+    }
+    
+    svg.blocks.selectAll("rect")
+        .data(global.blocksToDraw).enter().append("rect")
+        .attr('class', 'block')
+        .attr("width", function(d) { return d.width; })
+        .attr("height", function(d) { return d.height; })
+        .attr("x", function(d) { return d.x; })
+        .attr("y", function(d) { return d.y; })
+        .style("fill", function(d) { return d.color; });
+}
+
+function createBlockFromOperation(operation, rowIndex) {
+	var timestamp = operation.timestamp;
+	var timestamp2 = operation.timestamp2;
+	
+	// there should always be a timestamp.
+	if (timestamp == null) {
+		return false;
+	}
+	
+	// if timestamp2 is not defined, just use the timestamp value.
+	if (timestamp2 == null) {
+		timestamp2 = timestamp;
+	}
+	
+	// the block is outside of the current view.
+	if (timestamp2 < global.minToShow || timestamp > global.maxToShow) {
+		return false;
+	}
+	
+	timestamp = clamp(timestamp, global.minToShow, global.maxToShow);
+	timestamp2 = clamp(timestamp2, global.minToShow, global.maxToShow);
+	
+	blockWidth = global.xBar(timestamp2) - global.xBar(timestamp);
+	if (blockWidth < global.minBlockWidth) {
+		blockWidth = global.minBlockWidth;
+	}
+	
+	if (timestamp2 >= global.maxTimestamp) {
+		global.maxTimestamp = global.xBar.invert( global.xBar(timestamp) + blockWidth );
+	}
+	
+	global.blocksToDraw.push(new Block(
+		operation.id,
+		operation.type,
+		blockWidth,
+		FILE_ZOOM_LEVELS[global.fileZoomIndex], 
+		global.xBar(timestamp), 
+		(FILE_ZOOM_LEVELS[global.fileZoomIndex] * rowIndex),
+		operation.color, 
+		timestamp, 
+		timestamp2)
+	);
+	
+	return true;
+}
+
+function drawRules() {
+    svg.rules.selectAll('text').remove();
+	
+    svg.rules.selectAll(".rule")
+        .data(range(0, NUM_TIMESTAMPS))
+        .enter()
+        .append("text")
+        .attr("x", function(d,i) { return global.xBar(global.xRule(i)); })
+        .attr("y", global.chartHeight + 15)
+        .attr("text-anchor", function(d,i) {
+            if(i == 0)
+                return "start";
+            else if(i == NUM_TIMESTAMPS - 1)
+                return "end";
+            else 
+                return "middle";
+        })
+        .attr('fill', 'white')
+        .text(function(d,i) { return dateFormat(new Date(global.startTimestamp + global.xRule(i)), 'hh:MMTT mm/dd') })
+        .style('-moz-user-select', 'none')
+        .style('-webkit-user-select', 'none')
+        .attr('onselectstart', false);
+}
+
+function drawScrollbar() {
+    // Only show the scrollbar when needed.
+    if (global.barMaxPageIndex == null || global.barMaxPageIndex <= 0) {
+        $('#x_scrollbar').css({"display": "none"});
+        return;
+    }
+
+    $('#x_scrollbar').css({
+        "position": 'absolute',
+        "left": global.titleWidth + "px",
+        "top": global.chartHeight + MENU_PANEL_HEIGHT + 50 + "px",
+        "width": global.barWidth + "px",
+        "display": "block"
+    });
+    
+    var $scrollX = $('#x_scrollbar').slider({
+        value: global.barCurIndex,
+        min: 0,
+        max: global.barMaxPageIndex,
+        step: 1,
+        orientation: 'horizontal',
+
+        slide: function(event, ui) {
+            //debugger;
+            setBarCurIndex(ui.value);
+            redraw();
+        }
+    });
+    
+    var handle_size = $scrollX.width() / (global.barMaxPageIndex + 1);
+    var handle_margin_left = -handle_size * global.barCurIndex / global.barMaxPageIndex;
+    if (global.barMaxPageIndex == 0) handle_margin_left = 0;
+    handle_margin_left -= 1;    // I don't know why, but it's off by 1 px by default.
+    
+    $scrollX.find('.ui-slider-handle').css({
+        "width": handle_size + "px",
+        "margin-left": handle_margin_left + "px"
+    });
+    
+}
+
+function drawIndicator() {
+    d3.select('.indicator').remove();
+    
+    // draw the "now" indicator only when needed.
+    if (global.minToShow <= global.maxTimestamp && global.maxTimestamp <= global.maxToShow) {
+        svg.subBar.append('line')
+            .attr('class', 'indicator')
+            .attr('x1', global.xBar(global.maxTimestamp))
+            .attr('y1', 0)
+            .attr('x2', global.xBar(global.maxTimestamp))
+            .attr('y2', global.chartHeight)
+            .attr('stroke', 'yellow' )
+            .style('stroke-width', 2);
+    }
+}
+
+
+/*
+ * When the page loads, load a log file
+ */
+window.onload = function () {
+    loadFile();
+    parseXml();
+    initContextMenu();
+	
+    setBarCurIndex(0);
+	setFileCurIndex(0);
+	
+	window.onresize();
+	initEventHandlers();
+}
+
+window.onresize = function (e) {
+    // if window size are different, redraw everything
+    if(global.lastWindowWidth != window.innerWidth || global.lastWindowHeight != window.innerHeight) {
+        global.lastWindowWidth = window.innerWidth;
+        global.lastWindowHeight = window.innerHeight;
+		
+		var svgWidth = parseInt(svg.main.style('width'));
+		var svgHeight = parseInt(svg.main.style('height'));
+		
+		global.chartWidth = svgWidth - CHART_MARGINS.left - CHART_MARGINS.right;
+		global.chartHeight = svgHeight - CHART_MARGINS.top - CHART_MARGINS.bottom;
+		global.titleWidth = global.chartWidth * 0.15;
+		global.barWidth = global.chartWidth * 0.85;
+		
+		global.minBlockWidth = global.barWidth * 0.005;
+        
+        redraw();
+    }
+}
+
+/******************************************************************
+ MOUSE EVENT FUNCTIONS
+ ******************************************************************/
+ 
+function initContextMenu() {
+    global.divContext = document.getElementById('context_menu');
+    
+    global.divContext.onmouseover = function() { mouseOverContext = true; };
+    global.divContext.onmouseout = function(e) {
+        e = event.toElement || event.relatedTarget;
+        
+        while(e && e.parentNode && e.parentNode != window) {
+            if(e.parentNode == this || e == this) {
+                return;
+            }
+            e = e.parentNode;
+        }
+        
+        // hideContextMenu();
+    };
+}
+
+function initEventHandlers() {
+    document.addEventListener("keydown", function(e) {
+        if(e.keyCode == 17) 
+            cmenu.isCtrlDown = true;
+    }
+    , false);
+    
+    document.addEventListener("keyup", function(e) {
+        if(e.keyCode == 17)
+            cmenu.isCtrlDown = false;
+    }
+    , false);
+	
     var draggableArea = {
         top: CHART_MARGINS.top,
-        bottom: CHART_MARGINS.top + chartHeight,
-        left: (CHART_MARGINS.left + titleWidth),
-        right:  (CHART_MARGINS.left + titleWidth + barWidth)
+        bottom: CHART_MARGINS.top + global.chartHeight,
+        left: (CHART_MARGINS.left + global.titleWidth),
+        right:  (CHART_MARGINS.left + global.titleWidth + global.barWidth)
     };
     
     document.onmousedown =  function(e) {
@@ -549,297 +877,11 @@ function redraw() {
             y1 = mouseY;
             y2 = global.dragStart[1];
         }
-        addSelections(x1, y1, x2, y2, (CHART_MARGINS.left + titleWidth), CHART_MARGINS.top);
+        addSelections(x1, y1, x2, y2, (CHART_MARGINS.left + global.titleWidth), CHART_MARGINS.top);
     
         global.dragging = false;   
         global.dragStart = [];
     }
-}
-
-function getCursorPosition(e) {
-    e = e || window.event;
-    
-    if(e) {
-        if (e.pageX || e.pageX == 0) return [e.pageX,e.pageY];
-            var dE = document.documentElement || {};
-        
-        var dB = document.body || {};
-        if ((e.clientX || e.clientX == 0) && ((dB.scrollLeft || dB.scrollLeft == 0) || (dE.clientLeft || dE.clientLeft == 0))) 
-            return [e.clientX + (dE.scrollLeft || dB.scrollLeft || 0) - (dE.clientLeft || 0),e.clientY + (dE.scrollTop || dB.scrollTop || 0) - (dE.clientTop || 0)];
-    }
-    
-    return null;
-}
-
-function drawMenu() {
-    // draw timeline bar control
-    var barZoomLevel = document.getElementById('bar_zoom_level');
-    var barPageIndex = document.getElementById('bar_page_index');
-    
-    barZoomLevel.innerHTML = "Zoom Index : " + global.barZoomIndex + "/" + (BAR_ZOOM_LEVELS.length-1);
-    barPageIndex.innerHTML = "Page Index : " + global.barCurIndex + "/" + global.barMaxPageIndex;
-    
-    // draw file list control
-    var fileZoomLevel = document.getElementById('file_zoom_level');
-    var filePageIndex = document.getElementById('file_page_index');
-    
-    fileZoomLevel.innerHTML = "Zoom Index : " + global.fileZoomIndex + "/" + (FILE_ZOOM_LEVELS.length-1);
-    filePageIndex.innerHTML = "Page Index : " + global.fileCurIndex + "/" + global.fileMaxPageIndex;
-}
-
-function drawFiles(filesToDraw) {
-    // draw file titles.
-    svg.subFile.selectAll('.fileTitles')
-        .data(filesToDraw)
-        .enter().append('text')
-        .text(function(d) { return d.fileName; })
-        .attr('x', 0)
-        .attr('y', function(d,i) { return (FILE_ZOOM_LEVELS[global.fileZoomIndex] * i) +  FILE_ZOOM_LEVELS[global.fileZoomIndex]/2} )
-        .attr('dy', '0.5ex')
-        .attr('text-anchor', 'start')
-        .attr('class', 'file_title')
-        .attr('fill', 'white')
-        .style('-moz-user-select', 'none')
-        .style('-webkit-user-select', 'none')
-        .attr('onselectstart', false);
-}
-
-function drawFileLines(numFiles, width) {
-    // if there's no file, then don't bother to draw a line.
-    if (numFiles == 0) {
-        return;
-    }
-    
-    // draw file lines
-    for(var i = 0; i < numFiles + 1; i++) {
-        svg.fileLines.append('line')
-            .attr('x1', 0)
-            .attr('y1', FILE_ZOOM_LEVELS[global.fileZoomIndex] * i)
-            .attr('x2', width)
-            .attr('y2', FILE_ZOOM_LEVELS[global.fileZoomIndex] * i)
-            .attr('stroke', 'lightgray' )
-            .style('stroke-width', 1);
-    }
-}
-
-function drawBars(filesToDraw, width, height) {
-    global.xRule = d3.scale.linear()
-        .domain([0, NUM_TIMESTAMPS - 1])
-        .range([global.minToShow, global.maxToShow]);
-    
-    global.xBar = d3.time.scale()
-        .domain([global.minToShow, global.maxToShow])
-        .range([0, width]);
-    
-    // filter blocks to draw
-    global.blocksToDraw = [];
-    var minBarWidth = width * 0.005;
-    
-    for(var i = 0; i < filesToDraw.length; i++) {
-        var file = filesToDraw[i];
-        var events = file.event;
-        var length = events.length;
-        var barWidth;
-        
-        for(var j = 0; j < length; j++) {
-            var draw = false;
-            var timestamp = events[j].timestamp;
-            var timestamp2 = events[j].timestamp2;
-            
-            // there should always be a timestamp.
-            if (timestamp == null) {
-                continue;
-            }
-            
-            // if timestamp2 is not defined, just use the timestamp value.
-            if (timestamp2 == null) {
-                timestamp2 = timestamp;
-            }
-            
-            // the block is outside of the current view.
-            if (timestamp2 < global.minToShow || timestamp > global.maxToShow) {
-                continue;
-            }
-            
-            timestamp = clamp(timestamp, global.minToShow, global.maxToShow);
-            timestamp2 = clamp(timestamp2, global.minToShow, global.maxToShow);
-            
-            barWidth = global.xBar(timestamp2) - global.xBar(timestamp);
-            if (barWidth < minBarWidth) {
-                barWidth = minBarWidth;
-            }
-            
-            if (timestamp2 >= global.maxTimestamp) {
-                global.maxTimestamp = global.xBar.invert( global.xBar(timestamp) + barWidth );
-            }
-            
-            global.blocksToDraw.push(new Block(
-                events[j].id,
-                events[j].type,
-                barWidth,
-                FILE_ZOOM_LEVELS[global.fileZoomIndex], 
-                global.xBar(timestamp), 
-                (FILE_ZOOM_LEVELS[global.fileZoomIndex] * i),
-                events[j].color, 
-                timestamp, 
-                timestamp2)
-            );
-        }
-    }
-    
-    svg.blocks.selectAll("rect")
-        .data(global.blocksToDraw).enter().append("rect")
-        .attr('class', 'block')
-        .attr("width", function(d) { return d.width; })
-        .attr("height", function(d) { return d.height; })
-        .attr("x", function(d) { return d.x; })
-        .attr("y", function(d) { return d.y; })
-        .style("fill", function(d) { return d.color; });
-}
-
-function drawRules(chartHeight) {
-    svg.rules.selectAll(".rule")
-        .data(range(0, NUM_TIMESTAMPS))
-        .enter()
-        .append("text")
-        .attr("x", function(d,i) { return global.xBar(global.xRule(i)); })
-        .attr("y", chartHeight + 15)
-        .attr("text-anchor", function(d,i) {
-            if(i == 0)
-                return "start";
-            else if(i == NUM_TIMESTAMPS - 1)
-                return "end";
-            else 
-                return "middle";
-        })
-        .attr('fill', 'white')
-        .text(function(d,i) { return dateFormat(new Date(global.startTimestamp + global.xRule(i)), 'HH:MMTT mm/dd') })
-        .style('-moz-user-select', 'none')
-        .style('-webkit-user-select', 'none')
-        .attr('onselectstart', false);
-}
-
-function drawScrollbar(titleWidth, barWidth, chartHeight) {
-    // Only show the scrollbar when needed.
-    if (global.barMaxPageIndex == null || global.barMaxPageIndex <= 0) {
-        $('#x_scrollbar').css({"display": "none"});
-        return;
-    }
-
-    $('#x_scrollbar').css({
-        "position": 'absolute',
-        "left": titleWidth + "px",
-        "top": chartHeight + MENU_PANEL_HEIGHT + 50 + "px",
-        "width": barWidth + "px",
-        "display": "block"
-    });
-    
-    var $scrollX = $('#x_scrollbar').slider({
-        value: global.barCurIndex,
-        min: 0,
-        max: global.barMaxPageIndex,
-        step: 1,
-        orientation: 'horizontal',
-
-        slide: function(event, ui) {
-            //debugger;
-            setBarCurIndex(ui.value);
-            redraw();
-        }
-    });
-    
-    var handle_size = $scrollX.width() / (global.barMaxPageIndex + 1);
-    var handle_margin_left = -handle_size * global.barCurIndex / global.barMaxPageIndex;
-    if (global.barMaxPageIndex == 0) handle_margin_left = 0;
-    handle_margin_left -= 1;    // I don't know why, but it's off by 1 px by default.
-    
-    $scrollX.find('.ui-slider-handle').css({
-        "width": handle_size + "px",
-        "margin-left": handle_margin_left + "px"
-    });
-    
-}
-
-function drawIndicator(chartHeight) {
-    d3.select('.indicator').remove();
-    
-    // draw the "now" indicator only when needed.
-    if (global.minToShow <= global.maxTimestamp && global.maxTimestamp <= global.maxToShow) {
-        svg.subBar.append('line')
-            .attr('class', 'indicator')
-            .attr('x1', global.xBar(global.maxTimestamp))
-            .attr('y1', 0)
-            .attr('x2', global.xBar(global.maxTimestamp))
-            .attr('y2', chartHeight)
-            .attr('stroke', 'yellow' )
-            .style('stroke-width', 2);
-    }
-}
-
-
-/*
- * When the page loads, load a log file
- */
-window.onload = function () {
-    loadFile();
-    parseXml();
-    initContextMenu();
-    setBarCurIndex(0);
-    
-    document.addEventListener("keydown", function(e) {
-        if(e.keyCode == 17) 
-            cmenu.isCtrlDown = true;
-    }
-    , false);
-    
-    document.addEventListener("keyup", function(e) {
-        if(e.keyCode == 17)
-            cmenu.isCtrlDown = false;
-    }
-    , false);
-
-    if(global.lastWindowWidth != window.innerWidth || global.lastWindowHeight != window.innerHeight) {
-        global.lastWindowWidth = window.innerWidth;
-        global.lastWindowHeight = window.innerHeight;
-        
-        global.fileCurIndex = 0;
-        global.barCurIndex = 0;
-        
-        redraw();
-    }
-    
-}
-
-window.onresize = function(event) {
-    // if window size are different, redraw everything
-    if(global.lastWindowWidth != window.innerWidth || global.lastWindowHeight != window.innerHeight) {
-        global.lastWindowWidth = window.innerWidth;
-        global.lastWindowHeight = window.innerHeight;
-        
-        redraw();
-    }
-}
-
-/******************************************************************
- MOUSE EVENT FUNCTIONS
- ******************************************************************/
- 
-function initContextMenu() {
-    global.divContext = document.getElementById('context_menu');
-    
-    global.divContext.onmouseover = function() { mouseOverContext = true; };
-    global.divContext.onmouseout = function(e) {
-        e = event.toElement || event.relatedTarget;
-        
-        while(e && e.parentNode && e.parentNode != window) {
-            if(e.parentNode == this || e == this) {
-                return;
-            }
-            e = e.parentNode;
-        }
-        
-        // hideContextMenu();
-    };
 }
  
 function showContextMenu(event) {   
@@ -1035,6 +1077,8 @@ function showDown() {
 
 function setBarZoomIndex(newIndex) {
     global.barZoomIndex = clamp(newIndex, 0, BAR_ZOOM_LEVELS.length - 1);
+	
+	drawMenu();
 }
 
 function setBarCurIndex(newIndex) {
@@ -1042,14 +1086,20 @@ function setBarCurIndex(newIndex) {
     
     global.minToShow = global.barCurIndex * BAR_ZOOM_LEVELS[global.barZoomIndex];
     global.maxToShow = global.minToShow + BAR_ZOOM_LEVELS[global.barZoomIndex];
+	
+	drawMenu();
 }
 
 function setFileZoomIndex(newIndex) {
     global.fileZoomIndex = clamp(newIndex, 0, FILE_ZOOM_LEVELS.length - 1);
+	
+	drawMenu();
 }
 
 function setFileCurIndex(newIndex) {
     global.fileCurIndex = clamp(newIndex, 0, global.fileMaxPageIndex);
+	
+	drawMenu();
 }
 
 
