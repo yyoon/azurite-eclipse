@@ -319,7 +319,6 @@ function addFile(path) {
  * Sets the start timestamp.
  */
 function setStartTimestamp(timestamp) {
-    alert(timestamp);
     global.startTimestamp = parseInt(timestamp);
     redraw();
 }
@@ -720,10 +719,18 @@ function drawRules(chartHeight) {
                 return "middle";
         })
         .attr('fill', 'white')
-        .text(function(d,i) { return (new Time(global.startTimestamp + global.xRule(i))).toString(); })
+        .text(function(d,i) { return dateFormat(new Date(global.startTimestamp + global.xRule(i)), 'HH:MMTT mm/dd') })
         .style('-moz-user-select', 'none')
         .style('-webkit-user-select', 'none')
         .attr('onselectstart', false);
+}
+
+function timestampToString(timestamp) {
+    var d = new Date(timestamp);
+    var date = d.getDate();
+    var month = d.getMonth() + 1; //Months are zero based
+    var year = d.getFullYear();
+    document.write(curr_date + "-" + curr_month + "-" + curr_year);
 }
 
 function drawScrollbar(titleWidth, barWidth, chartHeight) {
