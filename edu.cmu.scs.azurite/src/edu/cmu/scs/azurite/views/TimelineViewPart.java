@@ -89,7 +89,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 
 					@Override
 					public void run() {
-						browser.execute("set_start_timestamp("
+						browser.execute("setStartTimestamp("
 								+ EventRecorder.getInstance().getStartTimestamp()
 								+ ");");
 					}
@@ -228,7 +228,12 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 
 	@Override
 	public void activeFileChanged(String projectName, String filePath) {
-		String executeStr = String.format("add_file('%1$s');",
+		if (projectName == null || filePath == null) {
+			// Some non-text file is opened maybe?
+			return;
+		}
+		
+		String executeStr = String.format("addFile('%1$s');",
 				filePath.replace('\\', '/'));	// avoid escaping..
 		browser.execute(executeStr);
 	}
@@ -240,7 +245,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 	
 	@Override
 	public void documentChangeAdded(BaseDocumentChangeEvent docChange) {
-		String executeStr = String.format("add_event(%1$d, %2$d, %3$d, %4$d);",
+		String executeStr = String.format("addOperation(%1$d, %2$d, %3$d, %4$d);",
 				docChange.getCommandIndex(),
 				docChange.getTimestamp(),
 				docChange.getTimestamp2(),
@@ -265,9 +270,9 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 
 	@Override
 	public void documentChangeUpdated(BaseDocumentChangeEvent docChange) {
-		String executeStr = String.format("update_event(%1$d, %2$d);",
-				docChange.getCommandIndex(),
-				docChange.getTimestamp2());
+		String executeStr = String.format(
+				"updateOperationTimestamp2(%1$d, %2$d);",
+				docChange.getCommandIndex(), docChange.getTimestamp2());
 		browser.execute(executeStr);
 	}
 
@@ -278,7 +283,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 	 */
 	public void addSelection(List<Integer> ids, boolean clearSelection) {
 		StringBuffer buffer = new StringBuffer();
-		buffer.append("add_selections_by_ids([");
+		buffer.append("addSelectionsByIds([");
 		
 		Iterator<Integer> it = ids.iterator();
 		if (it.hasNext()) {

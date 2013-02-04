@@ -1,853 +1,827 @@
+/**
+ * Things should be executed at the beginning.
+ */
+
 // Workaround for console.log problem.
 if (!window.console) window.console = {};
 if (!window.console.log) window.console.log = function () { };
 
+// Disable selection.
 document.unselectable = "on";
 document.onselectstart = function(){return false};
 
-// variables to remember the last window size
-var lastWindowWidth = null, lastWindowHeight = null;
 
-// left, right, top, bottom
-var menu_panel_height = 75;
-var chart_margins = {left: 5, right:5, top: 15, bottom: 30};
+/**
+ * Constants. (Always use UPPER_CASE.)
+ */
+var MENU_PANEL_HEIGHT = 75;
+var CHART_MARGINS = {
+    left: 5,
+    right:5,
+    top: 15,
+    bottom: 30
+};
 
-
-// Constants
-var INSERTION = 0;
-var DELETION = 1;
-var REPLACEMENT = 2;
+var TYPE_INSERT = 0;
+var TYPE_DELETE = 1;
+var TYPE_REPLACE = 2;
 
 var LOCAL_MODE = false;
 
 var NUM_TIMESTAMPS = 3;
 
-var files = [];
-var blocks_to_draw = [];
-var selected = {};
-var xmlDoc = null;
+
+/**
+ * Global variables. (Always use a pseudo-namespace.)
+ */
+var global = {};
+
+// variables to remember the last window size
+global.lastWindowWidth = null;
+global.lastWindowHeight = null;
+
+global.files = [];
+global.blocksToDraw = [];
+global.selected = [];
+
+// used for local debugging.
+global.xmlDoc = null;
 
 // last file opened
-var current_file = null;
-var last_event = null;
+global.currentFile = null;
+global.lastEvent = null;
 
-// maximum timestamp so far
-var max_timestamp = -1;
+// Timestamps
+global.maxTimestamp = 0;
+global.startTimestamp = 0;
 
-// starting timestamp (offset)
-var startTimestamp;
+// Dragging
+global.dragging = false;
+global.dragStart = [];
+
+
+// 5 min, 20 min, 1 hour, 4 hour
+var BAR_ZOOM_LEVELS = [300000, 1200000, 3600000, 14400000000];
+
+// height of each file title
+var FILE_ZOOM_LEVELS = [30, 40, 50, 60];
+
+// Current index of zoom level
+global.barZoomIndex = 0;
+global.fileZoomIndex = 0;
+
+// Page index to show based on currrent zoom level
+// eg. If zoom level is 0, and if page index is 0, show from 0 to 49. If index is 2, show from 100 to 149
+global.barCurIndex = 0;
+global.barMaxPageIndex = 0;
+global.fileCurIndex = 0;
+global.fileMaxPageIndex = 0;
+
+// Min and max timestamp to show at current zoom level
+global.minToShow = 0;
+global.maxToShow = 0;
+
+// Width of bars
+global.xBar;
+global.xRule;
+global.numXTicks;
+
 
 // context menu
-var isShowingContextMenu = false;
-var isRightClicked;
-var isCtrlPressed;
+var cmenu = {};
+cmenu.isContextMenuVisible = false;
+cmenu.isRightButtonDown = false;
+cmenu.isCtrlDown = false;
 
-var dragging = false, dragStart = [];
-
-var temp = -1;
 
 /**
-*	An object that keeps track of insertion, deletion and replacement for each file.
-*/
+ * SVG Setup.
+ */
+var svg = {};
+
+svg.main = d3.select('#svg_wrapper')
+    .append('svg')
+    .attr('class', 'svg')
+    .attr('id', 'svg');
+
+svg.subFile = svg.main
+    .append('g')
+    .attr('class', 'sub_file');
+    
+svg.subBar = svg.main
+    .append('g')
+    .attr('id', 'sub_bar');
+    
+svg.blocks = svg.subBar
+    .append('g')
+    .attr('class', 'blocks');
+    
+svg.fileLines = svg.subBar
+    .append('g')
+    .attr('class', 'file_lines');
+    
+svg.rules = svg.subBar
+    .append('g')
+    .attr('class', 'rules');
+
+svg.main.append('rect')
+    .attr('class', 'selection_box')
+    .style('fill', 'yellow')
+    .style('opacity', 0.3);
+
+/**
+ * An object that keeps track of insert, delete and replace for each file.
+ */
 function File(path, fileName) {
-	this.path = path;
-	this.fileName = fileName;
-	this.event = new Array();
-}
-
-
-// Type 0 : insertion, 1 : deletion, 2: replacement
-function Event(id, timestamp, timestamp2, type) {
-	this.id = id;
-	this.timestamp = timestamp;
-	this.timestamp2 = timestamp2;
-	this.type = type;
-	this.color;
-	
-	if(type == INSERTION)
-		this.color = "green";
-	else if(type == DELETION)
-		this.color = "red";
-	else if(type == REPLACEMENT)
-		this.color = "blue";
+    this.path = path;
+    this.fileName = fileName;
+    this.event = [];
 }
 
 /**
- * Block object to draw
+ * An object for representing an operation itself.
+ */
+function EditOperation(id, timestamp, timestamp2, type) {
+    this.id = id;
+    this.timestamp = timestamp;
+    this.timestamp2 = timestamp2;
+    this.type = type;
+    this.color;
+    
+    if(type == TYPE_INSERT) {
+        this.color = "green";
+    } else if(type == TYPE_DELETE) {
+        this.color = "red";
+    } else if(type == TYPE_REPLACE) {
+        this.color = "blue";
+    }
+}
+
+/**
+ * Block object to be drawn on the screen.
  */
 function Block(id, type, width, height, x, y, color, timestamp, timestamp2) {
-	this.id = id;
-	this.type = type;
-	this.width = width;
-	this.height = height;
-	this.x = x;
-	this.y = y;
-	this.color = color;
-	this.timestamp = timestamp;
-	this.timestamp2 = timestamp2;
+    this.id = id;
+    this.type = type;
+    this.width = width;
+    this.height = height;
+    this.x = x;
+    this.y = y;
+    this.color = color;
+    this.timestamp = timestamp;
+    this.timestamp2 = timestamp2;
 }
 
 // Loading local xml file
 function loadFile() {
 
-	if(LOCAL_MODE == true) {
-		var xmlhttp;
-		
-		if (window.XMLHttpRequest) { 
-			// code for IE7+, Firefox, Chrome, Opera, Safari
-			xmlhttp = new XMLHttpRequest();
-		} else { 
-			// code for IE6, IE5
-			xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
-		}
+    if(LOCAL_MODE == true) {
+        var xmlhttp;
+        
+        if (window.XMLHttpRequest) { 
+            // code for IE7+, Firefox, Chrome, Opera, Safari
+            xmlhttp = new XMLHttpRequest();
+        } else { 
+            // code for IE6, IE5
+            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+        }
 
-		xmlhttp.open("GET","Log2012-09-24-10-41-36-725.xml",false);
-		xmlhttp.send();
-		xmlDoc = xmlhttp.responseXML; 
-	} else {
-		 // disable this block temporarily.
-		return;
+        xmlhttp.open("GET","Log2012-09-24-10-41-36-725.xml",false);
+        xmlhttp.send();
+        global.xmlDoc = xmlhttp.responseXML; 
+    } else {
+         // disable this block temporarily.
+        return;
 
-	
-		var log = readLog();
+    
+        var log = readLog();
 
-		if(log == "") {
-			return;
-		}
-		
-		if (window.DOMParser) {
+        if(log == "") {
+            return;
+        }
+        
+        if (window.DOMParser) {
 
-			var parser = new DOMParser();
-			xmlDoc = parser.parseFromString(log,"text/xml");
-			
+            var parser = new DOMParser();
+            global.xmlDoc = parser.parseFromString(log,"text/xml");
+            
 
-			
-		} else { // Internet Explorer
-			xmlDoc = new ActiveXObject("Microsoft.XMLDOM");
-			xmlDoc.async = false;
-			xmlDoc.loadXML(text).responseXML;
-		}	
-	}
+            
+        } else { // Internet Explorer
+            global.xmlDoc = new ActiveXObject("Microsoft.XMLDOM");
+            global.xmlDoc.async = false;
+            global.xmlDoc.loadXML(text).responseXML;
+        }   
+    }
 }
 
 
 function parseXml() {
-	if(xmlDoc == null) {
-		return;
-	}
+    if(global.xmlDoc == null) {
+        return;
+    }
 
-	startTimestamp = parseInt(xmlDoc.childNodes[0].getAttribute("startTimestamp"))
-	
-	var command_list = xmlDoc.childNodes[0].childNodes;
+    global.startTimestamp = parseInt(global.xmlDoc.childNodes[0].getAttribute("global.startTimestamp"))
+    
+    var command_list = global.xmlDoc.childNodes[0].childNodes;
 
-	for(var i in command_list) {
-		var command = command_list[i];
-		
-		if(command.tagName === "Command") {
-			// Add a new file to file list if file this is a file never opened before
-			if(command.getAttribute("_type") === "FileOpenCommand") {
-				for(var j in command.childNodes) {
-					if(command.childNodes[j].tagName == "filePath") {
-						var path = command.childNodes[j].textContent;
-						var fileName = path.match(/[^\\/]+$/)[0];
-						
-						// check if this file was opened before
-						checkFileList(path, fileName);
-						break;
-					}
-					
-					
-				}
-			}
-		} else if (command.tagName === "DocumentChange" ) {	
-			var type;
-			var id = command.getAttribute("__id");
-			
-			if(command.getAttribute("_type") === "Insert") {
-				type = INSERTION;
-			} else if(command.getAttribute("_type") === "Delete") {
-				type = DELETION;
-			} else if(command.getAttribute("_type") === "Replace") {
-				type = REPLACEMENT;
-			}
-			
-			if(type === INSERTION || type === DELETION || type === REPLACEMENT) {
-				var timestamp = parseInt(command.getAttribute("timestamp"));
-				var timestamp2 = command.getAttribute("timestamp2");
-				
-				if(timestamp2 == null) {
-					timestamp2 = null;
-				} else {
-					timestamp2 = parseInt(timestamp2);
-				}
-				
-				current_file.event.push(new Event(id, timestamp, timestamp2, type));
-			
-				// update max_timestamp if necessary
-				if(timestamp2 == null && timestamp > max_timestamp) {
-					max_timestamp = timestamp;
-				} else if(timestamp2 != null && timestamp2 > max_timestamp) {
-					max_timestamp = timestamp2;
-				}
-			}
-			
-		}
-	}
+    for(var i in command_list) {
+        var command = command_list[i];
+        
+        if(command.tagName === "Command") {
+            // Add a new file to file list if file this is a file never opened before
+            if(command.getAttribute("_type") === "FileOpenCommand") {
+                for(var j in command.childNodes) {
+                    if(command.childNodes[j].tagName == "filePath") {
+                        var path = command.childNodes[j].textContent;
+                        var fileName = path.match(/[^\\/]+$/)[0];
+                        
+                        // check if this file was opened before
+                        checkFileList(path, fileName);
+                        break;
+                    }
+                    
+                    
+                }
+            }
+        } else if (command.tagName === "DocumentChange" ) { 
+            var type;
+            var id = command.getAttribute("__id");
+            
+            if(command.getAttribute("_type") === "Insert") {
+                type = TYPE_INSERT;
+            } else if(command.getAttribute("_type") === "Delete") {
+                type = TYPE_DELETE;
+            } else if(command.getAttribute("_type") === "Replace") {
+                type = TYPE_REPLACE;
+            }
+            
+            if(type === TYPE_INSERT || type === TYPE_DELETE || type === TYPE_REPLACE) {
+                var timestamp = parseInt(command.getAttribute("timestamp"));
+                var timestamp2 = command.getAttribute("timestamp2");
+                
+                if(timestamp2 == null) {
+                    timestamp2 = null;
+                } else {
+                    timestamp2 = parseInt(timestamp2);
+                }
+                
+                global.currentFile.event.push(new EditOperation(id, timestamp, timestamp2, type));
+                
+                updateMaxTimestamp(timestamp, timestamp2);
+            }
+            
+        }
+    }
 }
 
 /**
- * 	Returns true is fileName exists in files. Otherwise false
+ * Sets the given file as the current file.
+ * If the given file does not exist in the global.files list, adds it.
  */
 function checkFileList(path, fileName) {
-	for(var k in files) {
-		if(files[k].fileName === fileName) {
-			current_file = files[k];
-			return;
-		}
-	}
-	
-	var file = new File(path, fileName);
-	files.push(file);
-	current_file = file;
+    for(var k in global.files) {
+        if(global.files[k].fileName === fileName) {
+            global.currentFile = global.files[k];
+            return;
+        }
+    }
+    
+    var file = new File(path, fileName);
+    global.files.push(file);
+    global.currentFile = file;
 }
 
-// Current index of zoom level
-var bar_zoom_index = 0, file_zoom_index = 0;
-
-// Page index to show based on currrent zoom level
-// eg. If zoom level is 0, and if page index is 0, show from 0 to 49. If index is 2, show from 100 to 149
-var bar_cur_index = 0, file_cur_index = 0;
-var bar_max_page_index = 0, file_max_page_index = 0;
-
-// 5 min, 20 min, 1 hour, 4 hour
-var bar_zoom_levels = [300000,1200000,3600000,14400000000];
-
-// height of each file title
-var file_zoom_levels = [30,40,50,60];
-
-// Min and max timestamp to show at current zoom level
-var min_to_show, max_to_show;
-
-// An array of timestamps from min_timestamp to max_timestamp
-var enumerated;
-
-var width_ratio = [0.2, 0.8];
-
-// Width of bars
-var x_bar, x_rule;
-var num_x_ticks;
-
-var svg = d3.select('#main_panel')
-	.append('svg')
-	.attr('class', 'svg')
-	.attr('id', 'svg');
-
-var svg_element = document.getElementById('svg');
-
-var sub_file = svg.append('g')
-	.attr('class', 'sub_file')
-	
-var sub_bar = svg.append('g')
-	.attr('id', 'sub_bar');
-	
-var blocks = sub_bar.append('g')
-	.attr('class', 'blocks');
-	
-var fileLines = sub_bar.append('g')
-	.attr('class', 'fileLines');
-	
-var rules = sub_bar.append('g')
-	.attr('class', 'rules');
-
-svg.append('rect')
-	.attr('class', 'selection_box')
-	.style('fill', 'yellow')
-	.style('opacity', 0.3)
-	
-function add_file(path) {
-	var fileName = path.match(/[^\\/]+$/)[0];
-	
-	last_event = null;
-	
-	for(var index in files) {
-		if(files[index].path == path) {
-			current_file = files[index];
-			return;
-		}
-	}
-	
-	var newFile = new File(path, fileName);
-	files.push(newFile);
-	current_file = newFile;
-	redraw();
+/**
+ * Called by Azurite.
+ * Adds a new row if the given file is not already in the list.
+ */
+function addFile(path) {
+    var fileName = path.match(/[^\\/]+$/)[0];
+    
+    global.lastEvent = null;
+    
+    for(var index in global.files) {
+        if(global.files[index].path == path) {
+            global.currentFile = global.files[index];
+            return;
+        }
+    }
+    
+    var newFile = new File(path, fileName);
+    global.files.push(newFile);
+    global.currentFile = newFile;
+    redraw();
 }
 
-function set_start_timestamp(timestamp) {
-  startTimestamp = parseInt(timestamp);
-  redraw();
+/**
+ * Called by Azurite.
+ * Sets the start timestamp.
+ */
+function setStartTimestamp(timestamp) {
+    alert(timestamp);
+    global.startTimestamp = parseInt(timestamp);
+    redraw();
 }
 
 
 /**
- * Add an event to the end of the file
+ * Called by Azurite.
+ * Add an event to the end of the file.
+ * Note that this is called immediately after an edit operation is performed.
  */
-function add_event(id, timestamp1, timestamp2, type) {
-	var newEvent = new Event(parseInt(id), parseInt(timestamp1), parseInt(timestamp2), parseInt(type));
-	
-	var file_index = -1;
-	
-	for(var i = 0; i < files.length; i++) {
-		if(files[i].path == current_file.path) {
-			file_index = i;
-		}
-	}
-	
-	if(file_index == -1)
-		return;
-	
-	current_file.event.push(newEvent);
-	last_event = newEvent;
-	
-	// update max_timestamp if necessary
-	if(timestamp2 == null && timestamp > max_timestamp) {
-		max_timestamp = timestamp;
-	} else if(timestamp2 != null && timestamp2 > max_timestamp) {
-		max_timestamp = timestamp2;
-	}
+function addOperation(id, timestamp1, timestamp2, type) {
+    var newOp = new EditOperation(
+        parseInt(id),
+        parseInt(timestamp1),
+        parseInt(timestamp2),
+        parseInt(type)
+    );
 
-	
-	redraw();
+    var i;
+    var fileIndex = -1;
+    
+    for(i = 0; i < global.files.length; i++) {
+        if(global.files[i].path == global.currentFile.path) {
+            fileIndex = i;
+            break;
+        }
+    }
+    
+    if(fileIndex == -1)
+        return;
+    
+    global.currentFile.event.push(newOp);
+    global.lastEvent = newOp;
+    
+    updateMaxTimestamp(timestamp1, timestamp2);
+
+    redraw();
 }
 
-function update_event(id, timestamp2) {
-	if (last_event == null || last_event.id != parseInt(id))
-		return;
-	
-	last_event.timestamp2 = timestamp2;
-	
-	// update max_timestamp if necessary
-	if (timestamp2 > max_timestamp) {
-		max_timestamp = timestamp2;
-	}
-	
-	
-	redraw();
+/**
+ * Called by Azurite.
+ * Update the timestamp2 value for an existing operation, in case multiple
+ * operations are merged into one.
+ */
+function updateOperationTimestamp2(id, timestamp2) {
+    if (global.lastEvent == null || global.lastEvent.id != parseInt(id))
+        return;
+    
+    global.lastEvent.timestamp2 = timestamp2;
+    
+    updateMaxTimestamp(timestamp2, null);
+    
+    redraw();
 }
 
 function redraw() {
-	var svg_width = lastWindowWidth - 30;
-	var svg_height = lastWindowHeight - 30;
-	var chart_width = svg_width - chart_margins.left - chart_margins.right;
-	var chart_height = svg_height - menu_panel_height - chart_margins.top - chart_margins.bottom;
-	var title_width = (chart_width) * 0.15;
-	var bar_width = (chart_width) * 0.85;
-	
-	sub_file.selectAll("text").remove();
-	fileLines.selectAll('line').remove();
-	rules.selectAll('text').remove();
-	sub_bar.selectAll('rect').remove();
-	
-	// remove highlights
-	selected = {};
-	sub_bar.selectAll('polygon').remove();
-	
-	// reset svg width and height;
-	svg.attr("width", svg_width)
-		.attr("height", svg_height);
+    var svgWidth = parseInt(svg.main.style('width'));
+    var svgHeight = parseInt(svg.main.style('height'));
+    var chartWidth = svgWidth - CHART_MARGINS.left - CHART_MARGINS.right;
+    var chartHeight = svgHeight - CHART_MARGINS.top - CHART_MARGINS.bottom;
+    var titleWidth = (chartWidth) * 0.15;
+    var barWidth = (chartWidth) * 0.85;
+    
+    svg.subFile.selectAll('text').remove();
+    svg.fileLines.selectAll('line').remove();
+    svg.rules.selectAll('text').remove();
+    svg.subBar.selectAll('rect').remove();
+    
+    // remove highlights
+    global.selected = [];
+    svg.subBar.selectAll('polygon').remove();
 
-	
-	// recalculate page index and number of files to draw
-	bar_max_page_index = Math.ceil(max_timestamp / bar_zoom_levels[bar_zoom_index])-1;
-	
-	if(bar_cur_index > bar_max_page_index) 
-		bar_cur_index = bar_max_page_index;
-
-	if(bar_cur_index < 0)
-		bar_cur_index = 0;
-	
-	min_to_show = bar_cur_index * bar_zoom_levels[bar_zoom_index];
-	max_to_show = min_to_show + bar_zoom_levels[bar_zoom_index];
-
-	// using the current svg height, determine the number of files to draw
-	var num_file_to_show = Math.floor(chart_height / file_zoom_levels[file_zoom_index]);
-	file_max_page_index = Math.ceil(files.length / num_file_to_show) - 1;
-	
-	// calculate the number of files to draw
-	var files_to_draw = [];
-	var offset = num_file_to_show * file_cur_index;
-	
-	for(var i = 0; i < num_file_to_show && files[offset+i] != null; i++)
-		files_to_draw.push(files[offset+i]);
-	
-	
-	// translate sub_file and sub_bar
-	sub_file.attr('transform', 'translate(' + chart_margins.left + ',' + (chart_margins.top + menu_panel_height) + ')');
-	sub_bar.attr('transform', 'translate(' + (chart_margins.left + title_width) + ',' + (chart_margins.top + menu_panel_height) + ')');
-	
-	draw_menu();
-	draw_files(files_to_draw);
-	draw_bars(files_to_draw, bar_width, chart_height);
-	draw_rule(chart_height);
-	draw_scrollbar(title_width, bar_width, chart_height);
-	draw_highlight();
-
-	d3.select('.indicator').remove();
-	
-	/*
-	sub_bar.append('line')
-		.attr('class', 'indicator')
-		.attr('x1', x_bar(max_timestamp))
-		.attr('y1', 0)
-		.attr('x2', x_bar(max_timestamp))
-		.attr('y2', (files_to_draw.length * file_zoom_levels[file_zoom_index]))
-		.attr('stroke', 'yellow' )
-		.style('stroke-width', 2);
-	*/
-	
-	// draw the "now" indicator only when needed.
-	if (min_to_show <= max_timestamp && max_timestamp <= max_to_show) {
-		sub_bar.append('line')
-			.attr('class', 'indicator')
-			.attr('x1', x_bar(max_timestamp))
-			.attr('y1', 0)
-			.attr('x2', x_bar(max_timestamp))
-			.attr('y2', y(chart_height))
-			.attr('stroke', 'yellow' )
-			.style('stroke-width', 2);
-	}
-	
-	$('.block').tipsy({ 
+    // using the current svg height, determine the number of global.files to draw
+    var numMaxFilesToShow = Math.floor(chartHeight / FILE_ZOOM_LEVELS[global.fileZoomIndex]);
+    global.fileMaxPageIndex = Math.ceil(global.files.length / numMaxFilesToShow) - 1;
+    
+    // calculate the number of global.files to draw
+    var filesToDraw = [];
+    var offset = numMaxFilesToShow * global.fileCurIndex;
+    
+    for(var i = 0; i < numMaxFilesToShow && global.files[offset+i] != null; i++)
+        filesToDraw.push(global.files[offset+i]);
+    
+    
+    // translate subFile and subBar
+    svg.subFile.attr('transform', 'translate(' + CHART_MARGINS.left + ',' + CHART_MARGINS.top + ')');
+    svg.subBar.attr('transform', 'translate(' + (CHART_MARGINS.left + titleWidth) + ',' + CHART_MARGINS.top + ')');
+    
+    drawMenu();
+    drawFiles(filesToDraw);
+    drawFileLines(filesToDraw.length, barWidth);
+    drawBars(filesToDraw, barWidth, chartHeight);
+    drawRules(chartHeight);
+    drawScrollbar(titleWidth, barWidth, chartHeight);
+    drawHighlight();
+    drawIndicator(chartHeight);
+    
+    $('.block').tipsy({ 
         gravity: 'se', 
         html: true, 
         title: function() {
-			  var d = this.__data__;
-			  return 'id: ' + d.id;
-		}
-	});
-	
-	
-	var draggable_area = {
-		top: (menu_panel_height + chart_margins.top),
-		bottom: (menu_panel_height + chart_height), 
-		left: (chart_margins.left + title_width),
-		right:  (chart_margins.left + title_width + bar_width)
-	};
-	
-	
-	document.addEventListener("keydown", function(e) {
-		if(e.keyCode == 17) 
-			isCtrlPressed = true;
-		
-	}
-	, false);
-	
-	document.addEventListener("keyup", function(e) {
-		if(e.keyCode == 17)
-			isCtrlPressed = false;
-	
-	}
-	, false);
-	
-	
-	document.onmousedown =  function(e) {
-		console.log('down');
-		
-		if(isShowingContextMenu)
-			return;
-		
-		if ("which" in event) { // Gecko (Firefox), WebKit (Safari/Chrome) & Opera
-			isRightClicked = event.which == 3; 
-		} else if ("button" in event) { // IE, Opera 
-			isRightClicked = event.button == 2; 
-		}
-		
-		if(isRightClicked || e.clientX < draggable_area.left || e.clientX > draggable_area.right || e.clientY < draggable_area.top || e.clientY > draggable_area.bottom) {
-			return;
-		}
-		
-		if(dragging)
-			return;
-		
-		dragging = true;
-		
-		console.log(isCtrlPressed);
-		if(!isCtrlPressed) {
-			selected = {};
-			sub_bar.selectAll('polygon').remove();
-		}
-		
-		d3.select('.selection_box')
-			.attr('x', e.clientX)
-			.attr('y', e.clientY);
-			
-		dragStart[0] = e.clientX;
-		dragStart[1] = e.clientY;
-	};
-	
-	document.onmousemove = function(e) {
-		if(!dragging)
-			return;
-		
-		var newX, newY;
-		
-		if(e.clientX < draggable_area.left)
-			newX = draggable_area.left;
-		else if(e.clientX > draggable_area.right) 
-			newX = draggable_area.right;
-		else
-			newX = e.clientX;
-			
-		if(e.clientY < draggable_area.top)
-			newY = draggable_area.top;
-		else if(e.clientY > draggable_area.bottom)
-			newY = draggable_area.bottom;
-		else
-			newY = e.clientY;
-		
-		
-		if(newX - dragStart[0] < 0) {
-			d3.select('.selection_box')
-				.attr('x', newX)
-				.attr('width', dragStart[0] - newX);
-		} else {
-			d3.select('.selection_box')
-				.attr('x', dragStart[0])
-				.attr('width', newX - dragStart[0]);
-		}
-		
-		if(newY - dragStart[1] < 0) {
-			d3.select('.selection_box')
-				.attr('y', newY )
-				.attr('height', dragStart[1] - newY);
-		} else {
-			d3.select('.selection_box')
-				.attr('y', dragStart[1])
-				.attr('height', newY - dragStart[1]);
-		}
-		
-		d3.select('.selection_box')
-			.attr('display', 'block');
-	};
-	
-	document.onmouseup = function(e) {
-		if(isRightClicked) {
-			console.log('up');
-			showContextMenu(e);
-			return;
-		}
-	
-		if(!dragging)
-			return;
-		
-		d3.select('.selection_box')
-			.attr('display', 'none');
-		
-		var x1, y1, x2, y2;
-	
-		if(dragStart[0] <= e.clientX) {
-			x1 = dragStart[0];
-			x2 = e.clientX;
-		} else {
-			x1 = e.clientX;
-			x2 = dragStart[0];
-		}
-		
-		if(dragStart[1] <= e.clientY) {
-			y1 = dragStart[1];
-			y2 = e.clientY;
-		} else {
-			y1 = e.clientY;
-			y2 = dragStart[1];
-		}
-		console.log(x1, y1, x2, y2);
-		add_selections(x1, y1, x2, y2, (chart_margins.left + title_width), (chart_margins.top + menu_panel_height));
-	
-		dragging = false;	
-		dragStart = [];
-	}
+              var d = this.__data__;
+              return 'id: ' + d.id;
+        }
+    });
+    
+    
+    var draggable_area = {
+        top: (MENU_PANEL_HEIGHT + CHART_MARGINS.top),
+        bottom: (MENU_PANEL_HEIGHT + chartHeight), 
+        left: (CHART_MARGINS.left + titleWidth),
+        right:  (CHART_MARGINS.left + titleWidth + barWidth)
+    };
+    
+    
+    document.addEventListener("keydown", function(e) {
+        if(e.keyCode == 17) 
+            cmenu.isCtrlDown = true;
+        
+    }
+    , false);
+    
+    document.addEventListener("keyup", function(e) {
+        if(e.keyCode == 17)
+            cmenu.isCtrlDown = false;
+    
+    }
+    , false);
+    
+    
+    document.onmousedown =  function(e) {
+        if(cmenu.isContextMenuVisible)
+            return;
+        
+        if ("which" in event) { // Gecko (Firefox), WebKit (Safari/Chrome) & Opera
+            cmenu.isRightButtonDown = event.which == 3; 
+        } else if ("button" in event) { // IE, Opera 
+            cmenu.isRightButtonDown = event.button == 2; 
+        }
+        
+        if(cmenu.isRightButtonDown || e.clientX < draggable_area.left || e.clientX > draggable_area.right || e.clientY < draggable_area.top || e.clientY > draggable_area.bottom) {
+            return;
+        }
+        
+        if(global.dragging)
+            return;
+        
+        global.dragging = true;
+        
+        if(!cmenu.isCtrlDown) {
+            global.selected = [];
+            svg.subBar.selectAll('polygon').remove();
+        }
+        
+        d3.select('.selection_box')
+            .attr('x', e.clientX)
+            .attr('y', e.clientY);
+            
+        global.dragStart[0] = e.clientX;
+        global.dragStart[1] = e.clientY;
+    };
+    
+    document.onmousemove = function(e) {
+        if(!global.dragging)
+            return;
+        
+        var newX, newY;
+        
+        if(e.clientX < draggable_area.left)
+            newX = draggable_area.left;
+        else if(e.clientX > draggable_area.right) 
+            newX = draggable_area.right;
+        else
+            newX = e.clientX;
+            
+        if(e.clientY < draggable_area.top)
+            newY = draggable_area.top;
+        else if(e.clientY > draggable_area.bottom)
+            newY = draggable_area.bottom;
+        else
+            newY = e.clientY;
+        
+        
+        if(newX - global.dragStart[0] < 0) {
+            d3.select('.selection_box')
+                .attr('x', newX)
+                .attr('width', global.dragStart[0] - newX);
+        } else {
+            d3.select('.selection_box')
+                .attr('x', global.dragStart[0])
+                .attr('width', newX - global.dragStart[0]);
+        }
+        
+        if(newY - global.dragStart[1] < 0) {
+            d3.select('.selection_box')
+                .attr('y', newY )
+                .attr('height', global.dragStart[1] - newY);
+        } else {
+            d3.select('.selection_box')
+                .attr('y', global.dragStart[1])
+                .attr('height', newY - global.dragStart[1]);
+        }
+        
+        d3.select('.selection_box')
+            .attr('display', 'block');
+    };
+    
+    document.onmouseup = function(e) {
+        if(cmenu.isRightButtonDown) {
+            showContextMenu(e);
+            return;
+        }
+    
+        if(!global.dragging)
+            return;
+        
+        d3.select('.selection_box')
+            .attr('display', 'none');
+        
+        var x1, y1, x2, y2;
+    
+        if(global.dragStart[0] <= e.clientX) {
+            x1 = global.dragStart[0];
+            x2 = e.clientX;
+        } else {
+            x1 = e.clientX;
+            x2 = global.dragStart[0];
+        }
+        
+        if(global.dragStart[1] <= e.clientY) {
+            y1 = global.dragStart[1];
+            y2 = e.clientY;
+        } else {
+            y1 = e.clientY;
+            y2 = global.dragStart[1];
+        }
+        addSelections(x1, y1, x2, y2, (CHART_MARGINS.left + titleWidth), (CHART_MARGINS.top + MENU_PANEL_HEIGHT));
+    
+        global.dragging = false;   
+        global.dragStart = [];
+    }
 }
 
 function getCursorPosition(e) {
-	e = e || window.event;
-	
-	if(e) {
-		if (e.pageX || e.pageX == 0) return [e.pageX,e.pageY];
-			var dE = document.documentElement || {};
-		
-		var dB = document.body || {};
-		if ((e.clientX || e.clientX == 0) && ((dB.scrollLeft || dB.scrollLeft == 0) || (dE.clientLeft || dE.clientLeft == 0))) 
-			return [e.clientX + (dE.scrollLeft || dB.scrollLeft || 0) - (dE.clientLeft || 0),e.clientY + (dE.scrollTop || dB.scrollTop || 0) - (dE.clientTop || 0)];
-	}
-	
-	return null;
+    e = e || window.event;
+    
+    if(e) {
+        if (e.pageX || e.pageX == 0) return [e.pageX,e.pageY];
+            var dE = document.documentElement || {};
+        
+        var dB = document.body || {};
+        if ((e.clientX || e.clientX == 0) && ((dB.scrollLeft || dB.scrollLeft == 0) || (dE.clientLeft || dE.clientLeft == 0))) 
+            return [e.clientX + (dE.scrollLeft || dB.scrollLeft || 0) - (dE.clientLeft || 0),e.clientY + (dE.scrollTop || dB.scrollTop || 0) - (dE.clientTop || 0)];
+    }
+    
+    return null;
 }
 
-function draw_menu() {
-	// draw panel
-	var div_menu_panel = document.getElementById('menu_panel');
-
-	// draw timeline bar control
-	var bar_zoom_level = document.getElementById('bar_zoom_level');
-	var bar_page_index = document.getElementById('bar_page_index');
-	
-	bar_zoom_level.innerHTML = "Zoom Index : " + bar_zoom_index + "/" + (bar_zoom_levels.length-1);
-	bar_page_index.innerHTML = "Page Index : " + bar_cur_index + "/" + bar_max_page_index;
-	
-	// draw file list control
-	var file_zoom_level = document.getElementById('file_zoom_level');
-	var file_page_index = document.getElementById('file_page_index');
-	
-	file_zoom_level.innerHTML = "Zoom Index : " + file_zoom_index + "/" + (file_zoom_levels.length-1);
-	file_page_index.innerHTML = "Page Index : " + file_cur_index + "/" + file_max_page_index;
+function drawMenu() {
+    // draw timeline bar control
+    var bar_zoom_level = document.getElementById('bar_zoom_level');
+    var bar_page_index = document.getElementById('bar_page_index');
+    
+    bar_zoom_level.innerHTML = "Zoom Index : " + global.barZoomIndex + "/" + (BAR_ZOOM_LEVELS.length-1);
+    bar_page_index.innerHTML = "Page Index : " + global.barCurIndex + "/" + global.barMaxPageIndex;
+    
+    // draw file list control
+    var file_zoom_level = document.getElementById('file_zoom_level');
+    var file_page_index = document.getElementById('file_page_index');
+    
+    file_zoom_level.innerHTML = "Zoom Index : " + global.fileZoomIndex + "/" + (FILE_ZOOM_LEVELS.length-1);
+    file_page_index.innerHTML = "Page Index : " + global.fileCurIndex + "/" + global.fileMaxPageIndex;
 }
 
-function draw_files(files_to_draw) {
-	sub_file.selectAll('.fileTitles')
-		.data(files_to_draw)
-		.enter().append('text')
-		.text(function(d) { return d.fileName; })
-		.attr('x', 0)
-		.attr('y', function(d,i) { return (file_zoom_levels[file_zoom_index] * i) +  file_zoom_levels[file_zoom_index]/2} )
-		.attr('dy', '0.5ex')
-		.attr('text-anchor', 'start')
-		.attr('class', 'fileTitle')
-		.attr('fill', 'white')
-		.style('-moz-user-select', 'none')
-		.style('-webkit-user-select', 'none')
-		.attr('onselectstart', false);
+function drawFiles(filesToDraw) {
+    // draw file titles.
+    svg.subFile.selectAll('.fileTitles')
+        .data(filesToDraw)
+        .enter().append('text')
+        .text(function(d) { return d.fileName; })
+        .attr('x', 0)
+        .attr('y', function(d,i) { return (FILE_ZOOM_LEVELS[global.fileZoomIndex] * i) +  FILE_ZOOM_LEVELS[global.fileZoomIndex]/2} )
+        .attr('dy', '0.5ex')
+        .attr('text-anchor', 'start')
+        .attr('class', 'file_title')
+        .attr('fill', 'white')
+        .style('-moz-user-select', 'none')
+        .style('-webkit-user-select', 'none')
+        .attr('onselectstart', false);
 }
 
-function draw_bars(files_to_draw, width, height) {
-	
-	// draw file lines
-	for(var i = 0; i < files_to_draw.length+1; i++) {
-		fileLines.append('line')
-			.attr('x1', 0)
-			.attr('y1', file_zoom_levels[file_zoom_index] * i)
-			.attr('x2', width)
-			.attr('y2', file_zoom_levels[file_zoom_index] * i)
-			.attr('stroke', 'lightgray' )
-			.style('stroke-width', 1);
-	}
-	
-	x_rule = d3.scale.linear()
-		.domain([0, NUM_TIMESTAMPS - 1])
-		.range([min_to_show, max_to_show]);
-	
-	x_bar = d3.time.scale()
-		.domain([min_to_show, max_to_show])
-		.range([0, width]);
-		
-	y = d3.scale.linear()
-		.domain([0, height])
-		.range([0, height]);
-	
-	
-	
-	// select blocks to draw
-	blocks_to_draw = [];
-	var min_bar_width = width * 0.005;
-	
-	for(var i = 0; i < files_to_draw.length; i++) {
-		var file = files_to_draw[i];
-		var events = file.event;
-		var length = events.length;
-		var bar_width;
-		
-		for(var j = 0; j < length; j++) {
-			var draw = false;
-			var timestamp = events[j].timestamp;
-			var timestamp2 = events[j].timestamp2
-	
-			
-			if(timestamp != null && timestamp2 != null) {
-				// case 1: has both timestamp1 and timestamp2
-				
-				if(timestamp >= min_to_show && timestamp <= max_to_show && timestamp2 >= min_to_show && timestamp2 <= max_to_show) {
-					// case 1.1: both timestamp1 and timestamp2 are visible
-					bar_width = x_bar(timestamp2) - x_bar(timestamp);
-					
-					if(bar_width < min_bar_width)
-						bar_width = min_bar_width;
-
-					if (timestamp2 >= max_timestamp) {
-						max_timestamp = x_bar.invert( x_bar(timestamp) + bar_width );
-					}
-					
-					draw = true;
-				} else if(timestamp >= min_to_show && timestamp <= max_to_show && timestamp && timestamp2 > max_to_show ) {
-					// case 1.1: only timestamp1 is visible
-					bar_width = x_bar(max_to_show) - x_bar(timestamp);
-					
-					draw = true;
-				} else if(timestamp < min_to_show && timestamp2 >= min_to_show && timestamp2 <= max_to_show) {
-					// case 1.2: only timestamp2 is visible
-					bar_width = x_bar(timestamp2) - x_bar(min_to_show);
-					timestamp = min_to_show;
-					
-					draw = true;
-				}
-			} else if(timestamp != null && timestamp2 == null) {
-				// case 2: has timestamp1 only
-				
-				if(timestamp >= min_to_show && timestamp <= max_to_show) {
-					bar_width = min_bar_width;
-
-					if (timestamp >= max_timestamp) {
-						max_timestamp = x_bar.invert( x_bar(timestamp) + bar_width );
-					}
-					
-					draw = true;
-				}
-			}
-
-			if(draw) {
-				blocks_to_draw.push(
-					new Block(
-						events[j].id,
-						events[j].type,
-						bar_width,
-						file_zoom_levels[file_zoom_index], 
-						x_bar(timestamp), 
-						(file_zoom_levels[file_zoom_index] * i),
-						events[j].color, 
-						timestamp, 
-						timestamp2)
-				);
-			}
-		}
-	}
-	
-	blocks.selectAll("rect")
-		.data(blocks_to_draw).enter().append("rect")
-		.attr('class', 'block')
-		.attr("width", function(d) { return d.width; })
-		.attr("height", function(d) { return d.height; })
-		.attr("x", function(d) { return d.x; })
-		.attr("y", function(d) { return d.y; })
-		.style("fill", function(d) { return d.color; });
-	
-	console.log(blocks_to_draw.length);
+function drawFileLines(numFiles, width) {
+    // if there's no file, then don't bother to draw a line.
+    if (numFiles == 0) {
+        return;
+    }
+    
+    // draw file lines
+    for(var i = 0; i < numFiles + 1; i++) {
+        svg.fileLines.append('line')
+            .attr('x1', 0)
+            .attr('y1', FILE_ZOOM_LEVELS[global.fileZoomIndex] * i)
+            .attr('x2', width)
+            .attr('y2', FILE_ZOOM_LEVELS[global.fileZoomIndex] * i)
+            .attr('stroke', 'lightgray' )
+            .style('stroke-width', 1);
+    }
 }
 
-function range(begin, end) {
-	var result = new Array();
-	for (var i = begin; i < end; ++i) {
-		result[i - begin] = i;
-	}
-	
-	return result;
+function drawBars(filesToDraw, width, height) {
+    global.xRule = d3.scale.linear()
+        .domain([0, NUM_TIMESTAMPS - 1])
+        .range([global.minToShow, global.maxToShow]);
+    
+    global.xBar = d3.time.scale()
+        .domain([global.minToShow, global.maxToShow])
+        .range([0, width]);
+    
+    // filter blocks to draw
+    global.blocksToDraw = [];
+    var minBarWidth = width * 0.005;
+    
+    for(var i = 0; i < filesToDraw.length; i++) {
+        var file = filesToDraw[i];
+        var events = file.event;
+        var length = events.length;
+        var barWidth;
+        
+        for(var j = 0; j < length; j++) {
+            var draw = false;
+            var timestamp = events[j].timestamp;
+            var timestamp2 = events[j].timestamp2;
+            
+            // there should always be a timestamp.
+            if (timestamp == null) {
+                continue;
+            }
+            
+            // if timestamp2 is not defined, just use the timestamp value.
+            if (timestamp2 == null) {
+                timestamp2 = timestamp;
+            }
+            
+            // the block is outside of the current view.
+            if (timestamp2 < global.minToShow || timestamp > global.maxToShow) {
+                continue;
+            }
+            
+            timestamp = clamp(timestamp, global.minToShow, global.maxToShow);
+            timestamp2 = clamp(timestamp2, global.minToShow, global.maxToShow);
+            
+            barWidth = global.xBar(timestamp2) - global.xBar(timestamp);
+            if (barWidth < minBarWidth) {
+                barWidth = minBarWidth;
+            }
+            
+            if (timestamp2 >= global.maxTimestamp) {
+                global.maxTimestamp = global.xBar.invert( global.xBar(timestamp) + barWidth );
+            }
+            
+            global.blocksToDraw.push(new Block(
+                events[j].id,
+                events[j].type,
+                barWidth,
+                FILE_ZOOM_LEVELS[global.fileZoomIndex], 
+                global.xBar(timestamp), 
+                (FILE_ZOOM_LEVELS[global.fileZoomIndex] * i),
+                events[j].color, 
+                timestamp, 
+                timestamp2)
+            );
+        }
+    }
+    
+    svg.blocks.selectAll("rect")
+        .data(global.blocksToDraw).enter().append("rect")
+        .attr('class', 'block')
+        .attr("width", function(d) { return d.width; })
+        .attr("height", function(d) { return d.height; })
+        .attr("x", function(d) { return d.x; })
+        .attr("y", function(d) { return d.y; })
+        .style("fill", function(d) { return d.color; });
 }
 
-function draw_rule(chart_height) {
-	rules.selectAll(".rule")
-		.data(range(0, NUM_TIMESTAMPS))
-		.enter().append("text")
-		.attr("x", function(d,i) { return x_bar(x_rule(i)); })
-		.attr("y", chart_height + 15)
-		.attr("text-anchor", function(d,i) {
-			if(i == 0)
-				return "start";
-			else if(i == NUM_TIMESTAMPS - 1)
-				return "end";
-			else 
-				return "middle";
-		})
-		.attr('fill', 'white')
-		.text(function(d,i) { return (new Time(startTimestamp + x_rule(i))).toString(); })
-		.style('-moz-user-select', 'none')
-		.style('-webkit-user-select', 'none')
-		.attr('onselectstart', false);
+function drawRules(chartHeight) {
+    svg.rules.selectAll(".rule")
+        .data(range(0, NUM_TIMESTAMPS))
+        .enter()
+        .append("text")
+        .attr("x", function(d,i) { return global.xBar(global.xRule(i)); })
+        .attr("y", chartHeight + 15)
+        .attr("text-anchor", function(d,i) {
+            if(i == 0)
+                return "start";
+            else if(i == NUM_TIMESTAMPS - 1)
+                return "end";
+            else 
+                return "middle";
+        })
+        .attr('fill', 'white')
+        .text(function(d,i) { return (new Time(global.startTimestamp + global.xRule(i))).toString(); })
+        .style('-moz-user-select', 'none')
+        .style('-webkit-user-select', 'none')
+        .attr('onselectstart', false);
 }
 
-function draw_scrollbar(title_width, bar_width, chart_height) {
+function drawScrollbar(titleWidth, barWidth, chartHeight) {
+    // Only show the scrollbar when needed.
+    if (global.barMaxPageIndex == null || global.barMaxPageIndex <= 0) {
+        $('#x_scrollbar').css({"display": "none"});
+        return;
+    }
 
-	// Only show the scrollbar when needed.
-	if (bar_max_page_index == null || bar_max_page_index <= 0) {
-		$('#x_scrollbar').css({"display": "none"});
-		return;
-	}
+    $('#x_scrollbar').css({
+        "position": 'absolute',
+        "left": titleWidth + "px",
+        "top": chartHeight + MENU_PANEL_HEIGHT + 50 + "px",
+        "width": barWidth + "px",
+        "display": "block"
+    });
+    
+    var $scrollX = $('#x_scrollbar').slider({
+        value: global.barCurIndex,
+        min: 0,
+        max: global.barMaxPageIndex,
+        step: 1,
+        orientation: 'horizontal',
 
-	$('#x_scrollbar').css({
-		"position": 'absolute',
-		"left": title_width + "px",
-		"top": chart_height + menu_panel_height + 50 + "px",
-		"width": bar_width + "px",
-		"display": "block"
-	});
-	
-	scroll_x = $('#x_scrollbar').slider({
-		value: bar_cur_index,
-		min: 0,
-		max: bar_max_page_index,
-		step: 1,
-		orientation: 'horizontal',
+        slide: function(event, ui) {
+            //debugger;
+            setBarCurIndex(ui.value);
+            redraw();
+        }
+    });
+    
+    var handle_size = $scrollX.width() / (global.barMaxPageIndex + 1);
+    var handle_margin_left = -handle_size * global.barCurIndex / global.barMaxPageIndex;
+    if (global.barMaxPageIndex == 0) handle_margin_left = 0;
+    handle_margin_left -= 1;    // I don't know why, but it's off by 1 px by default.
+    
+    $scrollX.find('.ui-slider-handle').css({
+        "width": handle_size + "px",
+        "margin-left": handle_margin_left + "px"
+    });
+    
+}
 
-		slide: function(event, ui) {
-			console.log('slide');
-			//debugger;
-			bar_cur_index = ui.value;
-			redraw();
-		}
-	});
-	
-	var handle_size = scroll_x.width() / (bar_max_page_index + 1);
-	var handle_margin_left = -handle_size * bar_cur_index / bar_max_page_index;
-	if (bar_max_page_index == 0) handle_margin_left = 0;
-	handle_margin_left -= 1;	// I don't know why, but it's off by 1 px by default.
-	
-	scroll_x.find('.ui-slider-handle').css({
-		"width": handle_size + "px",
-		"margin-left": handle_margin_left + "px"
-	});
-	
+function drawIndicator(chartHeight) {
+    d3.select('.indicator').remove();
+    
+    // draw the "now" indicator only when needed.
+    if (global.minToShow <= global.maxTimestamp && global.maxTimestamp <= global.maxToShow) {
+        svg.subBar.append('line')
+            .attr('class', 'indicator')
+            .attr('x1', global.xBar(global.maxTimestamp))
+            .attr('y1', 0)
+            .attr('x2', global.xBar(global.maxTimestamp))
+            .attr('y2', chartHeight)
+            .attr('stroke', 'yellow' )
+            .style('stroke-width', 2);
+    }
 }
 
 
-function test() {
-	console.log("HHHHHHHHHHHHHHHHHHHHHHH");
-}
 /*
  * When the page loads, load a log file
  */
 window.onload = function () {
-	console.log("ON LOAD");
-	console.log(window.innerWidth);
-	console.log(window.innerHeight);
-	
-	loadFile();
-	parseXml();
-	initContextMenu();
+    loadFile();
+    parseXml();
+    initContextMenu();
+    setBarCurIndex(0);
 
-	if(lastWindowWidth != window.innerWidth || lastWindowHeight != window.innerHeight) {
-		lastWindowWidth = window.innerWidth;
-		lastWindowHeight = window.innerHeight;
-		
-		file_cur_index = 0;
-		bar_cur_index = 0;
-		
-		redraw();
-	}
-	
+    if(global.lastWindowWidth != window.innerWidth || global.lastWindowHeight != window.innerHeight) {
+        global.lastWindowWidth = window.innerWidth;
+        global.lastWindowHeight = window.innerHeight;
+        
+        global.fileCurIndex = 0;
+        global.barCurIndex = 0;
+        
+        redraw();
+    }
+    
 }
 
 window.onresize = function(event) {
     console.log("ON RESIZE");
-	console.log(window.innerWidth);
-	console.log(window.innerHeight);
-	
-	// if window size are different, redraw everything
-	if(lastWindowWidth != window.innerWidth || lastWindowHeight != window.innerHeight) {
-		lastWindowWidth = window.innerWidth;
-		lastWindowHeight = window.innerHeight;
-		
-		file_cur_index = 0;
-		bar_cur_index = 0;
-		
-		redraw();
-	}
-	
-	
+    console.log(window.innerWidth);
+    console.log(window.innerHeight);
+    
+    // if window size are different, redraw everything
+    if(global.lastWindowWidth != window.innerWidth || global.lastWindowHeight != window.innerHeight) {
+        global.lastWindowWidth = window.innerWidth;
+        global.lastWindowHeight = window.innerHeight;
+        
+        global.fileCurIndex = 0;
+        global.barCurIndex = 0;
+        
+        redraw();
+    }
+    
+    
 }
 
 /******************************************************************
@@ -855,241 +829,273 @@ window.onresize = function(event) {
  ******************************************************************/
  
 function initContextMenu() {
-	div_context = document.getElementById('context_menu');
-	
-	div_context.onmouseover = function() { mouseOverContext = true; };
-	div_context.onmouseout = function(e) {
-		e = event.toElement || event.relatedTarget;
-		
-		while(e && e.parentNode && e.parentNode != window) {
-			if(e.parentNode == this || e == this) {
-				return;
-			}
-			e = e.parentNode;
-		}
-		
-		hideContextMenu();
-	};
+    div_context = document.getElementById('context_menu');
+    
+    div_context.onmouseover = function() { mouseOverContext = true; };
+    div_context.onmouseout = function(e) {
+        e = event.toElement || event.relatedTarget;
+        
+        while(e && e.parentNode && e.parentNode != window) {
+            if(e.parentNode == this || e == this) {
+                return;
+            }
+            e = e.parentNode;
+        }
+        
+        hideContextMenu();
+    };
 }
  
-function showContextMenu(event) {	
+function showContextMenu(event) {   
 
-	var offset_x = 0, offset_y = 0;
-	
-	if(event.clientX + parseInt(div_context.style.width) > lastWindowWidth) {
-		offset_x = event.clientX + parseInt(div_context.style.width) - lastWindowWidth
-	}
-	
-	if(event.clientY + parseInt(div_context.style.height) > lastWindowHeight) {
-		offset_y = event.clientY + parseInt(div_context.style.height) - lastWindowHeight;
-	}
-	
-	div_context.style.left = event.clientX - offset_x -10 + 'px';
-	div_context.style.top = event.clientY -offset_y -10 + 'px';
-	div_context.style.display = 'block';
-	
-	isShowingContextMenu = true;
+    var offset_x = 0, offset_y = 0;
+    
+    if(event.clientX + parseInt(div_context.style.width) > global.lastWindowWidth) {
+        offset_x = event.clientX + parseInt(div_context.style.width) - global.lastWindowWidth
+    }
+    
+    if(event.clientY + parseInt(div_context.style.height) > global.lastWindowHeight) {
+        offset_y = event.clientY + parseInt(div_context.style.height) - global.lastWindowHeight;
+    }
+    
+    div_context.style.left = event.clientX - offset_x -10 + 'px';
+    div_context.style.top = event.clientY -offset_y -10 + 'px';
+    div_context.style.display = 'block';
+    
+    cmenu.isContextMenuVisible = true;
 }
 
 function hideContextMenu() {
-	div_context.style.display = 'none';
-	isShowingContextMenu = false;
+    div_context.style.display = 'none';
+    cmenu.isContextMenuVisible = false;
 }
 
 
-function add_selections_by_ids(ids, clearPreviousSelection) {
-	if (clearPreviousSelection) {
-		selected = {};
-	}
-	
-	for (var i = 0; i < ids.length; ++i) {
-		var id = ids[i];
-		selected[id] = id;
-	}
-	
-	draw_highlight();
+function addSelectionsByIds(ids, clearPreviousSelection) {
+    if (clearPreviousSelection) {
+        global.selected = [];
+    }
+    
+    for (var i = 0; i < ids.length; ++i) {
+        var id = ids[i];
+        global.selected.push(id);
+    }
+    
+    drawHighlight();
 }
 
 
-function add_selections(x1, y1, x2, y2, offsetX, offsetY) {
-	var blockLength = blocks_to_draw.length;
-	var somethingAdded = false;
-	
-	for(var i = 0; i < blockLength; i++) {
-		if(trivial_reject_test(x1, y1, x2, y2, offsetX, offsetY, blocks_to_draw[i]) == 0) {
-			var id = blocks_to_draw[i].id;
-			selected[id] = id;
-			somethingAdded = true;
-		}
-	}
-	
-	if (somethingAdded) {
-		draw_highlight();
-	}
+function addSelections(x1, y1, x2, y2, offsetX, offsetY) {
+    var blockLength = global.blocksToDraw.length;
+    var somethingAdded = false;
+    
+    for(var i = 0; i < blockLength; i++) {
+        var id = global.blocksToDraw[i].id;
+        if ($.inArray(id, global.selected)) {
+            continue;
+        }
+        
+        if(trivial_reject_test(x1, y1, x2, y2, offsetX, offsetY, global.blocksToDraw[i]) == 0) {
+            global.selected.push(id);
+            somethingAdded = true;
+        }
+    }
+    
+    if (somethingAdded) {
+        drawHighlight();
+    }
 }
 
 
-function draw_highlight() {
-	sub_bar.selectAll('polygon').remove();
-	
-	var count = 0;
-	var itemsToHighlight = [];
-	var prev = null;
-	var item;
-	
-	for(i in selected) 
-		count++;
-	
-	
-	console.log("COUNT" + count);
-	
-	
-	if(count > 0) {
-		var blockLength = blocks_to_draw.length;
-		for (var i = 0; i < blockLength; ++i) {
+function drawHighlight() {
+    svg.subBar.selectAll('polygon').remove();
+    
+    var count = global.selected.length;
+    var itemsToHighlight = [];
+    var prev = null;
+    var item;
+    
+    if(count > 0) {
+        var blockLength = global.blocksToDraw.length;
+        for (var i = 0; i < blockLength; ++i) {
 
-			var block = blocks_to_draw[i];
-			
-			if (block.id in selected) {
-				if(prev == null) {
-					prev = block;
-					item = {startX: prev.x, startY: prev.y, endX: prev.x + prev.width, endY: prev.y + prev.height};
-				} else {
-					if(item.startY == block.y &&  Math.abs(item.endX - block.x) <= 8) {
-						item.endX = (item.endX > (block.x + block.width)) ? item.endX : (block.x + block.width);
-					} else {
-						itemsToHighlight.push(item);
-						item = {startX: block.x, startY: block.y, endX: block.x + block.width, endY: block.y + block.height};
-					}
-					prev = block;
-				}
-			}
-		}
-		itemsToHighlight.push(item);
-			
-		var highlight_width = 3;
-		
-		if(itemsToHighlight != []) {
-			blocks.selectAll('polygon')
-				.data(itemsToHighlight).enter().append('polygon')
-				.attr("points", function(d) { return ((d.startX) + "," + (d.startY) + " \ " + 
-				(d.endX) + "," + (d.startY) + " \ " +
-				(d.endX) + "," + (d.endY) + " \ " +
-				(d.startX) + "," + (d.endY)) })
-				.style("stroke", "yellow")
-				.style("stroke-width", highlight_width)
-				.style("fill-opacity", 0);
-		}
-	}
+            var block = global.blocksToDraw[i];
+            
+            if ($.inArray(block.id, global.selected)) {
+                if(prev == null) {
+                    prev = block;
+                    item = {startX: prev.x, startY: prev.y, endX: prev.x + prev.width, endY: prev.y + prev.height};
+                } else {
+                    if(item.startY == block.y &&  Math.abs(item.endX - block.x) <= 8) {
+                        item.endX = (item.endX > (block.x + block.width)) ? item.endX : (block.x + block.width);
+                    } else {
+                        itemsToHighlight.push(item);
+                        item = {startX: block.x, startY: block.y, endX: block.x + block.width, endY: block.y + block.height};
+                    }
+                    prev = block;
+                }
+            }
+        }
+        itemsToHighlight.push(item);
+            
+        var highlight_width = 3;
+        
+        if(itemsToHighlight != []) {
+            svg.blocks.selectAll('polygon')
+                .data(itemsToHighlight).enter().append('polygon')
+                .attr("points", function(d) { return ((d.startX) + "," + (d.startY) + " \ " + 
+                (d.endX) + "," + (d.startY) + " \ " +
+                (d.endX) + "," + (d.endY) + " \ " +
+                (d.startX) + "," + (d.endY)) })
+                .style("stroke", "yellow")
+                .style("stroke-width", highlight_width)
+                .style("fill-opacity", 0);
+        }
+    }
 }
 
 function trivial_reject_test(x1, y1, x2, y2, offsetX, offsetY, block) {
-	var result0 = 0, result1= 0;
-	var left = 1;
-	var right = 2;
-	var bottom = 4;
-	var top = 8;
-	
-	
-	if(x1 < (block.x + offsetX)) {
-		result0 = result0 | left;
-	} else if(x1 > (block.x + block.width + offsetX)) {
-		result0 = result0 | right;
-	}
-	
-	if(y1 < (block.y + offsetY)) {
-		result0 = result0 | top;
-	} else if(y1 > (block.y + block.height + offsetY)) {
-		result0 = result0 | bottom;
-	}
-	
-	if(x2 < (block.x + offsetX)) {
-		result1 = result1 | left;
-	} else if(x2 > (block.x + block.width + offsetX)) {
-		result1 = result1 | right;
-	}
-	
-	if(y2 < (block.y + offsetY)) {
-		result1 = result1 | top;
-	} else if(y2 > (block.y + block.height + offsetY)) {
-		result1 = result1 | bottom;
-	}
-	
-	return (result0 & result1);
+    var result0 = 0, result1= 0;
+    var left = 1;
+    var right = 2;
+    var bottom = 4;
+    var top = 8;
+    
+    
+    if(x1 < (block.x + offsetX)) {
+        result0 = result0 | left;
+    } else if(x1 > (block.x + block.width + offsetX)) {
+        result0 = result0 | right;
+    }
+    
+    if(y1 < (block.y + offsetY)) {
+        result0 = result0 | top;
+    } else if(y1 > (block.y + block.height + offsetY)) {
+        result0 = result0 | bottom;
+    }
+    
+    if(x2 < (block.x + offsetX)) {
+        result1 = result1 | left;
+    } else if(x2 > (block.x + block.width + offsetX)) {
+        result1 = result1 | right;
+    }
+    
+    if(y2 < (block.y + offsetY)) {
+        result1 = result1 | top;
+    } else if(y2 > (block.y + block.height + offsetY)) {
+        result1 = result1 | bottom;
+    }
+    
+    return (result0 & result1);
 }
 
-	
+    
 /******************************************************************
  LISTENER FUNCTIONS
  ******************************************************************/
 function bar_zoom_in() {
-	if(bar_zoom_index != 0) {
-		bar_zoom_index--;
-		redraw();
-	}
+    if(global.barZoomIndex != 0) {
+        global.barZoomIndex--;
+        redraw();
+    }
 }
 
 function bar_zoom_out() {
-	if(bar_zoom_index != (bar_zoom_levels.length - 1)) {
-		bar_zoom_index++;
-		
-		redraw();
-	}
+    if(global.barZoomIndex != (BAR_ZOOM_LEVELS.length - 1)) {
+        global.barZoomIndex++;
+        
+        redraw();
+    }
 }
 
 function show_before() {
-	if(bar_cur_index > 0) {
-		bar_cur_index--;
-		redraw();
-	}
+    setBarCurIndex(global.barCurIndex - 1);
+    redraw();
 }
 
 function show_after() {
-	if(bar_cur_index < bar_max_page_index) {
-		bar_cur_index++;
-		redraw();
-	}
+    setBarCurIndex(global.barCurIndex + 1);
+    redraw();
+}
+
+function setBarCurIndex(newIndex) {
+    global.barCurIndex = clamp(newIndex, 0, global.barMaxPageIndex);
+    
+    global.minToShow = global.barCurIndex * BAR_ZOOM_LEVELS[global.barZoomIndex];
+    global.maxToShow = global.minToShow + BAR_ZOOM_LEVELS[global.barZoomIndex];
 }
 
 function file_zoom_in() {
-	if(file_zoom_index != 0) {
-		file_zoom_index--;
-		redraw();
-	}
+    if(global.fileZoomIndex != 0) {
+        global.fileZoomIndex--;
+        redraw();
+    }
 }
 
 function file_zoom_out() {
-	if(file_zoom_index != (file_zoom_levels.length - 1)) {
-		file_zoom_index++;
-		redraw();
-	}
+    if(global.fileZoomIndex != (FILE_ZOOM_LEVELS.length - 1)) {
+        global.fileZoomIndex++;
+        redraw();
+    }
 }
 
 function show_up() {
-	if(file_cur_index > 0) {
-		file_cur_index--;
-		redraw();
-	}
+    if(global.fileCurIndex > 0) {
+        global.fileCurIndex--;
+        redraw();
+    }
 }
 
 function show_down() {
-	if(file_cur_index < file_max_page_index) {
-		file_cur_index++;
-		redraw();
-	}
+    if(global.fileCurIndex < global.fileMaxPageIndex) {
+        global.fileCurIndex++;
+        redraw();
+    }
 }
 
 function undo() {
-	// close context menu if there is any
-	hideContextMenu();
-	console.log('undo');
-	var result = [];
-	
-	for(var i in selected) {
-		result.push(selected[i]);
-	}
-	
-	if(result.length > 0)
-		doUndo(result);
-	
+    // close context menu if there is any
+    hideContextMenu();
+    var result = [];
+    
+    for(var i in global.selected) {
+        result.push(global.selected[i]);
+    }
+    
+    if(result.length > 0)
+        doUndo(result);
+}
+    
+
+function updateMaxTimestamp(timestamp, timestamp2) {
+    // update global.maxTimestamp if necessary
+    if (timestamp2 == null && timestamp > global.maxTimestamp) {
+        global.maxTimestamp = timestamp;
+    } else if (timestamp2 != null && timestamp2 > global.maxTimestamp) {
+        global.maxTimestamp = timestamp2;
+    }
+    
+    // recalculate page index and number of global.files to draw
+    global.barMaxPageIndex = Math.ceil(
+        global.maxTimestamp / BAR_ZOOM_LEVELS[global.barZoomIndex]) - 1;
+}
+
+function clamp(value, min, max) {
+    if (value < min) {
+        value = min;
+    }
+    if (value > max) {
+        value = max;
+    }
+    
+    return value;
+}
+
+function range(begin, end) {
+    var result = new Array();
+    for (var i = begin; i < end; ++i) {
+        result[i - begin] = i;
+    }
+    
+    return result;
 }

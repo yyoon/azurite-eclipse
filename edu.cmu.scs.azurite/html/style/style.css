@@ -21,7 +21,11 @@ font-size:12px;
 margin: 0px;
 }
 
-.fileTitle {
+html, body {
+height: 100%;
+}
+
+.file_title {
 
 }
 
@@ -30,6 +34,7 @@ background-color:grey;
 padding: 5px;
 width: 100%;
 height: 75px;
+margin-top: -75px;
 
 -moz-box-sizing:    border-box;
 -webkit-box-sizing: border-box;
@@ -41,8 +46,30 @@ display: inline-block;
 margin-right: 50px;
 }
 
-.menu {
-/*position: absolute;*/
+#main {
+height: 100%;
+padding-top: 75px;
+
+-moz-box-sizing:    border-box;
+-webkit-box-sizing: border-box;
+box-sizing:         border-box;
+}
+
+#main_panel {
+width: 100%;
+height: 100%;
+}
+
+#svg_wrapper {
+display: block;
+width: 100%;
+height: 100%;
+padding-right: 30px;
+padding-bottom: 30px;
+
+-moz-box-sizing:    border-box;
+-webkit-box-sizing: border-box;
+box-sizing:         border-box;
 }
 
 button.menu {
@@ -53,9 +80,6 @@ padding: 0px;
 }
 
 .svg {
-position: absolute;
-left:0px;
-top:0px;
 }
 
 .cmenu {
