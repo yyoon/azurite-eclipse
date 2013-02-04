@@ -929,10 +929,10 @@ function addSelections(x1, y1, x2, y2, offsetX, offsetY) {
     
     for(var i = 0; i < blockLength; i++) {
         var id = global.blocksToDraw[i].id;
-        if ($.inArray(id, global.selected)) {
+        if ($.inArray(id, global.selected) !== -1) {
             continue;
         }
-        
+		
         if(trivialRejectTest(x1, y1, x2, y2, offsetX, offsetY, global.blocksToDraw[i]) == 0) {
             global.selected.push(id);
             somethingAdded = true;
@@ -959,7 +959,7 @@ function drawHighlight() {
 
             var block = global.blocksToDraw[i];
             
-            if ($.inArray(block.id, global.selected)) {
+            if ($.inArray(block.id, global.selected) !== -1) {
                 if(prev == null) {
                     prev = block;
                     item = {startX: prev.x, startY: prev.y, endX: prev.x + prev.width, endY: prev.y + prev.height};
