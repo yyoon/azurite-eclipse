@@ -53,7 +53,7 @@ global.lastEvent = null;
 
 // Timestamps
 global.maxTimestamp = 0;
-global.startTimestamp = 0;
+global.startTimestamp = new Date().valueOf();
 
 // Dragging
 global.dragging = false;
@@ -426,28 +426,12 @@ function redraw() {
     });
     
     
-    var draggable_area = {
-        top: (MENU_PANEL_HEIGHT + CHART_MARGINS.top),
-        bottom: (MENU_PANEL_HEIGHT + chartHeight), 
+    var draggableArea = {
+        top: CHART_MARGINS.top,
+        bottom: CHART_MARGINS.top + chartHeight,
         left: (CHART_MARGINS.left + titleWidth),
         right:  (CHART_MARGINS.left + titleWidth + barWidth)
     };
-    
-    
-    document.addEventListener("keydown", function(e) {
-        if(e.keyCode == 17) 
-            cmenu.isCtrlDown = true;
-        
-    }
-    , false);
-    
-    document.addEventListener("keyup", function(e) {
-        if(e.keyCode == 17)
-            cmenu.isCtrlDown = false;
-    
-    }
-    , false);
-    
     
     document.onmousedown =  function(e) {
         if(cmenu.isContextMenuVisible)
@@ -459,7 +443,10 @@ function redraw() {
             cmenu.isRightButtonDown = event.button == 2; 
         }
         
-        if(cmenu.isRightButtonDown || e.clientX < draggable_area.left || e.clientX > draggable_area.right || e.clientY < draggable_area.top || e.clientY > draggable_area.bottom) {
+        var mouseX = e.clientX;
+        var mouseY = e.clientY - MENU_PANEL_HEIGHT;
+        
+        if(cmenu.isRightButtonDown || mouseX < draggableArea.left || mouseX > draggableArea.right || mouseY < draggableArea.top || mouseY > draggableArea.bottom) {
             return;
         }
         
@@ -474,11 +461,11 @@ function redraw() {
         }
         
         d3.select('.selection_box')
-            .attr('x', e.clientX)
-            .attr('y', e.clientY);
+            .attr('x', mouseX)
+            .attr('y', mouseY);
             
-        global.dragStart[0] = e.clientX;
-        global.dragStart[1] = e.clientY;
+        global.dragStart[0] = mouseX;
+        global.dragStart[1] = mouseY;
     };
     
     document.onmousemove = function(e) {
@@ -487,19 +474,22 @@ function redraw() {
         
         var newX, newY;
         
-        if(e.clientX < draggable_area.left)
-            newX = draggable_area.left;
-        else if(e.clientX > draggable_area.right) 
-            newX = draggable_area.right;
+        var mouseX = e.clientX;
+        var mouseY = e.clientY - MENU_PANEL_HEIGHT;
+        
+        if(mouseX < draggableArea.left)
+            newX = draggableArea.left;
+        else if(mouseX > draggableArea.right) 
+            newX = draggableArea.right;
         else
-            newX = e.clientX;
+            newX = mouseX;
             
-        if(e.clientY < draggable_area.top)
-            newY = draggable_area.top;
-        else if(e.clientY > draggable_area.bottom)
-            newY = draggable_area.bottom;
+        if(mouseY < draggableArea.top)
+            newY = draggableArea.top;
+        else if(mouseY > draggableArea.bottom)
+            newY = draggableArea.bottom;
         else
-            newY = e.clientY;
+            newY = mouseY;
         
         
         if(newX - global.dragStart[0] < 0) {
@@ -539,23 +529,26 @@ function redraw() {
             .attr('display', 'none');
         
         var x1, y1, x2, y2;
+        
+        var mouseX = e.clientX;
+        var mouseY = e.clientY - MENU_PANEL_HEIGHT;
     
-        if(global.dragStart[0] <= e.clientX) {
+        if(global.dragStart[0] <= mouseX) {
             x1 = global.dragStart[0];
-            x2 = e.clientX;
+            x2 = mouseX;
         } else {
-            x1 = e.clientX;
+            x1 = mouseX;
             x2 = global.dragStart[0];
         }
         
-        if(global.dragStart[1] <= e.clientY) {
+        if(global.dragStart[1] <= mouseY) {
             y1 = global.dragStart[1];
-            y2 = e.clientY;
+            y2 = mouseY;
         } else {
-            y1 = e.clientY;
+            y1 = mouseY;
             y2 = global.dragStart[1];
         }
-        addSelections(x1, y1, x2, y2, (CHART_MARGINS.left + titleWidth), (CHART_MARGINS.top + MENU_PANEL_HEIGHT));
+        addSelections(x1, y1, x2, y2, (CHART_MARGINS.left + titleWidth), CHART_MARGINS.top);
     
         global.dragging = false;   
         global.dragStart = [];
@@ -579,18 +572,18 @@ function getCursorPosition(e) {
 
 function drawMenu() {
     // draw timeline bar control
-    var bar_zoom_level = document.getElementById('bar_zoom_level');
-    var bar_page_index = document.getElementById('bar_page_index');
+    var barZoomLevel = document.getElementById('bar_zoom_level');
+    var barPageIndex = document.getElementById('bar_page_index');
     
-    bar_zoom_level.innerHTML = "Zoom Index : " + global.barZoomIndex + "/" + (BAR_ZOOM_LEVELS.length-1);
-    bar_page_index.innerHTML = "Page Index : " + global.barCurIndex + "/" + global.barMaxPageIndex;
+    barZoomLevel.innerHTML = "Zoom Index : " + global.barZoomIndex + "/" + (BAR_ZOOM_LEVELS.length-1);
+    barPageIndex.innerHTML = "Page Index : " + global.barCurIndex + "/" + global.barMaxPageIndex;
     
     // draw file list control
-    var file_zoom_level = document.getElementById('file_zoom_level');
-    var file_page_index = document.getElementById('file_page_index');
+    var fileZoomLevel = document.getElementById('file_zoom_level');
+    var filePageIndex = document.getElementById('file_page_index');
     
-    file_zoom_level.innerHTML = "Zoom Index : " + global.fileZoomIndex + "/" + (FILE_ZOOM_LEVELS.length-1);
-    file_page_index.innerHTML = "Page Index : " + global.fileCurIndex + "/" + global.fileMaxPageIndex;
+    fileZoomLevel.innerHTML = "Zoom Index : " + global.fileZoomIndex + "/" + (FILE_ZOOM_LEVELS.length-1);
+    filePageIndex.innerHTML = "Page Index : " + global.fileCurIndex + "/" + global.fileMaxPageIndex;
 }
 
 function drawFiles(filesToDraw) {
@@ -725,14 +718,6 @@ function drawRules(chartHeight) {
         .attr('onselectstart', false);
 }
 
-function timestampToString(timestamp) {
-    var d = new Date(timestamp);
-    var date = d.getDate();
-    var month = d.getMonth() + 1; //Months are zero based
-    var year = d.getFullYear();
-    document.write(curr_date + "-" + curr_month + "-" + curr_year);
-}
-
 function drawScrollbar(titleWidth, barWidth, chartHeight) {
     // Only show the scrollbar when needed.
     if (global.barMaxPageIndex == null || global.barMaxPageIndex <= 0) {
@@ -799,6 +784,18 @@ window.onload = function () {
     parseXml();
     initContextMenu();
     setBarCurIndex(0);
+    
+    document.addEventListener("keydown", function(e) {
+        if(e.keyCode == 17) 
+            cmenu.isCtrlDown = true;
+    }
+    , false);
+    
+    document.addEventListener("keyup", function(e) {
+        if(e.keyCode == 17)
+            cmenu.isCtrlDown = false;
+    }
+    , false);
 
     if(global.lastWindowWidth != window.innerWidth || global.lastWindowHeight != window.innerHeight) {
         global.lastWindowWidth = window.innerWidth;
@@ -813,22 +810,13 @@ window.onload = function () {
 }
 
 window.onresize = function(event) {
-    console.log("ON RESIZE");
-    console.log(window.innerWidth);
-    console.log(window.innerHeight);
-    
     // if window size are different, redraw everything
     if(global.lastWindowWidth != window.innerWidth || global.lastWindowHeight != window.innerHeight) {
         global.lastWindowWidth = window.innerWidth;
         global.lastWindowHeight = window.innerHeight;
         
-        global.fileCurIndex = 0;
-        global.barCurIndex = 0;
-        
         redraw();
     }
-    
-    
 }
 
 /******************************************************************
@@ -836,10 +824,10 @@ window.onresize = function(event) {
  ******************************************************************/
  
 function initContextMenu() {
-    div_context = document.getElementById('context_menu');
+    global.divContext = document.getElementById('context_menu');
     
-    div_context.onmouseover = function() { mouseOverContext = true; };
-    div_context.onmouseout = function(e) {
+    global.divContext.onmouseover = function() { mouseOverContext = true; };
+    global.divContext.onmouseout = function(e) {
         e = event.toElement || event.relatedTarget;
         
         while(e && e.parentNode && e.parentNode != window) {
@@ -855,25 +843,25 @@ function initContextMenu() {
  
 function showContextMenu(event) {   
 
-    var offset_x = 0, offset_y = 0;
+    var offsetX = 0, offsetY = 0;
     
-    if(event.clientX + parseInt(div_context.style.width) > global.lastWindowWidth) {
-        offset_x = event.clientX + parseInt(div_context.style.width) - global.lastWindowWidth
+    if(event.clientX + parseInt(global.divContext.style.width) > global.lastWindowWidth) {
+        offsetX = event.clientX + parseInt(global.divContext.style.width) - global.lastWindowWidth
     }
     
-    if(event.clientY + parseInt(div_context.style.height) > global.lastWindowHeight) {
-        offset_y = event.clientY + parseInt(div_context.style.height) - global.lastWindowHeight;
+    if(event.clientY + parseInt(global.divContext.style.height) > global.lastWindowHeight) {
+        offsetY = event.clientY + parseInt(global.divContext.style.height) - global.lastWindowHeight;
     }
     
-    div_context.style.left = event.clientX - offset_x -10 + 'px';
-    div_context.style.top = event.clientY -offset_y -10 + 'px';
-    div_context.style.display = 'block';
+    global.divContext.style.left = event.clientX - offsetX -10 + 'px';
+    global.divContext.style.top = event.clientY - offsetY -10 + 'px';
+    global.divContext.style.display = 'block';
     
     cmenu.isContextMenuVisible = true;
 }
 
 function hideContextMenu() {
-    div_context.style.display = 'none';
+    global.divContext.style.display = 'none';
     cmenu.isContextMenuVisible = false;
 }
 
@@ -902,7 +890,7 @@ function addSelections(x1, y1, x2, y2, offsetX, offsetY) {
             continue;
         }
         
-        if(trivial_reject_test(x1, y1, x2, y2, offsetX, offsetY, global.blocksToDraw[i]) == 0) {
+        if(trivialRejectTest(x1, y1, x2, y2, offsetX, offsetY, global.blocksToDraw[i]) == 0) {
             global.selected.push(id);
             somethingAdded = true;
         }
@@ -961,7 +949,7 @@ function drawHighlight() {
     }
 }
 
-function trivial_reject_test(x1, y1, x2, y2, offsetX, offsetY, block) {
+function trivialRejectTest(x1, y1, x2, y2, offsetX, offsetY, block) {
     var result0 = 0, result1= 0;
     var left = 1;
     var right = 2;
@@ -1000,29 +988,52 @@ function trivial_reject_test(x1, y1, x2, y2, offsetX, offsetY, block) {
 /******************************************************************
  LISTENER FUNCTIONS
  ******************************************************************/
-function bar_zoom_in() {
-    if(global.barZoomIndex != 0) {
-        global.barZoomIndex--;
-        redraw();
-    }
+function barZoomIn() {
+    setBarZoomIndex(global.barZoomIndex - 1);
+    redraw();
 }
 
-function bar_zoom_out() {
-    if(global.barZoomIndex != (BAR_ZOOM_LEVELS.length - 1)) {
-        global.barZoomIndex++;
-        
-        redraw();
-    }
+function barZoomOut() {
+    setBarZoomIndex(global.barZoomIndex + 1);
+    redraw();
 }
 
-function show_before() {
+function showBefore() {
     setBarCurIndex(global.barCurIndex - 1);
     redraw();
 }
 
-function show_after() {
+function showAfter() {
     setBarCurIndex(global.barCurIndex + 1);
     redraw();
+}
+
+function fileZoomIn() {
+    if(global.fileZoomIndex != 0) {
+        global.fileZoomIndex--;
+        redraw();
+    }
+}
+
+function fileZoomOut() {
+    if(global.fileZoomIndex != (FILE_ZOOM_LEVELS.length - 1)) {
+        global.fileZoomIndex++;
+        redraw();
+    }
+}
+
+function showUp() {
+    setFileCurIndex(global.fileCurIndex - 1);
+    redraw();
+}
+
+function showDown() {
+    setFileCurIndex(global.fileCurIndex + 1);
+    redraw();
+}
+
+function setBarZoomIndex(newIndex) {
+    global.barZoomIndex = clamp(newIndex, 0, BAR_ZOOM_LEVELS.length - 1);
 }
 
 function setBarCurIndex(newIndex) {
@@ -1032,33 +1043,14 @@ function setBarCurIndex(newIndex) {
     global.maxToShow = global.minToShow + BAR_ZOOM_LEVELS[global.barZoomIndex];
 }
 
-function file_zoom_in() {
-    if(global.fileZoomIndex != 0) {
-        global.fileZoomIndex--;
-        redraw();
-    }
+function setFileZoomIndex(newIndex) {
+    global.fileZoomIndex = clamp(newIndex, 0, FILE_ZOOM_LEVELS.length - 1);
 }
 
-function file_zoom_out() {
-    if(global.fileZoomIndex != (FILE_ZOOM_LEVELS.length - 1)) {
-        global.fileZoomIndex++;
-        redraw();
-    }
+function setFileCurIndex(newIndex) {
+    global.fileCurIndex = clamp(newIndex, 0, global.fileMaxPageIndex);
 }
 
-function show_up() {
-    if(global.fileCurIndex > 0) {
-        global.fileCurIndex--;
-        redraw();
-    }
-}
-
-function show_down() {
-    if(global.fileCurIndex < global.fileMaxPageIndex) {
-        global.fileCurIndex++;
-        redraw();
-    }
-}
 
 function undo() {
     // close context menu if there is any
