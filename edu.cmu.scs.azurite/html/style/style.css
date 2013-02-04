@@ -87,7 +87,25 @@ margin: 0;
 list-style-type: none;
 }
 
+#context_menu {
+z-index: 10000;
+background-color: white;
+border: 2px solid #FFA500;
+display: none;
+position: absolute;
+height:150;
+}
+
 #context_menu div:hover {
 cursor:pointer;
 background-color:#ADD8E6;
+}
+
+.context_menu_item {
+font-size: 14px;
+padding: 3px;
+}
+
+.disabled {
+color: gray;
 }

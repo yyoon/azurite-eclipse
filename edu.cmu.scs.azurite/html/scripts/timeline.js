@@ -434,8 +434,9 @@ function redraw() {
     };
     
     document.onmousedown =  function(e) {
-        if(cmenu.isContextMenuVisible)
-            return;
+        if(cmenu.isContextMenuVisible) {
+            hideContextMenu();
+        }
         
         if ("which" in event) { // Gecko (Firefox), WebKit (Safari/Chrome) & Opera
             cmenu.isRightButtonDown = event.which == 3; 
@@ -837,7 +838,7 @@ function initContextMenu() {
             e = e.parentNode;
         }
         
-        hideContextMenu();
+        // hideContextMenu();
     };
 }
  

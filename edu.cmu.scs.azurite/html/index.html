@@ -51,9 +51,10 @@
       </div>
     </div>
 
-    <div id="context_menu" style="z-index: 10000; background-color: white; border: 2px solid #FFA500; display: none; position: absolute; width:100px; height:150">
-      <div id='undo' onclick='undo()'>Undo</div>
-<!--      <div id='redo'>Redo</div> -->
+    <div id='context_menu'>
+      <div class='context_menu_item' onclick='undo()'>Undo</div>
+      <div class='context_menu_item disabled'>Redo</div>
+      <div class='context_menu_item disabled'>Highlight Affected Code</div>
     </div>
 
     <script type="text/javascript" src="scripts/timeline.js"></script>
