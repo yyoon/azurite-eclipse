@@ -136,6 +136,12 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 	 */
 	public void start() {
 		EventRecorder.getInstance().addDocumentChangeListener(this);
+		mStarted = true;
+		
+		// Execute all the scheduled tasks.
+		for (Runnable runnable : mScheduledTasks) {
+			runnable.run();
+		}
 	}
 	
 	/**

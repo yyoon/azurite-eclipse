@@ -14,11 +14,13 @@ import org.eclipse.swt.browser.BrowserFunction;
 import org.eclipse.swt.browser.ProgressEvent;
 import org.eclipse.swt.browser.ProgressListener;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.part.ViewPart;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.model.RuntimeDCListener;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
+import edu.cmu.scs.azurite.model.RuntimeHistoryManager.FileKey;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 import edu.cmu.scs.fluorite.commands.Delete;
@@ -31,6 +33,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 	private Browser browser;
 	
 	private static TimelineViewPart me = null;
+	private static String BROWSER_FUNC_PREFIX = "__AZURITE__";
 	
 	/**
 	 * Not a singleton pattern per se.
@@ -48,7 +51,9 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 		me = this;
 		
 		browser = new Browser(parent, SWT.NONE);
-		new UndoFunction(browser, "doUndo");
+		new UndoFunction(browser, BROWSER_FUNC_PREFIX + "selectiveUndo");
+		new InitializeFunction(browser, BROWSER_FUNC_PREFIX + "initialize");
+		
 		// Retrieve the full URL of /html/index.html in our project.
 		try {
 			URL indexUrl = FileLocator.toFileURL(Platform.getBundle(
@@ -61,25 +66,6 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 		browser.addProgressListener(new ProgressListener() {
             
             public void completed(ProgressEvent event) {
-                System.out.println("Page loaded");
-                try {
-                    Thread.sleep(2000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                // Execute JavaScript in the browser
-                browser.execute("call();");
-                
-                EventRecorder.getInstance().scheduleTask(new Runnable() {
-
-					@Override
-					public void run() {
-						browser.execute("setStartTimestamp("
-								+ EventRecorder.getInstance().getStartTimestamp()
-								+ ");");
-					}
-                	
-                });
             }
             
             public void changed(ProgressEvent event) {
@@ -141,6 +127,47 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 
 	}
 	
+	class InitializeFunction extends BrowserFunction {
+		
+		public InitializeFunction(Browser browser, String name) {
+			super(browser, name);
+		}
+		
+		@Override
+		public Object function(Object[] arguments) {
+            
+			// Set the start Timestamp.
+            EventRecorder.getInstance().scheduleTask(new Runnable() {
+				public void run() {
+					browser.execute("setStartTimestamp("
+							+ EventRecorder.getInstance().getStartTimestamp()
+							+ ");");
+				}
+            });
+            
+            // Read the existing runtime document changes.
+            RuntimeHistoryManager.getInstance().scheduleTask(new Runnable() {
+            	public void run() {
+            		Display.getDefault().asyncExec(new Runnable() {
+            			public void run() {
+                    		RuntimeHistoryManager manager = RuntimeHistoryManager.getInstance(); 
+                    		for (FileKey key : manager.getFileKeys()) {
+                    			addFile(key.getFilePath());
+                    			for (RuntimeDC dc : manager.getRuntimeDocumentChanges(key)) {
+                    				addOperation(dc.getOriginal(), false);
+                    			}
+                    		}
+                    		
+                    		redraw();
+            			}
+            		});
+            	}
+            });
+            
+			return "ok";
+		}
+	}
+	
 	@Override
 	public void activeFileChanged(String projectName, String filePath) {
 		if (projectName == null || filePath == null) {
@@ -148,9 +175,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 			return;
 		}
 		
-		String executeStr = String.format("addFile('%1$s');",
-				filePath.replace('\\', '/'));	// avoid escaping..
-		browser.execute(executeStr);
+		addFile(filePath);
 	}
 
 	@Override
@@ -160,12 +185,29 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 	
 	@Override
 	public void documentChangeAdded(BaseDocumentChangeEvent docChange) {
-		String executeStr = String.format("addOperation(%1$d, %2$d, %3$d, %4$d);",
+		addOperation(docChange, true);
+	}
+
+	private void addFile(String filePath) {
+		String executeStr = String.format("addFile('%1$s');",
+				filePath.replace('\\', '/'));	// avoid escaping..
+		browser.execute(executeStr);
+	}
+
+	private void addOperation(BaseDocumentChangeEvent docChange, boolean drawImmediately) {
+		String executeStr = String.format("addOperation(%1$d, %2$d, %3$d, %4$d, %5$s);",
 				docChange.getCommandIndex(),
 				docChange.getTimestamp(),
 				docChange.getTimestamp2(),
-				getTypeIndex(docChange));
+				getTypeIndex(docChange),
+				drawImmediately);
 		browser.execute(executeStr);
+	}
+	
+	private void redraw() {
+		Display.getDefault().asyncExec(new Runnable() {
+			public void run() { browser.execute("redraw();"); }
+		});
 	}
 	
 	private int getTypeIndex(BaseDocumentChangeEvent docChange) {

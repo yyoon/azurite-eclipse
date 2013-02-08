@@ -42,9 +42,6 @@ global.files = [];
 global.blocksToDraw = [];
 global.selected = [];
 
-// used for local debugging.
-global.xmlDoc = null;
-
 // last file opened
 global.currentFile = null;
 global.lastOperation = null;
@@ -170,70 +167,6 @@ function Block(id, type, width, height, x, y, color, timestamp, timestamp2) {
     this.timestamp2 = timestamp2;
 }
 
-// Loading local xml file
-function loadFile() {
-	// Do something..
-}
-
-
-function parseXml() {
-    if(global.xmlDoc == null) {
-        return;
-    }
-
-    global.startTimestamp = parseInt(global.xmlDoc.childNodes[0].getAttribute("global.startTimestamp"))
-    
-    var command_list = global.xmlDoc.childNodes[0].childNodes;
-
-    for(var i in command_list) {
-        var command = command_list[i];
-        
-        if(command.tagName === "Command") {
-            // Add a new file to file list if file this is a file never opened before
-            if(command.getAttribute("_type") === "FileOpenCommand") {
-                for(var j in command.childNodes) {
-                    if(command.childNodes[j].tagName == "filePath") {
-                        var path = command.childNodes[j].textContent;
-                        var fileName = path.match(/[^\\/]+$/)[0];
-                        
-                        // check if this file was opened before
-                        checkFileList(path, fileName);
-                        break;
-                    }
-                    
-                    
-                }
-            }
-        } else if (command.tagName === "DocumentChange" ) { 
-            var type;
-            var id = command.getAttribute("__id");
-            
-            if(command.getAttribute("_type") === "Insert") {
-                type = TYPE_INSERT;
-            } else if(command.getAttribute("_type") === "Delete") {
-                type = TYPE_DELETE;
-            } else if(command.getAttribute("_type") === "Replace") {
-                type = TYPE_REPLACE;
-            }
-            
-            if(type === TYPE_INSERT || type === TYPE_DELETE || type === TYPE_REPLACE) {
-                var timestamp = parseInt(command.getAttribute("timestamp"));
-                var timestamp2 = command.getAttribute("timestamp2");
-                
-                if(timestamp2 == null) {
-                    timestamp2 = null;
-                } else {
-                    timestamp2 = parseInt(timestamp2);
-                }
-                
-                global.currentFile.operations.push(new EditOperation(id, timestamp, timestamp2, type));
-                
-                updateMaxTimestamp(timestamp, timestamp2);
-            }
-            
-        }
-    }
-}
 
 /**
  * Sets the given file as the current file.
@@ -271,8 +204,8 @@ function addFile(path) {
     var newFile = new File(path, fileName);
     global.files.push(newFile);
     global.currentFile = newFile;
-	
-	drawFiles();
+    
+    drawFiles();
 }
 
 /**
@@ -290,7 +223,7 @@ function setStartTimestamp(timestamp) {
  * Add an edit operation to the end of the file.
  * Note that this is called immediately after an edit operation is performed.
  */
-function addOperation(id, timestamp1, timestamp2, type) {
+function addOperation(id, timestamp1, timestamp2, type, drawImmediately) {
     var newOp = new EditOperation(
         parseInt(id),
         parseInt(timestamp1),
@@ -315,28 +248,30 @@ function addOperation(id, timestamp1, timestamp2, type) {
     global.lastOperation = newOp;
     
     updateMaxTimestamp(timestamp1, timestamp2);
-	
-	var numMaxFilesToDraw = getMaxFilesToDraw();
-	var offset = numMaxFilesToDraw * global.fileCurIndex;
-	
-	if (offset <= fileIndex && fileIndex < offset + numMaxFilesToDraw) {
-		var rowIndex = fileIndex - offset;
-		
-		if (createBlockFromOperation(newOp, rowIndex)) {
-			var block = global.blocksToDraw[global.blocksToDraw.length - 1];
-			
-			// This block should be drawn immediately!
-			svg.blocks.append('rect')
-				.attr('class', 'block')
-				.attr('width', block.width)
-				.attr('height', block.height)
-				.attr('x', block.x)
-				.attr('y', block.y)
-				.style('fill', block.color);
-		}
-	}
-	
-	drawIndicator();
+    
+    if (drawImmediately) {
+        var numMaxFilesToDraw = getMaxFilesToDraw();
+        var offset = numMaxFilesToDraw * global.fileCurIndex;
+        
+        if (offset <= fileIndex && fileIndex < offset + numMaxFilesToDraw) {
+            var rowIndex = fileIndex - offset;
+            
+            if (createBlockFromOperation(newOp, rowIndex)) {
+                var block = global.blocksToDraw[global.blocksToDraw.length - 1];
+                
+                // This block should be drawn immediately!
+                svg.blocks.append('rect')
+                    .attr('class', 'block')
+                    .attr('width', block.width)
+                    .attr('height', block.height)
+                    .attr('x', block.x)
+                    .attr('y', block.y)
+                    .style('fill', block.color);
+            }
+        }
+    }
+    
+    drawIndicator();
 }
 
 /**
@@ -368,8 +303,8 @@ function redraw() {
     // translate subFile and subBar
     svg.subFile.attr('transform', 'translate(' + CHART_MARGINS.left + ',' + CHART_MARGINS.top + ')');
     svg.subBar.attr('transform', 'translate(' + (CHART_MARGINS.left + global.titleWidth) + ',' + CHART_MARGINS.top + ')');
-	
-	var filesToDraw = getFilesToDraw();
+    
+    var filesToDraw = getFilesToDraw();
     
     drawMenu();
     drawFiles(filesToDraw);
@@ -393,9 +328,9 @@ function getFilesToDraw() {
     // using the current svg height, determine the number of global.files to draw
     var numMaxFilesToDraw = getMaxFilesToDraw();
     global.fileMaxPageIndex = Math.ceil(global.files.length / numMaxFilesToDraw) - 1;
-	if (global.fileMaxPageIndex < 0) {
-		global.fileMaxPageIndex = 0;
-	}
+    if (global.fileMaxPageIndex < 0) {
+        global.fileMaxPageIndex = 0;
+    }
     
     // calculate the number of global.files to draw
     var filesToDraw = [];
@@ -403,12 +338,12 @@ function getFilesToDraw() {
     
     for(var i = 0; i < numMaxFilesToDraw && global.files[offset+i] != null; i++)
         filesToDraw.push(global.files[offset+i]);
-	
-	return filesToDraw;
+    
+    return filesToDraw;
 }
 
 function getMaxFilesToDraw() {
-	return Math.floor((parseInt(svg.main.style('height')) - CHART_MARGINS.top - CHART_MARGINS.bottom) / FILE_ZOOM_LEVELS[global.fileZoomIndex]);
+    return Math.floor((parseInt(svg.main.style('height')) - CHART_MARGINS.top - CHART_MARGINS.bottom) / FILE_ZOOM_LEVELS[global.fileZoomIndex]);
 }
 
 function getCursorPosition(e) {
@@ -444,11 +379,11 @@ function drawMenu() {
 
 function drawFiles(filesToDraw) {
     svg.subFile.selectAll('text').remove();
-	
-	if (filesToDraw == null) {
-		filesToDraw = getFilesToDraw();
-	}
-	
+    
+    if (filesToDraw == null) {
+        filesToDraw = getFilesToDraw();
+    }
+    
     // draw file titles.
     svg.subFile.selectAll('.fileTitles')
         .data(filesToDraw)
@@ -463,10 +398,10 @@ function drawFiles(filesToDraw) {
         .style('-moz-user-select', 'none')
         .style('-webkit-user-select', 'none')
         .attr('onselectstart', false);
-	
-	// Lines
+    
+    // Lines
     svg.fileLines.selectAll('line').remove();
-	
+    
     // if there's no file, then don't draw a line.
     if (filesToDraw.length == 0) {
         return;
@@ -502,7 +437,7 @@ function drawBars(filesToDraw) {
         var length = operations.length;
         
         for(var j = 0; j < length; j++) {
-			createBlockFromOperation(operations[j], i);
+            createBlockFromOperation(operations[j], i);
         }
     }
     
@@ -517,54 +452,54 @@ function drawBars(filesToDraw) {
 }
 
 function createBlockFromOperation(operation, rowIndex) {
-	var timestamp = operation.timestamp;
-	var timestamp2 = operation.timestamp2;
-	
-	// there should always be a timestamp.
-	if (timestamp == null) {
-		return false;
-	}
-	
-	// if timestamp2 is not defined, just use the timestamp value.
-	if (timestamp2 == null) {
-		timestamp2 = timestamp;
-	}
-	
-	// the block is outside of the current view.
-	if (timestamp2 < global.minToShow || timestamp > global.maxToShow) {
-		return false;
-	}
-	
-	timestamp = clamp(timestamp, global.minToShow, global.maxToShow);
-	timestamp2 = clamp(timestamp2, global.minToShow, global.maxToShow);
-	
-	blockWidth = global.xBar(timestamp2) - global.xBar(timestamp);
-	if (blockWidth < global.minBlockWidth) {
-		blockWidth = global.minBlockWidth;
-	}
-	
-	if (timestamp2 >= global.maxTimestamp) {
-		global.maxTimestamp = global.xBar.invert( global.xBar(timestamp) + blockWidth );
-	}
-	
-	global.blocksToDraw.push(new Block(
-		operation.id,
-		operation.type,
-		blockWidth,
-		FILE_ZOOM_LEVELS[global.fileZoomIndex], 
-		global.xBar(timestamp), 
-		(FILE_ZOOM_LEVELS[global.fileZoomIndex] * rowIndex),
-		operation.color, 
-		timestamp, 
-		timestamp2)
-	);
-	
-	return true;
+    var timestamp = operation.timestamp;
+    var timestamp2 = operation.timestamp2;
+    
+    // there should always be a timestamp.
+    if (timestamp == null) {
+        return false;
+    }
+    
+    // if timestamp2 is not defined, just use the timestamp value.
+    if (timestamp2 == null) {
+        timestamp2 = timestamp;
+    }
+    
+    // the block is outside of the current view.
+    if (timestamp2 < global.minToShow || timestamp > global.maxToShow) {
+        return false;
+    }
+    
+    timestamp = clamp(timestamp, global.minToShow, global.maxToShow);
+    timestamp2 = clamp(timestamp2, global.minToShow, global.maxToShow);
+    
+    blockWidth = global.xBar(timestamp2) - global.xBar(timestamp);
+    if (blockWidth < global.minBlockWidth) {
+        blockWidth = global.minBlockWidth;
+    }
+    
+    if (timestamp2 >= global.maxTimestamp) {
+        global.maxTimestamp = global.xBar.invert( global.xBar(timestamp) + blockWidth );
+    }
+    
+    global.blocksToDraw.push(new Block(
+        operation.id,
+        operation.type,
+        blockWidth,
+        FILE_ZOOM_LEVELS[global.fileZoomIndex], 
+        global.xBar(timestamp), 
+        (FILE_ZOOM_LEVELS[global.fileZoomIndex] * rowIndex),
+        operation.color, 
+        timestamp, 
+        timestamp2)
+    );
+    
+    return true;
 }
 
 function drawRules() {
     svg.rules.selectAll('text').remove();
-	
+    
     svg.rules.selectAll(".rule")
         .data(range(0, NUM_TIMESTAMPS))
         .enter()
@@ -648,15 +583,14 @@ function drawIndicator() {
  * When the page loads, load a log file
  */
 window.onload = function () {
-    loadFile();
-    parseXml();
+    __AZURITE__initialize();
     initContextMenu();
-	
+    
     setBarCurIndex(0);
-	setFileCurIndex(0);
-	
-	window.onresize();
-	initEventHandlers();
+    setFileCurIndex(0);
+    
+    window.onresize();
+    initEventHandlers();
 }
 
 window.onresize = function (e) {
@@ -664,16 +598,16 @@ window.onresize = function (e) {
     if(global.lastWindowWidth != window.innerWidth || global.lastWindowHeight != window.innerHeight) {
         global.lastWindowWidth = window.innerWidth;
         global.lastWindowHeight = window.innerHeight;
-		
-		var svgWidth = parseInt(svg.main.style('width'));
-		var svgHeight = parseInt(svg.main.style('height'));
-		
-		global.chartWidth = svgWidth - CHART_MARGINS.left - CHART_MARGINS.right;
-		global.chartHeight = svgHeight - CHART_MARGINS.top - CHART_MARGINS.bottom;
-		global.titleWidth = global.chartWidth * 0.15;
-		global.barWidth = global.chartWidth * 0.85;
-		
-		global.minBlockWidth = global.barWidth * 0.005;
+        
+        var svgWidth = parseInt(svg.main.style('width'));
+        var svgHeight = parseInt(svg.main.style('height'));
+        
+        global.chartWidth = svgWidth - CHART_MARGINS.left - CHART_MARGINS.right;
+        global.chartHeight = svgHeight - CHART_MARGINS.top - CHART_MARGINS.bottom;
+        global.titleWidth = global.chartWidth * 0.15;
+        global.barWidth = global.chartWidth * 0.85;
+        
+        global.minBlockWidth = global.barWidth * 0.005;
         
         redraw();
     }
@@ -713,7 +647,7 @@ function initEventHandlers() {
             cmenu.isCtrlDown = false;
     }
     , false);
-	
+    
     var draggableArea = {
         top: CHART_MARGINS.top,
         bottom: CHART_MARGINS.top + global.chartHeight,
@@ -892,7 +826,7 @@ function addSelections(x1, y1, x2, y2, offsetX, offsetY) {
         if ($.inArray(id, global.selected) !== -1) {
             continue;
         }
-		
+        
         if(trivialRejectTest(x1, y1, x2, y2, offsetX, offsetY, global.blocksToDraw[i]) == 0) {
             global.selected.push(id);
             somethingAdded = true;
@@ -1037,8 +971,8 @@ function showDown() {
 
 function setBarZoomIndex(newIndex) {
     global.barZoomIndex = clamp(newIndex, 0, BAR_ZOOM_LEVELS.length - 1);
-	
-	drawMenu();
+    
+    drawMenu();
 }
 
 function setBarCurIndex(newIndex) {
@@ -1046,20 +980,20 @@ function setBarCurIndex(newIndex) {
     
     global.minToShow = global.barCurIndex * BAR_ZOOM_LEVELS[global.barZoomIndex];
     global.maxToShow = global.minToShow + BAR_ZOOM_LEVELS[global.barZoomIndex];
-	
-	drawMenu();
+    
+    drawMenu();
 }
 
 function setFileZoomIndex(newIndex) {
     global.fileZoomIndex = clamp(newIndex, 0, FILE_ZOOM_LEVELS.length - 1);
-	
-	drawMenu();
+    
+    drawMenu();
 }
 
 function setFileCurIndex(newIndex) {
     global.fileCurIndex = clamp(newIndex, 0, global.fileMaxPageIndex);
-	
-	drawMenu();
+    
+    drawMenu();
 }
 
 
@@ -1073,7 +1007,7 @@ function undo() {
     }
     
     if(result.length > 0)
-        doUndo(result);
+        __AZURITE__selectiveUndo(result);
 }
     
 
@@ -1108,4 +1042,17 @@ function range(begin, end) {
     }
     
     return result;
+}
+
+
+if (!__AZURITE__initialize) {
+    __AZURITE__initialize = function () {
+        console.log('__AZURITE__initialize call');
+    }
+}
+
+if (!__AZURITE__selectiveUndo) {
+    __AZURITE__selectiveUndo = function () {
+        console.log('__AZURITE_selectiveUndo call');
+    }
 }
