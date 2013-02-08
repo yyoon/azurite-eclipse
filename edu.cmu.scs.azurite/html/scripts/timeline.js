@@ -26,8 +26,6 @@ var TYPE_INSERT = 0;
 var TYPE_DELETE = 1;
 var TYPE_REPLACE = 2;
 
-var LOCAL_MODE = false;
-
 var NUM_TIMESTAMPS = 3;
 
 
@@ -174,45 +172,7 @@ function Block(id, type, width, height, x, y, color, timestamp, timestamp2) {
 
 // Loading local xml file
 function loadFile() {
-
-    if(LOCAL_MODE == true) {
-        var xmlhttp;
-        
-        if (window.XMLHttpRequest) { 
-            // code for IE7+, Firefox, Chrome, Opera, Safari
-            xmlhttp = new XMLHttpRequest();
-        } else { 
-            // code for IE6, IE5
-            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
-        }
-
-        xmlhttp.open("GET","Log2012-09-24-10-41-36-725.xml",false);
-        xmlhttp.send();
-        global.xmlDoc = xmlhttp.responseXML; 
-    } else {
-         // disable this block temporarily.
-        return;
-
-    
-        var log = readLog();
-
-        if(log == "") {
-            return;
-        }
-        
-        if (window.DOMParser) {
-
-            var parser = new DOMParser();
-            global.xmlDoc = parser.parseFromString(log,"text/xml");
-            
-
-            
-        } else { // Internet Explorer
-            global.xmlDoc = new ActiveXObject("Microsoft.XMLDOM");
-            global.xmlDoc.async = false;
-            global.xmlDoc.loadXML(text).responseXML;
-        }   
-    }
+	// Do something..
 }
 
 

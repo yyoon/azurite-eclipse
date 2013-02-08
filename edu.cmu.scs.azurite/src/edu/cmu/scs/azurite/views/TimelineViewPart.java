@@ -1,18 +1,7 @@
 package edu.cmu.scs.azurite.views;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.UnsupportedEncodingException;
-import java.io.Writer;
 import java.net.URL;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -39,9 +28,6 @@ import edu.cmu.scs.fluorite.model.EventRecorder;
 
 public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 
-	private static final String PATH = "C:/Users/asder/Desktop/timeline/";
-//	private static final String PATH = "D:/timeline_ver6/";
-
 	private Browser browser;
 	
 	private static TimelineViewPart me = null;
@@ -62,7 +48,6 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 		me = this;
 		
 		browser = new Browser(parent, SWT.NONE);
-		new ReadFileFunction(browser, "readLog");
 		new UndoFunction(browser, "doUndo");
 		// Retrieve the full URL of /html/index.html in our project.
 		try {
@@ -156,76 +141,6 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 
 	}
 	
-	class ReadFileFunction extends BrowserFunction {
-
-		public ReadFileFunction(Browser browser, String name) {
-			super(browser, name);
-		}
-
-		@Override
-		public Object function(Object[] arguments) {
-			return fileToString();
-		}
-
-	}
-
-    public String fileToString() {
-    	InputStream    fis = null;
-		BufferedReader br;
-		String         line;
-		StringBuilder builder = new StringBuilder();
-		
-		try {
-			fis = new FileInputStream(PATH + "Log2012-09-24-10-41-36-725.xml");
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		}
-		br = new BufferedReader(new InputStreamReader(fis, Charset.forName("UTF-8")));
-		try {
-			while ((line = br.readLine()) != null) {
-			    builder.append(line);
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		} finally {
-			try {
-				br.close();
-			} catch (IOException e) { }
-		}
-		
-		
-		
-		Writer out = null;
-		try {
-			out = new BufferedWriter(new OutputStreamWriter(
-				    new FileOutputStream(PATH + "test.js"), "UTF-8"));
-		} catch (UnsupportedEncodingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-			try {
-			    try {
-			    	System.out.println("asdsadsadasd");
-					out.write(builder.toString());
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			} finally {
-			    try {
-					out.close();
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-		
-		return builder.toString();
-    }
-
 	@Override
 	public void activeFileChanged(String projectName, String filePath) {
 		if (projectName == null || filePath == null) {
