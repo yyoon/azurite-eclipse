@@ -2,10 +2,6 @@
  * Things should be executed at the beginning.
  */
 
-// Workaround for console.log problem.
-if (!window.console) window.console = {};
-if (!window.console.log) window.console.log = function () { };
-
 // Disable selection.
 document.unselectable = "on";
 document.onselectstart = function () { return false };
@@ -583,7 +579,7 @@ function drawIndicator() {
  * When the page loads, load a log file
  */
 window.onload = function () {
-    __AZURITE__initialize();
+    azurite.initialize();
     initContextMenu();
     
     setBarCurIndex(0);
@@ -1007,7 +1003,7 @@ function undo() {
     }
     
     if(result.length > 0)
-        __AZURITE__selectiveUndo(result);
+        azurite.selectiveUndo(result);
 }
     
 
@@ -1042,17 +1038,4 @@ function range(begin, end) {
     }
     
     return result;
-}
-
-
-if (!__AZURITE__initialize) {
-    __AZURITE__initialize = function () {
-        console.log('__AZURITE__initialize call');
-    }
-}
-
-if (!__AZURITE__selectiveUndo) {
-    __AZURITE__selectiveUndo = function () {
-        console.log('__AZURITE_selectiveUndo call');
-    }
 }
