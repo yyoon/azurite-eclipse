@@ -336,18 +336,9 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 			throw new IllegalArgumentException();
 		}
 		
-		List<RuntimeDC> list = getRuntimeDocumentChanges();
-		if (list == null) {
-			throw new IllegalStateException();
-		}
-		
 		// Lazy-evaluation of the dynamic segments!
-		for (int i = mNextIndexToApply.get(getCurrentFileKey()); i < list.size(); ++i) {
-			for (int j = 0; j < i; ++j) {
-				list.get(i).applyTo(list.get(j));
-			}
-		}
-		mNextIndexToApply.put(getCurrentFileKey(), list.size());
+		FileKey fileKey = getCurrentFileKey();
+		List<RuntimeDC> list = calculateDynamicSegments(fileKey);
 		
 		// Then filter the results.
 		List<RuntimeDC> result = new ArrayList<RuntimeDC>();
@@ -359,4 +350,20 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		
 		return result;
 	}
+
+	public List<RuntimeDC> calculateDynamicSegments(FileKey fileKey) {
+		List<RuntimeDC> list = getRuntimeDocumentChanges(fileKey);
+		if (list == null) {
+			throw new IllegalStateException();
+		}
+		
+		for (int i = mNextIndexToApply.get(fileKey); i < list.size(); ++i) {
+			for (int j = 0; j < i; ++j) {
+				list.get(i).applyTo(list.get(j));
+			}
+		}
+		mNextIndexToApply.put(fileKey, list.size());
+		return list;
+	}
+	
 }
