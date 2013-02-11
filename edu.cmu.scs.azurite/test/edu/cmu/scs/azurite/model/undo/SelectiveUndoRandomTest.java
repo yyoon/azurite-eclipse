@@ -13,6 +13,7 @@ import org.junit.Test;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
+import edu.cmu.scs.azurite.model.RuntimeHistoryManager.FileKey;
 import edu.cmu.scs.fluorite.commands.AbstractCommand;
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 import edu.cmu.scs.fluorite.commands.Delete;
@@ -21,9 +22,9 @@ import edu.cmu.scs.fluorite.commands.Replace;
 
 public class SelectiveUndoRandomTest {
 	
-	private static final String RANDOM_TEXT = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz \t0123456789";
+	private static final String RANDOM_TEXT = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
-	private static final int LOOP_COUNT = 100;
+	private static final int LOOP_COUNT = 1;
 	private static final int INITIAL_TEXT_LENGTH = 10;
 	private static final int RANDOM_TEXT_MAX_LENGTH = 5;
 	
@@ -35,6 +36,40 @@ public class SelectiveUndoRandomTest {
 	@Test
 	public void testRandom10Operations() {
 		testRandomOperations(10);
+	}
+	
+	@Test
+	public void estimateTimeToTake() {
+		int numOperations = 1695;
+//		int numOperations = 10000;
+		
+		long totalMillis = 0;
+		
+		for (int trial = 0; trial < 100; ++trial) {
+			AbstractCommand.resetCommandID();
+			RuntimeHistoryManager manager = new RuntimeHistoryManager();
+			manager.activeFileChanged("dummyProject", "dummyFile", null);
+			
+			Document doc = new Document(
+					randomStringOfLength(100));
+			
+			for (int i = 0; i < numOperations; ++i) {
+				manager.documentChangeFinalized(applyRandomOperation(doc));
+			}
+			
+			long start = System.currentTimeMillis();
+			
+			for (FileKey key : manager.getFileKeys()) {
+				manager.calculateDynamicSegments(key);
+			}
+			
+			long end = System.currentTimeMillis();
+			
+			System.out.println("Trial " + trial + "\t" + (end - start) + "ms");
+			totalMillis += (end - start);
+		}
+		
+		System.out.println("Mean: " + totalMillis / 100.0);
 	}
 	
 	// This takes about 100 seconds to finish.
@@ -89,6 +124,8 @@ public class SelectiveUndoRandomTest {
 					assertEquals(documentList.get(i - j).get(), docCopy.get());
 				}
 			}
+			
+			printTrace(documentList.get(0).get(), docChanges, 0, 0);
 		}
 	}
 	
