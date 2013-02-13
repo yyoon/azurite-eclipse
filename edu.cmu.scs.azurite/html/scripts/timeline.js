@@ -65,33 +65,6 @@ global.dragging = false;
 global.dragStart = [];
 
 
-// 5 min, 20 min, 1 hour, 4 hour
-var BAR_ZOOM_LEVELS = [300000, 1200000, 3600000, 14400000000];
-
-// height of each file title
-var FILE_ZOOM_LEVELS = [30, 40, 50, 60];
-
-// Current index of zoom level
-global.barZoomIndex = 0;
-global.fileZoomIndex = 0;
-
-// Page index to show based on currrent zoom level
-// eg. If zoom level is 0, and if page index is 0, show from 0 to 49. If index is 2, show from 100 to 149
-global.barCurIndex = 0;
-global.barMaxPageIndex = 0;
-global.fileCurIndex = 0;
-global.fileMaxPageIndex = 0;
-
-// Min and max timestamp to show at current zoom level
-global.minToShow = 0;
-global.maxToShow = 0;
-
-// Width of bars
-global.xBar;
-global.xRule;
-global.numXTicks;
-
-
 // context menu
 var cmenu = {};
 cmenu.isContextMenuVisible = false;
@@ -696,19 +669,23 @@ function showAfter() {
 }
 
 function scrollRight(pixels) {
-    translateX( global.translateX + pixels / global.scaleX );
+    translateX( global.translateX + pixels );
 }
 
 function fileZoomIn() {
+    scaleY( global.scaleY + 0.5 );
 }
 
 function fileZoomOut() {
+    scaleY( global.scaleY - 0.5 );
 }
 
 function showUp() {
+    translateY( global.translateY + 1 );
 }
 
 function showDown() {
+    translateY( global.translateY - 1 );
 }
 
 
@@ -733,10 +710,6 @@ function updateMaxTimestamp(timestamp, timestamp2) {
     } else if (timestamp2 != null && timestamp2 > global.maxTimestamp) {
         global.maxTimestamp = timestamp2;
     }
-    
-    // recalculate page index and number of global.files to draw
-    global.barMaxPageIndex = Math.ceil(
-        global.maxTimestamp / BAR_ZOOM_LEVELS[global.barZoomIndex]) - 1;
 }
 
 function clamp(value, min, max) {
@@ -761,6 +734,7 @@ function range(begin, end) {
 
 function scaleX(sx) {
     sx = clamp( sx, 0.1, 50 );
+    global.translateX = global.translateX / global.scaleX * sx;
     global.scaleX = sx;
     
     updateSubRectsTransform();
@@ -783,8 +757,15 @@ function scaleY(sy) {
 }
 
 function translateX(tx) {
-    tx = Math.min( tx, 0 );
+    tx = clamp( tx, -global.maxTimestamp / DEFAULT_RATIO, 0 );
     global.translateX = tx;
+    
+    updateSubRectsTransform();
+}
+
+function translateY(ty) {
+    ty = clamp( ty, 1 - global.files.length, 0 );
+    global.translateY = ty;
     
     updateSubRectsTransform();
 }
@@ -792,7 +773,7 @@ function translateX(tx) {
 function updateSubRectsTransform() {
     svg.subRects
         .attr('transform',
-            'translate(' + global.translateX + ' ' + global.translateY + ') ' +
+            'translate(' + global.translateX + ' ' + (global.translateY * ROW_HEIGHT * global.scaleY) + ') ' +
             'scale(' + global.scaleX + ' ' + global.scaleY + ')');
 }
 
