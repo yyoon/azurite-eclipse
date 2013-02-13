@@ -64,6 +64,8 @@ box-sizing:         border-box;
 #main_panel {
 width: 100%;
 height: 100%;
+
+overflow: scroll;
 }
 
 #svg_wrapper {
@@ -78,12 +80,37 @@ padding-bottom: 30px;
 box-sizing:         border-box;
 }
 
-#svg {
-/*padding: 15px 5px 30px 5px;*/
+#svg_position_guide {
+width: 100%;
+height: 100%;
+position: relative;
+}
+
+#svg1_outer_wrap {
+display: inline-block;
+position: absolute;
+overflow-y: hidden;
+padding-bottom: 0px; /* This should be set as slider width */
+height: 100%;
 
 -moz-box-sizing:    border-box;
 -webkit-box-sizing: border-box;
 box-sizing:         border-box;
+}
+
+#svg1_inner_wrap {
+width: 100%;
+height: 100%;
+overflow-y: hidden;
+}
+
+#svg2_wrap {
+display: inline-block;
+position: absolute;
+overflow: scroll;
+left: 15%;
+top: 0%;
+height: 100%;
 }
 
 button.menu {

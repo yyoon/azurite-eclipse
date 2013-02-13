@@ -11,12 +11,6 @@ document.onselectstart = function () { return false };
  * Constants. (Always use UPPER_CASE.)
  */
 var MENU_PANEL_HEIGHT = 75;
-var CHART_MARGINS = {
-    left: 5,
-    right:5,
-    top: 15,
-    bottom: 30
-};
 
 var TYPE_INSERT = 0;
 var TYPE_DELETE = 1;
@@ -24,11 +18,21 @@ var TYPE_REPLACE = 2;
 
 var NUM_TIMESTAMPS = 3;
 
+var MIN_WIDTH = 5;
+var ROW_HEIGHT = 30;
+var DEFAULT_RATIO = 1000;
+
 
 /**
  * Global variables. (Always use a pseudo-namespace.)
  */
 var global = {};
+
+// mapping functions
+global.xFunc = function (d) { return (d.sid + d.t1 - global.startTimestamp) / DEFAULT_RATIO; };
+global.yFunc = function (d) { return ROW_HEIGHT * d.y1 / 100; };
+global.wFunc = function (d) { return Math.max(MIN_WIDTH / global.scaleX, (d.t2 - d.t1) / DEFAULT_RATIO); };
+global.hFunc = function (d) { return Math.max(MIN_WIDTH / global.scaleY, ROW_HEIGHT * (d.y2 - d.y1) / 100); };
 
 // variables to remember the last window size
 global.lastWindowWidth = null;
@@ -37,6 +41,10 @@ global.lastWindowHeight = null;
 global.files = [];
 global.blocksToDraw = [];
 global.selected = [];
+
+// Scales
+global.scaleX = 1;
+global.scaleY = 1;
 
 // last file opened
 global.currentFile = null;
@@ -90,35 +98,66 @@ cmenu.isCtrlDown = false;
  */
 var svg = {};
 
-svg.main = d3.select('#svg_wrapper')
-    .append('svg')
-    .attr('class', 'svg')
-    .attr('id', 'svg');
+function setupSVG() {
+	svg.main = d3.select('#svg_wrapper')
+		.append('svg')
+		.attr('class', 'svg')
 
-svg.subFile = svg.main
-    .append('g')
-    .attr('class', 'sub_file');
+	svg.subFiles = svg.main
+		.append('g')
+		.attr('id', 'sub_files')
+        .attr('clip-path', 'url(#clipFiles)');
+		
+	svg.subRectsWrap = svg.main
+		.append('g')
+		.attr('id', 'sub_rects_wrap')
+        .attr('clip-path', 'url(#clipRectsWrap)');
     
-svg.subBar = svg.main
-    .append('g')
-    .attr('id', 'sub_bar');
-    
-svg.blocks = svg.subBar
-    .append('g')
-    .attr('class', 'blocks');
-    
-svg.fileLines = svg.subBar
-    .append('g')
-    .attr('class', 'file_lines');
-    
-svg.rules = svg.subBar
-    .append('g')
-    .attr('class', 'rules');
+    svg.subRects = svg.subRectsWrap
+        .append('g')
+        .attr('id', 'sub_rects');
+		
+	svg.subTicks = svg.main
+		.append('g')
+		.attr('id', 'sub_ticks');
 
-svg.main.append('rect')
-    .attr('class', 'selection_box')
-    .style('fill', 'yellow')
-    .style('opacity', 0.3);
+	svg.main.append('rect')
+		.attr('class', 'selection_box')
+		.style('fill', 'yellow')
+		.style('opacity', 0.3);
+        
+    svg.clipFiles = svg.main
+        .append('clipPath')
+        .attr('id', 'clipFiles')
+        .append('rect');
+    
+    svg.clipRectsWrap = svg.main
+        .append('clipPath')
+        .attr('id', 'clipRectsWrap')
+        .append('rect');
+        
+    recalculateClipPaths();
+}
+
+function recalculateClipPaths() {
+    var svgWidth = parseInt(svg.main.style('width'));
+    var svgHeight = parseInt(svg.main.style('height'));
+    
+    var filesPortion = 0.15;
+    svg.clipFiles
+        .attr('width', (svgWidth * filesPortion) + 'px')
+        .attr('height', (svgHeight - 20) + 'px');
+    
+    svg.subRectsWrap
+        .attr('transform', 'translate(' + (svgWidth * filesPortion) + ' 0)');
+        
+    svg.clipRectsWrap
+        .attr('width', (svgWidth * (1.0 - filesPortion)) + 'px')
+        .attr('height', (svgHeight - 20) + 'px');
+    
+    svg.subTicks
+        .attr('transform', 'translate(' + (svgWidth * filesPortion) + ' ' + (svgHeight - 20) + ')');
+}
 
 /**
  * An object that keeps track of insert, delete and replace for each file.
@@ -127,15 +166,20 @@ function File(path, fileName) {
     this.path = path;
     this.fileName = fileName;
     this.operations = [];
+    
+    this.g = svg.subRects.append('g');
 }
 
 /**
  * An object for representing an operation itself.
  */
-function EditOperation(id, timestamp, timestamp2, type) {
+function EditOperation(sid, id, t1, t2, y1, y2, type) {
+    this.sid = sid;
     this.id = id;
-    this.timestamp = timestamp;
-    this.timestamp2 = timestamp2;
+    this.t1 = t1;
+    this.t2 = (t2 == null ? t1 : t2);
+    this.y1 = y1;
+    this.y2 = y2;
     this.type = type;
     this.color;
     
@@ -146,39 +190,6 @@ function EditOperation(id, timestamp, timestamp2, type) {
     } else if(type == TYPE_REPLACE) {
         this.color = "blue";
     }
-}
-
-/**
- * Block object to be drawn on the screen.
- */
-function Block(id, type, width, height, x, y, color, timestamp, timestamp2) {
-    this.id = id;
-    this.type = type;
-    this.width = width;
-    this.height = height;
-    this.x = x;
-    this.y = y;
-    this.color = color;
-    this.timestamp = timestamp;
-    this.timestamp2 = timestamp2;
-}
-
-
-/**
- * Sets the given file as the current file.
- * If the given file does not exist in the global.files list, adds it.
- */
-function checkFileList(path, fileName) {
-    for(var k in global.files) {
-        if(global.files[k].fileName === fileName) {
-            global.currentFile = global.files[k];
-            return;
-        }
-    }
-    
-    var file = new File(path, fileName);
-    global.files.push(file);
-    global.currentFile = file;
 }
 
 /**
@@ -200,8 +211,6 @@ function addFile(path) {
     var newFile = new File(path, fileName);
     global.files.push(newFile);
     global.currentFile = newFile;
-    
-    drawFiles();
 }
 
 /**
@@ -219,11 +228,14 @@ function setStartTimestamp(timestamp) {
  * Add an edit operation to the end of the file.
  * Note that this is called immediately after an edit operation is performed.
  */
-function addOperation(id, timestamp1, timestamp2, type, drawImmediately) {
+function addOperation(sid, id, t1, t2, y1, y2, type) {
     var newOp = new EditOperation(
+        parseInt(sid),
         parseInt(id),
-        parseInt(timestamp1),
-        parseInt(timestamp2),
+        parseInt(t1),
+        parseInt(t2),
+        parseFloat(y1),
+        parseFloat(y2),
         parseInt(type)
     );
 
@@ -243,31 +255,16 @@ function addOperation(id, timestamp1, timestamp2, type, drawImmediately) {
     global.currentFile.operations.push(newOp);
     global.lastOperation = newOp;
     
-    updateMaxTimestamp(timestamp1, timestamp2);
+    updateMaxTimestamp(t1, t2);
     
-    if (drawImmediately) {
-        var numMaxFilesToDraw = getMaxFilesToDraw();
-        var offset = numMaxFilesToDraw * global.fileCurIndex;
-        
-        if (offset <= fileIndex && fileIndex < offset + numMaxFilesToDraw) {
-            var rowIndex = fileIndex - offset;
-            
-            if (createBlockFromOperation(newOp, rowIndex)) {
-                var block = global.blocksToDraw[global.blocksToDraw.length - 1];
-                
-                // This block should be drawn immediately!
-                svg.blocks.append('rect')
-                    .attr('class', 'block')
-                    .attr('width', block.width)
-                    .attr('height', block.height)
-                    .attr('x', block.x)
-                    .attr('y', block.y)
-                    .style('fill', block.color);
-            }
-        }
-    }
-    
-    drawIndicator();
+    global.lastRect = global.currentFile.g.selectAll('rect').data( global.currentFile.operations )
+        .enter()
+        .append('rect')
+        .attr('x', global.xFunc)
+        .attr('y', global.yFunc)
+        .attr('width', global.wFunc)
+        .attr('height', global.hFunc)
+        .attr('fill', function (d) { return d.color; });
 }
 
 /**
@@ -275,40 +272,30 @@ function addOperation(id, timestamp1, timestamp2, type, drawImmediately) {
  * Update the timestamp2 value for an existing operation, in case multiple
  * operations are merged into one.
  */
-function updateOperationTimestamp2(id, timestamp2) {
+function updateOperationTimestamp2(id, t2) {
     if (global.lastOperation == null || global.lastOperation.id != parseInt(id))
         return;
     
-    global.lastOperation.timestamp2 = timestamp2;
+    global.lastOperation.t2 = t2;
     
-    updateMaxTimestamp(timestamp2, null);
+    updateMaxTimestamp(t2, t2);
     
-    redraw();
+    if (global.lastRect != null) {
+        global.lastRect.attr('width', global.wFunc);
+    }
 }
 
 function redraw() {
     var svgWidth = parseInt(svg.main.style('width'));
     var svgHeight = parseInt(svg.main.style('height'));
     
-    svg.subBar.selectAll('rect').remove();
+    recalculateClipPaths();
+    
+    svg.subRects.selectAll('rect').remove();
     
     // remove highlights
     global.selected = [];
-    svg.subBar.selectAll('polygon').remove();
-
-    // translate subFile and subBar
-    svg.subFile.attr('transform', 'translate(' + CHART_MARGINS.left + ',' + CHART_MARGINS.top + ')');
-    svg.subBar.attr('transform', 'translate(' + (CHART_MARGINS.left + global.titleWidth) + ',' + CHART_MARGINS.top + ')');
-    
-    var filesToDraw = getFilesToDraw();
-    
-    drawMenu();
-    drawFiles(filesToDraw);
-    drawBars(filesToDraw);
-    drawRules();
-    drawScrollbar();
-    drawHighlight();
-    drawIndicator();
+    svg.subRects.selectAll('polygon').remove();
     
     $('.block').tipsy({ 
         gravity: 'se', 
@@ -318,28 +305,6 @@ function redraw() {
               return 'id: ' + d.id;
         }
     });
-}
-
-function getFilesToDraw() {
-    // using the current svg height, determine the number of global.files to draw
-    var numMaxFilesToDraw = getMaxFilesToDraw();
-    global.fileMaxPageIndex = Math.ceil(global.files.length / numMaxFilesToDraw) - 1;
-    if (global.fileMaxPageIndex < 0) {
-        global.fileMaxPageIndex = 0;
-    }
-    
-    // calculate the number of global.files to draw
-    var filesToDraw = [];
-    var offset = numMaxFilesToDraw * global.fileCurIndex;
-    
-    for(var i = 0; i < numMaxFilesToDraw && global.files[offset+i] != null; i++)
-        filesToDraw.push(global.files[offset+i]);
-    
-    return filesToDraw;
-}
-
-function getMaxFilesToDraw() {
-    return Math.floor((parseInt(svg.main.style('height')) - CHART_MARGINS.top - CHART_MARGINS.bottom) / FILE_ZOOM_LEVELS[global.fileZoomIndex]);
 }
 
 function getCursorPosition(e) {
@@ -357,233 +322,14 @@ function getCursorPosition(e) {
     return null;
 }
 
-function drawMenu() {
-    // draw timeline bar control
-    var barZoomLevel = document.getElementById('bar_zoom_level');
-    var barPageIndex = document.getElementById('bar_page_index');
-    
-    barZoomLevel.innerHTML = "Zoom Index : " + global.barZoomIndex + "/" + (BAR_ZOOM_LEVELS.length-1);
-    barPageIndex.innerHTML = "Page Index : " + global.barCurIndex + "/" + global.barMaxPageIndex;
-    
-    // draw file list control
-    var fileZoomLevel = document.getElementById('file_zoom_level');
-    var filePageIndex = document.getElementById('file_page_index');
-    
-    fileZoomLevel.innerHTML = "Zoom Index : " + global.fileZoomIndex + "/" + (FILE_ZOOM_LEVELS.length-1);
-    filePageIndex.innerHTML = "Page Index : " + global.fileCurIndex + "/" + global.fileMaxPageIndex;
-}
-
-function drawFiles(filesToDraw) {
-    svg.subFile.selectAll('text').remove();
-    
-    if (filesToDraw == null) {
-        filesToDraw = getFilesToDraw();
-    }
-    
-    // draw file titles.
-    svg.subFile.selectAll('.fileTitles')
-        .data(filesToDraw)
-        .enter().append('text')
-        .text(function(d) { return d.fileName; })
-        .attr('x', 0)
-        .attr('y', function(d,i) { return (FILE_ZOOM_LEVELS[global.fileZoomIndex] * i) +  FILE_ZOOM_LEVELS[global.fileZoomIndex]/2} )
-        .attr('dy', '0.5ex')
-        .attr('text-anchor', 'start')
-        .attr('class', 'file_title')
-        .attr('fill', 'white')
-        .style('-moz-user-select', 'none')
-        .style('-webkit-user-select', 'none')
-        .attr('onselectstart', false);
-    
-    // Lines
-    svg.fileLines.selectAll('line').remove();
-    
-    // if there's no file, then don't draw a line.
-    if (filesToDraw.length == 0) {
-        return;
-    }
-    
-    // draw file lines
-    for(var i = 0; i < filesToDraw.length + 1; i++) {
-        svg.fileLines.append('line')
-            .attr('x1', 0)
-            .attr('y1', FILE_ZOOM_LEVELS[global.fileZoomIndex] * i)
-            .attr('x2', parseInt(svg.main.style('width')) * 0.85)
-            .attr('y2', FILE_ZOOM_LEVELS[global.fileZoomIndex] * i)
-            .attr('stroke', 'lightgray' )
-            .style('stroke-width', 1);
-    }
-}
-
-function drawBars(filesToDraw) {
-    global.xRule = d3.scale.linear()
-        .domain([0, NUM_TIMESTAMPS - 1])
-        .range([global.minToShow, global.maxToShow]);
-    
-    global.xBar = d3.time.scale()
-        .domain([global.minToShow, global.maxToShow])
-        .range([0, global.barWidth]);
-    
-    // filter blocks to draw
-    global.blocksToDraw = [];
-    
-    for(var i = 0; i < filesToDraw.length; i++) {
-        var file = filesToDraw[i];
-        var operations = file.operations;
-        var length = operations.length;
-        
-        for(var j = 0; j < length; j++) {
-            createBlockFromOperation(operations[j], i);
-        }
-    }
-    
-    svg.blocks.selectAll("rect")
-        .data(global.blocksToDraw).enter().append("rect")
-        .attr('class', 'block')
-        .attr("width", function(d) { return d.width; })
-        .attr("height", function(d) { return d.height; })
-        .attr("x", function(d) { return d.x; })
-        .attr("y", function(d) { return d.y; })
-        .style("fill", function(d) { return d.color; });
-}
-
-function createBlockFromOperation(operation, rowIndex) {
-    var timestamp = operation.timestamp;
-    var timestamp2 = operation.timestamp2;
-    
-    // there should always be a timestamp.
-    if (timestamp == null) {
-        return false;
-    }
-    
-    // if timestamp2 is not defined, just use the timestamp value.
-    if (timestamp2 == null) {
-        timestamp2 = timestamp;
-    }
-    
-    // the block is outside of the current view.
-    if (timestamp2 < global.minToShow || timestamp > global.maxToShow) {
-        return false;
-    }
-    
-    timestamp = clamp(timestamp, global.minToShow, global.maxToShow);
-    timestamp2 = clamp(timestamp2, global.minToShow, global.maxToShow);
-    
-    blockWidth = global.xBar(timestamp2) - global.xBar(timestamp);
-    if (blockWidth < global.minBlockWidth) {
-        blockWidth = global.minBlockWidth;
-    }
-    
-    if (timestamp2 >= global.maxTimestamp) {
-        global.maxTimestamp = global.xBar.invert( global.xBar(timestamp) + blockWidth );
-    }
-    
-    global.blocksToDraw.push(new Block(
-        operation.id,
-        operation.type,
-        blockWidth,
-        FILE_ZOOM_LEVELS[global.fileZoomIndex], 
-        global.xBar(timestamp), 
-        (FILE_ZOOM_LEVELS[global.fileZoomIndex] * rowIndex),
-        operation.color, 
-        timestamp, 
-        timestamp2)
-    );
-    
-    return true;
-}
-
-function drawRules() {
-    svg.rules.selectAll('text').remove();
-    
-    svg.rules.selectAll(".rule")
-        .data(range(0, NUM_TIMESTAMPS))
-        .enter()
-        .append("text")
-        .attr("x", function(d,i) { return global.xBar(global.xRule(i)); })
-        .attr("y", global.chartHeight + 15)
-        .attr("text-anchor", function(d,i) {
-            if(i == 0)
-                return "start";
-            else if(i == NUM_TIMESTAMPS - 1)
-                return "end";
-            else 
-                return "middle";
-        })
-        .attr('fill', 'white')
-        .text(function(d,i) { return dateFormat(new Date(global.startTimestamp + global.xRule(i)), 'hh:MMTT mm/dd') })
-        .style('-moz-user-select', 'none')
-        .style('-webkit-user-select', 'none')
-        .attr('onselectstart', false);
-}
-
-function drawScrollbar() {
-    // Only show the scrollbar when needed.
-    if (global.barMaxPageIndex == null || global.barMaxPageIndex <= 0) {
-        $('#x_scrollbar').css({"display": "none"});
-        return;
-    }
-
-    $('#x_scrollbar').css({
-        "position": 'absolute',
-        "left": global.titleWidth + "px",
-        "top": global.chartHeight + MENU_PANEL_HEIGHT + 50 + "px",
-        "width": global.barWidth + "px",
-        "display": "block"
-    });
-    
-    var $scrollX = $('#x_scrollbar').slider({
-        value: global.barCurIndex,
-        min: 0,
-        max: global.barMaxPageIndex,
-        step: 1,
-        orientation: 'horizontal',
-
-        slide: function(event, ui) {
-            //debugger;
-            setBarCurIndex(ui.value);
-            redraw();
-        }
-    });
-    
-    var handle_size = $scrollX.width() / (global.barMaxPageIndex + 1);
-    var handle_margin_left = -handle_size * global.barCurIndex / global.barMaxPageIndex;
-    if (global.barMaxPageIndex == 0) handle_margin_left = 0;
-    handle_margin_left -= 1;    // I don't know why, but it's off by 1 px by default.
-    
-    $scrollX.find('.ui-slider-handle').css({
-        "width": handle_size + "px",
-        "margin-left": handle_margin_left + "px"
-    });
-    
-}
-
-function drawIndicator() {
-    d3.select('.indicator').remove();
-    
-    // draw the "now" indicator only when needed.
-    if (global.minToShow <= global.maxTimestamp && global.maxTimestamp <= global.maxToShow) {
-        svg.subBar.append('line')
-            .attr('class', 'indicator')
-            .attr('x1', global.xBar(global.maxTimestamp))
-            .attr('y1', 0)
-            .attr('x2', global.xBar(global.maxTimestamp))
-            .attr('y2', global.chartHeight)
-            .attr('stroke', 'yellow' )
-            .style('stroke-width', 2);
-    }
-}
-
-
 /*
  * When the page loads, load a log file
  */
 window.onload = function () {
     azurite.initialize();
+	$('#svg1_outer_wrap').css('padding-bottom', $.getScrollbarWidth());
+	setupSVG();
     initContextMenu();
-    
-    setBarCurIndex(0);
-    setFileCurIndex(0);
     
     window.onresize();
     initEventHandlers();
@@ -597,13 +343,6 @@ window.onresize = function (e) {
         
         var svgWidth = parseInt(svg.main.style('width'));
         var svgHeight = parseInt(svg.main.style('height'));
-        
-        global.chartWidth = svgWidth - CHART_MARGINS.left - CHART_MARGINS.right;
-        global.chartHeight = svgHeight - CHART_MARGINS.top - CHART_MARGINS.bottom;
-        global.titleWidth = global.chartWidth * 0.15;
-        global.barWidth = global.chartWidth * 0.85;
-        
-        global.minBlockWidth = global.barWidth * 0.005;
         
         redraw();
     }
@@ -645,10 +384,10 @@ function initEventHandlers() {
     , false);
     
     var draggableArea = {
-        top: CHART_MARGINS.top,
-        bottom: CHART_MARGINS.top + global.chartHeight,
-        left: (CHART_MARGINS.left + global.titleWidth),
-        right:  (CHART_MARGINS.left + global.titleWidth + global.barWidth)
+        top: 0,
+        bottom: 0,
+        left: 0,
+        right: 0
     };
     
     document.onmousedown =  function(e) {
@@ -922,74 +661,27 @@ function trivialRejectTest(x1, y1, x2, y2, offsetX, offsetY, block) {
  LISTENER FUNCTIONS
  ******************************************************************/
 function barZoomIn() {
-    setBarZoomIndex(global.barZoomIndex - 1);
-    redraw();
 }
 
 function barZoomOut() {
-    setBarZoomIndex(global.barZoomIndex + 1);
-    redraw();
 }
 
 function showBefore() {
-    setBarCurIndex(global.barCurIndex - 1);
-    redraw();
 }
 
 function showAfter() {
-    setBarCurIndex(global.barCurIndex + 1);
-    redraw();
 }
 
 function fileZoomIn() {
-    if(global.fileZoomIndex != 0) {
-        global.fileZoomIndex--;
-        redraw();
-    }
 }
 
 function fileZoomOut() {
-    if(global.fileZoomIndex != (FILE_ZOOM_LEVELS.length - 1)) {
-        global.fileZoomIndex++;
-        redraw();
-    }
 }
 
 function showUp() {
-    setFileCurIndex(global.fileCurIndex - 1);
-    redraw();
 }
 
 function showDown() {
-    setFileCurIndex(global.fileCurIndex + 1);
-    redraw();
-}
-
-function setBarZoomIndex(newIndex) {
-    global.barZoomIndex = clamp(newIndex, 0, BAR_ZOOM_LEVELS.length - 1);
-    
-    drawMenu();
-}
-
-function setBarCurIndex(newIndex) {
-    global.barCurIndex = clamp(newIndex, 0, global.barMaxPageIndex);
-    
-    global.minToShow = global.barCurIndex * BAR_ZOOM_LEVELS[global.barZoomIndex];
-    global.maxToShow = global.minToShow + BAR_ZOOM_LEVELS[global.barZoomIndex];
-    
-    drawMenu();
-}
-
-function setFileZoomIndex(newIndex) {
-    global.fileZoomIndex = clamp(newIndex, 0, FILE_ZOOM_LEVELS.length - 1);
-    
-    drawMenu();
-}
-
-function setFileCurIndex(newIndex) {
-    global.fileCurIndex = clamp(newIndex, 0, global.fileMaxPageIndex);
-    
-    drawMenu();
 }
 
 
@@ -1038,4 +730,60 @@ function range(begin, end) {
     }
     
     return result;
+}
+
+function scaleX(scaleX) {
+    global.scaleX = scaleX;
+    
+    svg.subRects
+        .attr('transform', 'scale(' + global.scaleX + ' ' + global.scaleY + ')');
+    
+    svg.subRects.selectAll('rect')
+        .attr('width', global.wFunc);
+}
+
+function scaleY(scaleY) {
+    global.scaleY = scaleY;
+    
+    svg.subRects
+        .attr('transform', 'scale(' + global.scaleX + ' ' + global.scaleY + ')');
+    
+    svg.subRects.selectAll('rect')
+        .attr('height', global.hFunc);
+}
+
+function showFrom(timestamp) {
+    var translateX = -(timestamp - global.startTimestamp) / DEFAULT_RATIO;
+}
+
+function test() {
+	addFile('Test.java');
+	addRandomOperations(1000);
+}
+
+function addRandomOperations(count) {
+	var i = 0;
+	var id = -1;
+	var t = 0;
+	
+	if (global.lastOperation != null) {
+		id = global.lastOperation.id;
+		
+		if (global.lastOperation.timestamp2 != null) {
+			t = global.lastOperation.timestamp2;
+		} else {
+			t = global.lastOperation.timestamp;
+		}
+	}
+	
+	for (i = 0; i < count; ++i) {
+		++id;
+		var t1 = t + Math.floor(Math.random() * 5000) + 5000;
+		var t2 = t1 + Math.floor(Math.random() * 5000) + 5000;
+		t = t2;
+        
+        var y1 = Math.floor(Math.random() * 100);
+        var y2 = clamp(y1 + Math.floor(Math.random() * 30), y1, 100);
+		addOperation(global.startTimestamp, id, t1, t2, y1, y2, Math.floor(Math.random() * 3));
+	}
 }
