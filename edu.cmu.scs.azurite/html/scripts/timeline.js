@@ -46,7 +46,9 @@ global.files = [];
 global.blocksToDraw = [];
 global.selected = [];
 
-// Scales
+// transforms
+global.translateX = 0;
+global.translateY = 0;
 global.scaleX = 1;
 global.scaleY = 1;
 
@@ -202,8 +204,6 @@ function EditOperation(sid, id, t1, t2, y1, y2, type) {
  */
 function addFile(path) {
     var fileName = path.match(/[^\\/]+$/)[0];
-    
-    global.lastOperation = null;
     
     for(var index in global.files) {
         if(global.files[index].path == path) {
@@ -386,6 +386,10 @@ function initContextMenu() {
 }
 
 function initEventHandlers() {
+    svg.main.on("mousewheel", function () {
+        scrollRight( d3.event.wheelDelta / 10 );
+    });
+    
     document.addEventListener("keydown", function(e) {
         if(e.keyCode == 17) 
             cmenu.isCtrlDown = true;
@@ -676,15 +680,23 @@ function trivialRejectTest(x1, y1, x2, y2, offsetX, offsetY, block) {
  LISTENER FUNCTIONS
  ******************************************************************/
 function barZoomIn() {
+    scaleX( global.scaleX + 0.1 );
 }
 
 function barZoomOut() {
+    scaleX( global.scaleX - 0.1 );
 }
 
 function showBefore() {
+    scrollRight( 100 );
 }
 
 function showAfter() {
+    scrollRight( -100 );
+}
+
+function scrollRight(pixels) {
+    translateX( global.translateX + pixels / global.scaleX );
 }
 
 function fileZoomIn() {
@@ -747,21 +759,21 @@ function range(begin, end) {
     return result;
 }
 
-function scaleX(scaleX) {
-    global.scaleX = scaleX;
+function scaleX(sx) {
+    sx = clamp( sx, 0.1, 50 );
+    global.scaleX = sx;
     
-    svg.subRects
-        .attr('transform', 'scale(' + global.scaleX + ' ' + global.scaleY + ')');
+    updateSubRectsTransform();
     
     svg.subRects.selectAll('rect')
         .attr('width', rectDraw.wFunc);
 }
 
-function scaleY(scaleY) {
-    global.scaleY = scaleY;
+function scaleY(sy) {
+    sy = clamp( sy, 0.1, 10 );
+    global.scaleY = sy;
     
-    svg.subRects
-        .attr('transform', 'scale(' + global.scaleX + ' ' + global.scaleY + ')');
+    updateSubRectsTransform();
     
     svg.subRects.selectAll('rect')
         .attr('height', rectDraw.hFunc);
@@ -770,13 +782,33 @@ function scaleY(scaleY) {
         .attr('y', fileDraw.yFunc);
 }
 
+function translateX(tx) {
+    tx = Math.min( tx, 0 );
+    global.translateX = tx;
+    
+    updateSubRectsTransform();
+}
+
+function updateSubRectsTransform() {
+    svg.subRects
+        .attr('transform',
+            'translate(' + global.translateX + ' ' + global.translateY + ') ' +
+            'scale(' + global.scaleX + ' ' + global.scaleY + ')');
+}
+
 function showFrom(timestamp) {
     var translateX = -(timestamp - global.startTimestamp) / DEFAULT_RATIO;
 }
 
 function test() {
 	addFile('Test.java');
-	addRandomOperations(1000);
+	addRandomOperations(100);
+    
+    addFile('Test2.java');
+    addRandomOperations(200);
+    
+	addFile('Test.java');
+	addRandomOperations(100);
 }
 
 function addRandomOperations(count) {
@@ -786,12 +818,7 @@ function addRandomOperations(count) {
 	
 	if (global.lastOperation != null) {
 		id = global.lastOperation.id;
-		
-		if (global.lastOperation.timestamp2 != null) {
-			t = global.lastOperation.timestamp2;
-		} else {
-			t = global.lastOperation.timestamp;
-		}
+        t = global.lastOperation.t2;
 	}
 	
 	for (i = 0; i < count; ++i) {
