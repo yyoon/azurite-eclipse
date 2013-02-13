@@ -23,16 +23,20 @@ var ROW_HEIGHT = 30;
 var DEFAULT_RATIO = 1000;
 
 
+// mapping functions
+var rectDraw = {};
+rectDraw.xFunc = function (d) { return (d.sid + d.t1 - global.startTimestamp) / DEFAULT_RATIO; };
+rectDraw.yFunc = function (d) { return ROW_HEIGHT * d.y1 / 100; };
+rectDraw.wFunc = function (d) { return Math.max(MIN_WIDTH / global.scaleX, (d.t2 - d.t1) / DEFAULT_RATIO); };
+rectDraw.hFunc = function (d) { return Math.max(MIN_WIDTH / global.scaleY, ROW_HEIGHT * (d.y2 - d.y1) / 100); };
+
+var fileDraw = {};
+fileDraw.yFunc = function (d, i) { return ROW_HEIGHT * i * global.scaleY + 10; };
+
 /**
  * Global variables. (Always use a pseudo-namespace.)
  */
 var global = {};
-
-// mapping functions
-global.xFunc = function (d) { return (d.sid + d.t1 - global.startTimestamp) / DEFAULT_RATIO; };
-global.yFunc = function (d) { return ROW_HEIGHT * d.y1 / 100; };
-global.wFunc = function (d) { return Math.max(MIN_WIDTH / global.scaleX, (d.t2 - d.t1) / DEFAULT_RATIO); };
-global.hFunc = function (d) { return Math.max(MIN_WIDTH / global.scaleY, ROW_HEIGHT * (d.y2 - d.y1) / 100); };
 
 // variables to remember the last window size
 global.lastWindowWidth = null;
@@ -209,8 +213,19 @@ function addFile(path) {
     }
     
     var newFile = new File(path, fileName);
+    newFile.g.attr('transform', 'translate(0 ' + (global.files.length * ROW_HEIGHT) + ')');
+    
     global.files.push(newFile);
     global.currentFile = newFile;
+    
+    svg.subFiles.selectAll('text').data(global.files)
+        .enter()
+        .append('text')
+        .attr('x', '10px')
+        .attr('y', fileDraw.yFunc)
+        .attr('dy', '1em')
+        .attr('fill', 'white')
+        .text(function (d) { return d.fileName; });
 }
 
 /**
@@ -260,10 +275,10 @@ function addOperation(sid, id, t1, t2, y1, y2, type) {
     global.lastRect = global.currentFile.g.selectAll('rect').data( global.currentFile.operations )
         .enter()
         .append('rect')
-        .attr('x', global.xFunc)
-        .attr('y', global.yFunc)
-        .attr('width', global.wFunc)
-        .attr('height', global.hFunc)
+        .attr('x', rectDraw.xFunc)
+        .attr('y', rectDraw.yFunc)
+        .attr('width', rectDraw.wFunc)
+        .attr('height', rectDraw.hFunc)
         .attr('fill', function (d) { return d.color; });
 }
 
@@ -281,7 +296,7 @@ function updateOperationTimestamp2(id, t2) {
     updateMaxTimestamp(t2, t2);
     
     if (global.lastRect != null) {
-        global.lastRect.attr('width', global.wFunc);
+        global.lastRect.attr('width', rectDraw.wFunc);
     }
 }
 
@@ -344,7 +359,7 @@ window.onresize = function (e) {
         var svgWidth = parseInt(svg.main.style('width'));
         var svgHeight = parseInt(svg.main.style('height'));
         
-        redraw();
+        recalculateClipPaths();
     }
 }
 
@@ -739,7 +754,7 @@ function scaleX(scaleX) {
         .attr('transform', 'scale(' + global.scaleX + ' ' + global.scaleY + ')');
     
     svg.subRects.selectAll('rect')
-        .attr('width', global.wFunc);
+        .attr('width', rectDraw.wFunc);
 }
 
 function scaleY(scaleY) {
@@ -749,7 +764,10 @@ function scaleY(scaleY) {
         .attr('transform', 'scale(' + global.scaleX + ' ' + global.scaleY + ')');
     
     svg.subRects.selectAll('rect')
-        .attr('height', global.hFunc);
+        .attr('height', rectDraw.hFunc);
+        
+    svg.subFiles.selectAll('text')
+        .attr('y', fileDraw.yFunc);
 }
 
 function showFrom(timestamp) {
