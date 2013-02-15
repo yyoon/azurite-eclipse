@@ -26,7 +26,7 @@ var DEFAULT_RATIO = 1000;
 // mapping functions
 var rectDraw = {};
 rectDraw.xFunc = function (d) { return (d.sid + d.t1 - global.startTimestamp) / DEFAULT_RATIO; };
-rectDraw.yFunc = function (d) { return ROW_HEIGHT * d.y1 / 100; };
+rectDraw.yFunc = function (d) { return Math.min(ROW_HEIGHT * d.y1 / 100, ROW_HEIGHT - MIN_WIDTH / global.scaleY); };
 rectDraw.wFunc = function (d) { return Math.max(MIN_WIDTH / global.scaleX, (d.t2 - d.t1) / DEFAULT_RATIO); };
 rectDraw.hFunc = function (d) { return Math.max(MIN_WIDTH / global.scaleY, ROW_HEIGHT * (d.y2 - d.y1) / 100); };
 
