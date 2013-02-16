@@ -221,14 +221,17 @@ function addFile(path) {
     var newFile = new File(path, fileName);
     newFile.g.attr('transform', 'translate(0 ' + (global.files.length * ROW_HEIGHT) + ')');
     
+    var fileIndex = global.files.length;
+    
     global.files.push(newFile);
     global.currentFile = newFile;
     
-    svg.subFiles.selectAll('text').data(global.files)
-        .enter()
-        .append('text')
+    var newText = svg.subFiles.append('text');
+    newText.datum(newFile);
+    
+    newText
         .attr('x', FILE_NAME_OFFSET_X + 'px')
-        .attr('y', fileDraw.yFunc)
+        .attr('y', function (d) { return fileDraw.yFunc(d, fileIndex); })
         .attr('dy', '1em')
         .attr('fill', 'white')
         .text(function (d) { return d.fileName; });
@@ -304,9 +307,9 @@ function addOperation(sid, id, t1, t2, y1, y2, type) {
     
     updateMaxTimestamp(t1, t2);
     
-    global.lastRect = global.currentFile.g.selectAll('rect').data( global.currentFile.operations )
-        .enter()
-        .append('rect')
+    global.lastRect = global.currentFile.g.append('rect');
+    global.lastRect.datum(newOp);
+    global.lastRect
         .attr('id', function (d) { return d.sid + '_' + d.id; })
         .attr('class', 'op_rect')
         .attr('x', rectDraw.xFunc)
@@ -427,9 +430,13 @@ function initEventHandlers() {
     , false);
     
     document.onmousedown = function (e) {
+        azurite.log('mousedown' + 1);
+        
         if(cmenu.isContextMenuVisible) {
             hideContextMenu();
         }
+        
+        azurite.log('mousedown' + 2);
         
         if ("which" in event) { // Gecko (Firefox), WebKit (Safari/Chrome) & Opera
             cmenu.isRightButtonDown = event.which == 3; 
@@ -437,29 +444,45 @@ function initEventHandlers() {
             cmenu.isRightButtonDown = event.button == 2; 
         }
         
+        azurite.log('mousedown' + 3);
+        
         var mouseX = e.clientX - SVG_WRAPPER_PADDING;
         var mouseY = e.clientY - MENU_PANEL_HEIGHT - SVG_WRAPPER_PADDING;
+        
+        azurite.log('mousedown' + 4);
         
         if(cmenu.isRightButtonDown || mouseX < global.draggableArea.left || mouseX > global.draggableArea.right || mouseY < global.draggableArea.top || mouseY > global.draggableArea.bottom) {
             return;
         }
         
+        azurite.log('mousedown' + 5);
+        
         if(global.dragging)
             return;
         
+        azurite.log('mousedown' + 6);
+        
         global.dragging = true;
+        
+        azurite.log('mousedown' + 7);
         
         if(!cmenu.isCtrlDown) {
             global.selected = [];
             svg.subRects.selectAll('rect.highlight_rect').remove();
         }
         
+        azurite.log('mousedown' + 8);
+        
         d3.select('.selection_box')
             .attr('x', mouseX)
             .attr('y', mouseY);
         
+        azurite.log('mousedown' + 9);
+        
         global.dragStart[0] = mouseX;
         global.dragStart[1] = mouseY;
+        
+        azurite.log('mousedown' + 10);
     };
 
     document.onmousemove = function (e) {
@@ -484,7 +507,6 @@ function initEventHandlers() {
             newY = global.draggableArea.bottom;
         else
             newY = mouseY;
-        
         
         if(newX - global.dragStart[0] < 0) {
             d3.select('.selection_box')
@@ -511,21 +533,31 @@ function initEventHandlers() {
     };
     
     document.onmouseup = function (e) {
+        azurite.log('mouseup' + 1);
+        
         if(cmenu.isRightButtonDown) {
             showContextMenu(e);
             return;
         }
     
+        azurite.log('mouseup' + 2);
+        
         if(!global.dragging)
             return;
         
+        azurite.log('mouseup' + 3);
+        
         d3.select('.selection_box')
             .attr('display', 'none');
+        
+        azurite.log('mouseup' + 4);
         
         var x1, y1, x2, y2;
         
         var mouseX = e.clientX - SVG_WRAPPER_PADDING;
         var mouseY = e.clientY - MENU_PANEL_HEIGHT - SVG_WRAPPER_PADDING;
+        
+        azurite.log('mouseup' + 5);
     
         if(global.dragStart[0] <= mouseX) {
             x1 = global.dragStart[0];
@@ -542,10 +574,17 @@ function initEventHandlers() {
             y1 = mouseY;
             y2 = global.dragStart[1];
         }
+        
+        azurite.log('mouseup' + 6);
+        
         addSelections(x1, y1, x2, y2);
+        
+        azurite.log('mouseup' + 7);
     
         global.dragging = false;   
         global.dragStart = [];
+        
+        azurite.log('mouseup' + 8);
     };
 }
  
@@ -586,28 +625,32 @@ function addSelectionsByIds(sids, ids, clearPreviousSelection) {
 
 
 function addSelections(x1, y1, x2, y2) {
-    var somethingAdded = false;
-
+    azurite.log('addSelections' + 1);
     var rect = svg.main.node().createSVGRect();
     rect.x = x1;
     rect.y = y1;
     rect.width = Math.max(x2 - x1, 1);
     rect.height = Math.max(y2 - y1, 1);
+    azurite.log('addSelections' + 2);
     
     // Get all the intersecting objects in the SVG.
     var list = svg.main.node().getIntersectionList(rect, null);
+    azurite.log('addSelections' + 3);
     
     // Filter only the operation rects.
     d3.selectAll(list).filter('.op_rect').each( function (d, i) {
         var sid = d.sid;
         var id = d.id;
+        console.log('' + sid + '_' + id);
         
         if (!isSelected( sid, id )) {
             global.selected.push(new OperationId(sid, id));
         }
     });
+    azurite.log('addSelections' + 4);
     
     updateHighlight();
+    azurite.log('addSelections' + 5);
 }
 
 function isSelected(sid, id) {
@@ -623,11 +666,19 @@ function isSelected(sid, id) {
 
 function updateHighlight() {
     svg.subRects.selectAll('rect.highlight_rect').remove();
+    azurite.log('updateHighlight' + 1);
     
     for (var i = 0; i < global.selected.length; ++i) {
         var idString = '#' + global.selected[i].sid + '_' + global.selected[i].id;
+        azurite.log('updateHighlight' + 2);
         
-        var refBBox = $(idString)[0].getBBox();
+        var $ref = $(idString);
+        var refBBox;
+        if ($ref.length == 0) {
+            continue;
+        }
+        var refBBox = $ref.get(0).getBBox();
+        azurite.log('updateHighlight' + 3);
         
         d3.select( $(idString)[0].parentNode ).insert('rect', ':first-child')
             .attr('class', 'highlight_rect')
@@ -639,6 +690,7 @@ function updateHighlight() {
             // .attr('stroke', 'yellow')
             // .attr('stroke-width', (HIGHLIGHT_WIDTH * 2) + 'px')
             // .attr('fill-opacity', '0');
+        azurite.log('updateHighlight' + 4);
     }
 }
 

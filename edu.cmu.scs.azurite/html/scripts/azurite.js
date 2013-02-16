@@ -10,7 +10,7 @@ try {
 	azurite.initialize = __AZURITE__initialize;
 	azurite.selectiveUndo = __AZURITE__selectiveUndo;
     
-    window.console.log = __AZURITE__log;
+    azurite.log = __AZURITE__log;
 } catch (e) {
     // Being run in a web browser.
     var alertFn;
@@ -30,4 +30,8 @@ try {
 		alertFn('azurite.selectiveUndo() call');
 		alertFn(arrayOfIds);
 	};
+    
+    azurite.log = function (msg) {
+        alertFn(msg);
+    }
 }
