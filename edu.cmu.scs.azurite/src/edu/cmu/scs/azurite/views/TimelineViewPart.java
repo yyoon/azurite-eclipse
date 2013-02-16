@@ -60,6 +60,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 			URL indexUrl = FileLocator.toFileURL(Platform.getBundle(
 					"edu.cmu.scs.azurite").getEntry("/html/index.html"));
 			browser.setUrl(indexUrl.toString());
+//			browser.setUrl("http://stackoverflow.com/questions/12003602/eclipse-swt-browser-and-firebug-lite");
 		} catch (IOException e1) {
 			e1.printStackTrace();
 		}
@@ -275,4 +276,9 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 		
 		browser.execute(buffer.toString());
 	}
+	
+	public void activateFirebugLite() {
+        browser.setUrl("javascript:(function(F,i,r,e,b,u,g,L,I,T,E){if(F.getElementById(b))return;E=F[i+'NS']&&F.documentElement.namespaceURI;E=E?F[i+'NS'](E,'script'):F[i]('script');E[r]('id',b);E[r]('src',I+g+T);E[r](b,u);(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);E=new%20Image;E[r]('src',I+L);})(document,'createElement','setAttribute','getElementsByTagName','FirebugLite','3','releases/lite/1.3/firebug-lite.js','releases/lite/latest/skin/xp/sprite.png','https://getfirebug.com/','#startOpened');");
+	}
+	
 }

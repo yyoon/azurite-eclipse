@@ -89,6 +89,15 @@
             </command>
          </menu>
       </menuContribution>
+      <menuContribution
+            allPopups="false"
+            locationURI="toolbar:edu.cmu.scs.azurite.views.TimelineViewPart">
+         <command
+               commandId="edu.cmu.scs.azurite.ui.commands.activateFirebugLiteCommand"
+               icon="icons/firebug.png"
+               style="push">
+         </command>
+      </menuContribution>
    </extension>
    <extension
          point="org.eclipse.ui.commands">
@@ -101,6 +110,11 @@
             defaultHandler="edu.cmu.scs.azurite.ui.handlers.SelectOperationsInRegion"
             id="edu.cmu.scs.azurite.ui.commands.selectOperationsInRegionCommand"
             name="Select Operations in Selected Region">
+      </command>
+      <command
+            defaultHandler="edu.cmu.scs.azurite.ui.handlers.ActivateFirebugLiteHandler"
+            id="edu.cmu.scs.azurite.ui.commands.activateFirebugLiteCommand"
+            name="Activate Firebug Lite">
       </command>
    </extension>
 
