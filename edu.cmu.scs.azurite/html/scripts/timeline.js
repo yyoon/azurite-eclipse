@@ -102,7 +102,7 @@ cmenu.isCtrlDown = false;
 var svg = {};
 
 function setupSVG() {
-	svg.main = d3.select('#svg_wrapper')
+	svg.main = d3.select('#svg_inner_wrapper')
 		.append('svg')
 		.attr('class', 'svg')
 
@@ -593,8 +593,8 @@ function addSelections(x1, y1, x2, y2) {
     var somethingAdded = false;
 
     var rect = svg.main.node().createSVGRect();
-    rect.x = x1 + 5;    // the value from #svg_wrapper.padding
-    rect.y = y1 + 5;
+    rect.x = x1;
+    rect.y = y1;
     rect.width = Math.max(x2 - x1, 1);
     rect.height = Math.max(y2 - y1, 1);
     
