@@ -11,6 +11,7 @@ document.onselectstart = function () { return false };
  * Constants. (Always use UPPER_CASE.)
  */
 var MENU_PANEL_HEIGHT = 75;
+var SVG_WRAPPER_PADDING = 5;
 
 var TYPE_INSERT = 0;
 var TYPE_DELETE = 1;
@@ -21,7 +22,7 @@ var NUM_TIMESTAMPS = 3;
 var MIN_WIDTH = 5;
 var ROW_HEIGHT = 30;
 var TICKS_HEIGHT = 20;
-var DEFAULT_RATIO = 1000;
+var DEFAULT_RATIO = 500;
 
 var FILE_NAME_OFFSET_X = 0;
 var FILE_NAME_OFFSET_Y = 5;
@@ -345,7 +346,7 @@ function redraw() {
     
     // remove highlights
     global.selected = [];
-    svg.subRects.selectAll('use.highlight_rect').remove();
+    svg.subRects.selectAll('rect.highlight_rect').remove();
     
     $('.block').tipsy({ 
         gravity: 'se', 
@@ -428,7 +429,7 @@ function initEventHandlers() {
     }
     , false);
     
-    svg.main.on('mousedown', function (e) {
+    document.onmousedown = function (e) {
         if(cmenu.isContextMenuVisible) {
             hideContextMenu();
         }
@@ -439,8 +440,8 @@ function initEventHandlers() {
             cmenu.isRightButtonDown = event.button == 2; 
         }
         
-        var mouseX = d3.mouse(this)[0];
-        var mouseY = d3.mouse(this)[1];
+        var mouseX = e.clientX - SVG_WRAPPER_PADDING;
+        var mouseY = e.clientY - MENU_PANEL_HEIGHT - SVG_WRAPPER_PADDING;
         
         if(cmenu.isRightButtonDown || mouseX < global.draggableArea.left || mouseX > global.draggableArea.right || mouseY < global.draggableArea.top || mouseY > global.draggableArea.bottom) {
             return;
@@ -453,7 +454,7 @@ function initEventHandlers() {
         
         if(!cmenu.isCtrlDown) {
             global.selected = [];
-            svg.subRects.selectAll('use.highlight_rect').remove();
+            svg.subRects.selectAll('rect.highlight_rect').remove();
         }
         
         d3.select('.selection_box')
@@ -462,16 +463,16 @@ function initEventHandlers() {
         
         global.dragStart[0] = mouseX;
         global.dragStart[1] = mouseY;
-    });
+    };
 
-    svg.main.on('mousemove', function (e) {
+    document.onmousemove = function (e) {
         if(!global.dragging)
             return;
         
         var newX, newY;
         
-        var mouseX = d3.mouse(this)[0];
-        var mouseY = d3.mouse(this)[1];
+        var mouseX = e.clientX - SVG_WRAPPER_PADDING;
+        var mouseY = e.clientY - MENU_PANEL_HEIGHT - SVG_WRAPPER_PADDING;
         
         if(mouseX < global.draggableArea.left)
             newX = global.draggableArea.left;
@@ -510,11 +511,11 @@ function initEventHandlers() {
         
         d3.select('.selection_box')
             .attr('display', 'block');
-    });
+    };
     
-    svg.main.on('mouseup', function (e) {
+    document.onmouseup = function (e) {
         if(cmenu.isRightButtonDown) {
-            showContextMenu(d3.event);
+            showContextMenu(e);
             return;
         }
     
@@ -526,8 +527,8 @@ function initEventHandlers() {
         
         var x1, y1, x2, y2;
         
-        var mouseX = d3.mouse(this)[0];
-        var mouseY = d3.mouse(this)[1];
+        var mouseX = e.clientX - SVG_WRAPPER_PADDING;
+        var mouseY = e.clientY - MENU_PANEL_HEIGHT - SVG_WRAPPER_PADDING;
     
         if(global.dragStart[0] <= mouseX) {
             x1 = global.dragStart[0];
@@ -548,7 +549,7 @@ function initEventHandlers() {
     
         global.dragging = false;   
         global.dragStart = [];
-    });
+    };
 }
  
 function showContextMenu(event) {   
@@ -597,7 +598,6 @@ function addSelections(x1, y1, x2, y2) {
     rect.height = Math.max(y2 - y1, 1);
     
     // Get all the intersecting objects in the SVG.
-    console.log(rect);
     var list = svg.main.node().getIntersectionList(rect, null);
     
     // Filter only the operation rects.
@@ -625,17 +625,23 @@ function isSelected(sid, id) {
 }
 
 function updateHighlight() {
-    svg.subRects.selectAll('use.highlight_rect').remove();
+    svg.subRects.selectAll('rect.highlight_rect').remove();
     
     for (var i = 0; i < global.selected.length; ++i) {
         var idString = '#' + global.selected[i].sid + '_' + global.selected[i].id;
         
-        d3.select( $(idString)[0].parentNode ).insert('use', ':first-child')
-            .attr('xlink:href', idString)
+        var refBBox = $(idString)[0].getBBox();
+        
+        d3.select( $(idString)[0].parentNode ).insert('rect', ':first-child')
             .attr('class', 'highlight_rect')
-            .attr('stroke', 'yellow')
-            .attr('stroke-width', (HIGHLIGHT_WIDTH * 2) + 'px')
-            .attr('fill-opacity', '0');
+            .attr('fill', 'yellow')
+            .attr('x', refBBox.x - (HIGHLIGHT_WIDTH / global.scaleX))
+            .attr('y', refBBox.y - (HIGHLIGHT_WIDTH / global.scaleY))
+            .attr('width', refBBox.width + HIGHLIGHT_WIDTH * 2 / global.scaleX)
+            .attr('height', refBBox.height + HIGHLIGHT_WIDTH * 2 / global.scaleY);
+            // .attr('stroke', 'yellow')
+            // .attr('stroke-width', (HIGHLIGHT_WIDTH * 2) + 'px')
+            // .attr('fill-opacity', '0');
     }
 }
 
@@ -644,11 +650,11 @@ function updateHighlight() {
  LISTENER FUNCTIONS
  ******************************************************************/
 function barZoomIn() {
-    scaleX( global.scaleX + 0.1 );
+    scaleX( global.scaleX + 0.5 );
 }
 
 function barZoomOut() {
-    scaleX( global.scaleX - 0.1 );
+    scaleX( global.scaleX - 0.5 );
 }
 
 function showBefore() {
@@ -730,8 +736,10 @@ function scaleX(sx) {
     
     updateSubRectsTransform();
     
-    svg.subRects.selectAll('rect')
+    svg.subRects.selectAll('rect.op_rect')
         .attr('width', rectDraw.wFunc);
+    
+    updateHighlight();
 }
 
 function scaleY(sy) {
@@ -740,13 +748,15 @@ function scaleY(sy) {
     
     updateSubRectsTransform();
     
-    svg.subRects.selectAll('rect')
+    svg.subRects.selectAll('rect.op_rect')
         .attr('height', rectDraw.hFunc);
         
     svg.subFiles.selectAll('text')
         .attr('y', fileDraw.yFunc);
     
     updateSeparatingLines();
+    
+    updateHighlight();
 }
 
 function translateX(tx) {
