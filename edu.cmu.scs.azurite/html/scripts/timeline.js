@@ -430,13 +430,9 @@ function initEventHandlers() {
     , false);
     
     document.onmousedown = function (e) {
-        azurite.log('mousedown' + 1);
-        
         if(cmenu.isContextMenuVisible) {
             hideContextMenu();
         }
-        
-        azurite.log('mousedown' + 2);
         
         if ("which" in event) { // Gecko (Firefox), WebKit (Safari/Chrome) & Opera
             cmenu.isRightButtonDown = event.which == 3; 
@@ -444,45 +440,29 @@ function initEventHandlers() {
             cmenu.isRightButtonDown = event.button == 2; 
         }
         
-        azurite.log('mousedown' + 3);
-        
         var mouseX = e.clientX - SVG_WRAPPER_PADDING;
         var mouseY = e.clientY - MENU_PANEL_HEIGHT - SVG_WRAPPER_PADDING;
-        
-        azurite.log('mousedown' + 4);
         
         if(cmenu.isRightButtonDown || mouseX < global.draggableArea.left || mouseX > global.draggableArea.right || mouseY < global.draggableArea.top || mouseY > global.draggableArea.bottom) {
             return;
         }
         
-        azurite.log('mousedown' + 5);
-        
         if(global.dragging)
             return;
         
-        azurite.log('mousedown' + 6);
-        
         global.dragging = true;
-        
-        azurite.log('mousedown' + 7);
         
         if(!cmenu.isCtrlDown) {
             global.selected = [];
             svg.subRects.selectAll('rect.highlight_rect').remove();
         }
         
-        azurite.log('mousedown' + 8);
-        
         d3.select('.selection_box')
             .attr('x', mouseX)
             .attr('y', mouseY);
         
-        azurite.log('mousedown' + 9);
-        
         global.dragStart[0] = mouseX;
         global.dragStart[1] = mouseY;
-        
-        azurite.log('mousedown' + 10);
     };
 
     document.onmousemove = function (e) {
@@ -533,32 +513,22 @@ function initEventHandlers() {
     };
     
     document.onmouseup = function (e) {
-        azurite.log('mouseup' + 1);
-        
         if(cmenu.isRightButtonDown) {
             showContextMenu(e);
             return;
         }
     
-        azurite.log('mouseup' + 2);
-        
         if(!global.dragging)
             return;
         
-        azurite.log('mouseup' + 3);
-        
         d3.select('.selection_box')
             .attr('display', 'none');
-        
-        azurite.log('mouseup' + 4);
         
         var x1, y1, x2, y2;
         
         var mouseX = e.clientX - SVG_WRAPPER_PADDING;
         var mouseY = e.clientY - MENU_PANEL_HEIGHT - SVG_WRAPPER_PADDING;
         
-        azurite.log('mouseup' + 5);
-    
         if(global.dragStart[0] <= mouseX) {
             x1 = global.dragStart[0];
             x2 = mouseX;
@@ -575,16 +545,10 @@ function initEventHandlers() {
             y2 = global.dragStart[1];
         }
         
-        azurite.log('mouseup' + 6);
-        
         addSelections(x1, y1, x2, y2);
-        
-        azurite.log('mouseup' + 7);
     
         global.dragging = false;   
         global.dragStart = [];
-        
-        azurite.log('mouseup' + 8);
     };
 }
  
@@ -625,32 +589,26 @@ function addSelectionsByIds(sids, ids, clearPreviousSelection) {
 
 
 function addSelections(x1, y1, x2, y2) {
-    azurite.log('addSelections' + 1);
     var rect = svg.main.node().createSVGRect();
     rect.x = x1;
     rect.y = y1;
     rect.width = Math.max(x2 - x1, 1);
     rect.height = Math.max(y2 - y1, 1);
-    azurite.log('addSelections' + 2);
     
     // Get all the intersecting objects in the SVG.
     var list = svg.main.node().getIntersectionList(rect, null);
-    azurite.log('addSelections' + 3);
     
     // Filter only the operation rects.
     d3.selectAll(list).filter('.op_rect').each( function (d, i) {
         var sid = d.sid;
         var id = d.id;
-        console.log('' + sid + '_' + id);
         
         if (!isSelected( sid, id )) {
             global.selected.push(new OperationId(sid, id));
         }
     });
-    azurite.log('addSelections' + 4);
     
     updateHighlight();
-    azurite.log('addSelections' + 5);
 }
 
 function isSelected(sid, id) {
@@ -666,11 +624,9 @@ function isSelected(sid, id) {
 
 function updateHighlight() {
     svg.subRects.selectAll('rect.highlight_rect').remove();
-    azurite.log('updateHighlight' + 1);
     
     for (var i = 0; i < global.selected.length; ++i) {
         var idString = '#' + global.selected[i].sid + '_' + global.selected[i].id;
-        azurite.log('updateHighlight' + 2);
         
         var $ref = $(idString);
         var refBBox;
@@ -678,7 +634,6 @@ function updateHighlight() {
             continue;
         }
         var refBBox = $ref.get(0).getBBox();
-        azurite.log('updateHighlight' + 3);
         
         d3.select( $(idString)[0].parentNode ).insert('rect', ':first-child')
             .attr('class', 'highlight_rect')
@@ -687,10 +642,6 @@ function updateHighlight() {
             .attr('y', refBBox.y - (HIGHLIGHT_WIDTH / global.scaleY))
             .attr('width', refBBox.width + HIGHLIGHT_WIDTH * 2 / global.scaleX)
             .attr('height', refBBox.height + HIGHLIGHT_WIDTH * 2 / global.scaleY);
-            // .attr('stroke', 'yellow')
-            // .attr('stroke-width', (HIGHLIGHT_WIDTH * 2) + 'px')
-            // .attr('fill-opacity', '0');
-        azurite.log('updateHighlight' + 4);
     }
 }
 
