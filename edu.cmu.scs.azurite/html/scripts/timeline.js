@@ -20,6 +20,7 @@ var NUM_TIMESTAMPS = 3;
 
 var MIN_WIDTH = 5;
 var ROW_HEIGHT = 30;
+var TICKS_HEIGHT = 20;
 var DEFAULT_RATIO = 1000;
 
 var FILE_NAME_OFFSET_X = 0;
@@ -27,11 +28,13 @@ var FILE_NAME_OFFSET_Y = 5;
 
 var FILES_PORTION = 0.15;
 
+var HIGHLIGHT_WIDTH = 3;
+
 var CHART_MARGINS = {
-    left: 5,
-    top: 5,
-    right: 5,
-    bottom: 5
+    left: 15,
+    top: 15,
+    right: 15,
+    bottom: 15
 };
 
 
@@ -59,7 +62,6 @@ global.lastWindowWidth = null;
 global.lastWindowHeight = null;
 
 global.files = [];
-global.blocksToDraw = [];
 global.selected = [];
 
 // transforms
@@ -79,6 +81,12 @@ global.startTimestamp = new Date().valueOf();
 // Dragging
 global.dragging = false;
 global.dragStart = [];
+global.draggableArea = {
+    left: 0,
+    top: 0,
+    right: 0,
+    bottom: 0
+};
 
 
 // context menu
@@ -151,10 +159,10 @@ function recalculateClipPaths() {
     svg.clipRectsWrap
         .attr('y', '-1')
         .attr('width', (svgWidth * (1.0 - FILES_PORTION)) + 'px')
-        .attr('height', (svgHeight - 20 + 2) + 'px');
+        .attr('height', (svgHeight - TICKS_HEIGHT + 2) + 'px');
     
     svg.subTicks
-        .attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' ' + (CHART_MARGINS.top + svgHeight - 20) + ')');
+        .attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' ' + (CHART_MARGINS.top + svgHeight - TICKS_HEIGHT) + ')');
 }
 
 /**
@@ -166,6 +174,11 @@ function File(path, fileName) {
     this.operations = [];
     
     this.g = svg.subRects.append('g');
+}
+
+function OperationId(sid, id) {
+    this.sid = sid;
+    this.id = id;
 }
 
 /**
@@ -294,11 +307,14 @@ function addOperation(sid, id, t1, t2, y1, y2, type) {
     global.lastRect = global.currentFile.g.selectAll('rect').data( global.currentFile.operations )
         .enter()
         .append('rect')
+        .attr('id', function (d) { return d.sid + '_' + d.id; })
+        .attr('class', 'op_rect')
         .attr('x', rectDraw.xFunc)
         .attr('y', rectDraw.yFunc)
         .attr('width', rectDraw.wFunc)
         .attr('height', rectDraw.hFunc)
-        .attr('fill', function (d) { return d.color; });
+        .attr('fill', function (d) { return d.color; })
+        .attr('vector-effect', 'non-scaling-stroke');
 }
 
 /**
@@ -329,7 +345,7 @@ function redraw() {
     
     // remove highlights
     global.selected = [];
-    svg.subRects.selectAll('polygon').remove();
+    svg.subRects.selectAll('use.highlight_rect').remove();
     
     $('.block').tipsy({ 
         gravity: 'se', 
@@ -339,21 +355,6 @@ function redraw() {
               return 'id: ' + d.id;
         }
     });
-}
-
-function getCursorPosition(e) {
-    e = e || window.event;
-    
-    if(e) {
-        if (e.pageX || e.pageX == 0) return [e.pageX,e.pageY];
-            var dE = document.documentElement || {};
-        
-        var dB = document.body || {};
-        if ((e.clientX || e.clientX == 0) && ((dB.scrollLeft || dB.scrollLeft == 0) || (dE.clientLeft || dE.clientLeft == 0))) 
-            return [e.clientX + (dE.scrollLeft || dB.scrollLeft || 0) - (dE.clientLeft || 0),e.clientY + (dE.scrollTop || dB.scrollTop || 0) - (dE.clientTop || 0)];
-    }
-    
-    return null;
 }
 
 /*
@@ -367,6 +368,8 @@ window.onload = function () {
     
     window.onresize();
     initEventHandlers();
+    
+    test();
 }
 
 window.onresize = function (e) {
@@ -377,7 +380,15 @@ window.onresize = function (e) {
         
         recalculateClipPaths();
         updateSeparatingLines();
+        updateDraggableArea();
     }
+}
+
+function updateDraggableArea() {
+    global.draggableArea.left = CHART_MARGINS.left + getSvgWidth() * FILES_PORTION;
+    global.draggableArea.top = CHART_MARGINS.top;
+    global.draggableArea.right = getSvgWidth() - CHART_MARGINS.right;
+    global.draggableArea.bottom = getSvgHeight() - CHART_MARGINS.bottom;
 }
 
 /******************************************************************
@@ -419,14 +430,7 @@ function initEventHandlers() {
     }
     , false);
     
-    var draggableArea = {
-        top: 0,
-        bottom: 0,
-        left: 0,
-        right: 0
-    };
-    
-    document.onmousedown =  function(e) {
+    svg.main.on('mousedown', function (e) {
         if(cmenu.isContextMenuVisible) {
             hideContextMenu();
         }
@@ -437,10 +441,10 @@ function initEventHandlers() {
             cmenu.isRightButtonDown = event.button == 2; 
         }
         
-        var mouseX = e.clientX;
-        var mouseY = e.clientY - MENU_PANEL_HEIGHT;
+        var mouseX = d3.mouse(this)[0];
+        var mouseY = d3.mouse(this)[1];
         
-        if(cmenu.isRightButtonDown || mouseX < draggableArea.left || mouseX > draggableArea.right || mouseY < draggableArea.top || mouseY > draggableArea.bottom) {
+        if(cmenu.isRightButtonDown || mouseX < global.draggableArea.left || mouseX > global.draggableArea.right || mouseY < global.draggableArea.top || mouseY > global.draggableArea.bottom) {
             return;
         }
         
@@ -451,37 +455,37 @@ function initEventHandlers() {
         
         if(!cmenu.isCtrlDown) {
             global.selected = [];
-            svg.subBar.selectAll('polygon').remove();
+            svg.subRects.selectAll('use.highlight_rect').remove();
         }
         
         d3.select('.selection_box')
             .attr('x', mouseX)
             .attr('y', mouseY);
-            
+        
         global.dragStart[0] = mouseX;
         global.dragStart[1] = mouseY;
-    };
-    
-    document.onmousemove = function(e) {
+    });
+
+    svg.main.on('mousemove', function (e) {
         if(!global.dragging)
             return;
         
         var newX, newY;
         
-        var mouseX = e.clientX;
-        var mouseY = e.clientY - MENU_PANEL_HEIGHT;
+        var mouseX = d3.mouse(this)[0];
+        var mouseY = d3.mouse(this)[1];
         
-        if(mouseX < draggableArea.left)
-            newX = draggableArea.left;
-        else if(mouseX > draggableArea.right) 
-            newX = draggableArea.right;
+        if(mouseX < global.draggableArea.left)
+            newX = global.draggableArea.left;
+        else if(mouseX > global.draggableArea.right) 
+            newX = global.draggableArea.right;
         else
             newX = mouseX;
             
-        if(mouseY < draggableArea.top)
-            newY = draggableArea.top;
-        else if(mouseY > draggableArea.bottom)
-            newY = draggableArea.bottom;
+        if(mouseY < global.draggableArea.top)
+            newY = global.draggableArea.top;
+        else if(mouseY > global.draggableArea.bottom)
+            newY = global.draggableArea.bottom;
         else
             newY = mouseY;
         
@@ -508,11 +512,11 @@ function initEventHandlers() {
         
         d3.select('.selection_box')
             .attr('display', 'block');
-    };
+    });
     
-    document.onmouseup = function(e) {
+    svg.main.on('mouseup', function (e) {
         if(cmenu.isRightButtonDown) {
-            showContextMenu(e);
+            showContextMenu(d3.event);
             return;
         }
     
@@ -524,8 +528,8 @@ function initEventHandlers() {
         
         var x1, y1, x2, y2;
         
-        var mouseX = e.clientX;
-        var mouseY = e.clientY - MENU_PANEL_HEIGHT;
+        var mouseX = d3.mouse(this)[0];
+        var mouseY = d3.mouse(this)[1];
     
         if(global.dragStart[0] <= mouseX) {
             x1 = global.dragStart[0];
@@ -542,11 +546,11 @@ function initEventHandlers() {
             y1 = mouseY;
             y2 = global.dragStart[1];
         }
-        addSelections(x1, y1, x2, y2, (CHART_MARGINS.left + global.titleWidth), CHART_MARGINS.top);
+        addSelections(x1, y1, x2, y2);
     
         global.dragging = false;   
         global.dragStart = [];
-    }
+    });
 }
  
 function showContextMenu(event) {   
@@ -570,122 +574,70 @@ function hideContextMenu() {
 }
 
 
-function addSelectionsByIds(ids, clearPreviousSelection) {
+function addSelectionsByIds(sids, ids, clearPreviousSelection) {
     if (clearPreviousSelection) {
         global.selected = [];
     }
     
     for (var i = 0; i < ids.length; ++i) {
+        var sid = sids[i];
         var id = ids[i];
-        global.selected.push(id);
+        global.selected.push(new OperationId(sid, id));
     }
     
-    drawHighlight();
+    updateHighlight();
 }
 
 
-function addSelections(x1, y1, x2, y2, offsetX, offsetY) {
-    var blockLength = global.blocksToDraw.length;
+function addSelections(x1, y1, x2, y2) {
     var somethingAdded = false;
+
+    var rect = svg.main.node().createSVGRect();
+    rect.x = x1 + 5;    // the value from #svg_wrapper.padding
+    rect.y = y1 + 5;
+    rect.width = Math.max(x2 - x1, 1);
+    rect.height = Math.max(y2 - y1, 1);
     
-    for(var i = 0; i < blockLength; i++) {
-        var id = global.blocksToDraw[i].id;
-        if ($.inArray(id, global.selected) !== -1) {
-            continue;
-        }
+    // Get all the intersecting objects in the SVG.
+    var list = svg.main.node().getIntersectionList(rect);
+    
+    // Filter only the operation rects.
+    d3.selectAll(list).filter('.op_rect').each( function (d, i) {
+        var sid = d.sid;
+        var id = d.id;
         
-        if(trivialRejectTest(x1, y1, x2, y2, offsetX, offsetY, global.blocksToDraw[i]) == 0) {
-            global.selected.push(id);
-            somethingAdded = true;
+        if (!isSelected( sid, id )) {
+            global.selected.push(new OperationId(sid, id));
         }
-    }
+    });
     
-    if (somethingAdded) {
-        drawHighlight();
-    }
+    updateHighlight();
 }
 
-
-function drawHighlight() {
-    svg.subBar.selectAll('polygon').remove();
-    
-    var count = global.selected.length;
-    var itemsToHighlight = [];
-    var prev = null;
-    var item;
-    
-    if(count > 0) {
-        var blockLength = global.blocksToDraw.length;
-        for (var i = 0; i < blockLength; ++i) {
-
-            var block = global.blocksToDraw[i];
-            
-            if ($.inArray(block.id, global.selected) !== -1) {
-                if(prev == null) {
-                    prev = block;
-                    item = {startX: prev.x, startY: prev.y, endX: prev.x + prev.width, endY: prev.y + prev.height};
-                } else {
-                    if(item.startY == block.y &&  Math.abs(item.endX - block.x) <= 8) {
-                        item.endX = (item.endX > (block.x + block.width)) ? item.endX : (block.x + block.width);
-                    } else {
-                        itemsToHighlight.push(item);
-                        item = {startX: block.x, startY: block.y, endX: block.x + block.width, endY: block.y + block.height};
-                    }
-                    prev = block;
-                }
-            }
-        }
-        itemsToHighlight.push(item);
-            
-        var highlight_width = 3;
-        
-        if(itemsToHighlight != []) {
-            svg.blocks.selectAll('polygon')
-                .data(itemsToHighlight).enter().append('polygon')
-                .attr("points", function(d) { return ((d.startX) + "," + (d.startY) + " \ " + 
-                (d.endX) + "," + (d.startY) + " \ " +
-                (d.endX) + "," + (d.endY) + " \ " +
-                (d.startX) + "," + (d.endY)) })
-                .style("stroke", "yellow")
-                .style("stroke-width", highlight_width)
-                .style("fill-opacity", 0);
+function isSelected(sid, id) {
+    var i;
+    for (i = 0; i < global.selected.length; ++i) {
+        if (global.selected[i].sid == sid && global.selected[i].id == id) {
+            return true;
         }
     }
+    
+    return false;
 }
 
-function trivialRejectTest(x1, y1, x2, y2, offsetX, offsetY, block) {
-    var result0 = 0, result1= 0;
-    var left = 1;
-    var right = 2;
-    var bottom = 4;
-    var top = 8;
+function updateHighlight() {
+    svg.subRects.selectAll('use.highlight_rect').remove();
     
-    
-    if(x1 < (block.x + offsetX)) {
-        result0 = result0 | left;
-    } else if(x1 > (block.x + block.width + offsetX)) {
-        result0 = result0 | right;
+    for (var i = 0; i < global.selected.length; ++i) {
+        var idString = '#' + global.selected[i].sid + '_' + global.selected[i].id;
+        
+        d3.select( $(idString)[0].parentNode ).insert('use', ':first-child')
+            .attr('xlink:href', idString)
+            .attr('class', 'highlight_rect')
+            .attr('stroke', 'yellow')
+            .attr('stroke-width', (HIGHLIGHT_WIDTH * 2) + 'px')
+            .attr('fill-opacity', '0');
     }
-    
-    if(y1 < (block.y + offsetY)) {
-        result0 = result0 | top;
-    } else if(y1 > (block.y + block.height + offsetY)) {
-        result0 = result0 | bottom;
-    }
-    
-    if(x2 < (block.x + offsetX)) {
-        result1 = result1 | left;
-    } else if(x2 > (block.x + block.width + offsetX)) {
-        result1 = result1 | right;
-    }
-    
-    if(y2 < (block.y + offsetY)) {
-        result1 = result1 | top;
-    } else if(y2 > (block.y + block.height + offsetY)) {
-        result1 = result1 | bottom;
-    }
-    
-    return (result0 & result1);
 }
 
     
