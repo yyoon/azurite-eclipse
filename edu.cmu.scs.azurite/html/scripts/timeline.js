@@ -358,7 +358,7 @@ function getCursorPosition(e) {
  */
 window.onload = function () {
     azurite.initialize();
-	$('#svg1_outer_wrap').css('padding-bottom', $.getScrollbarWidth());
+    
 	setupSVG();
     initContextMenu();
     
@@ -550,16 +550,12 @@ function showContextMenu(event) {
 
     var offsetX = 0, offsetY = 0;
     
-    if(event.clientX + parseInt(global.divContext.style.width) > global.lastWindowWidth) {
-        offsetX = event.clientX + parseInt(global.divContext.style.width) - global.lastWindowWidth
-    }
+    var $contextMenu = $('#context_menu');
+    var w = $contextMenu.outerWidth();
+    var h = $contextMenu.outerHeight();
     
-    if(event.clientY + parseInt(global.divContext.style.height) > global.lastWindowHeight) {
-        offsetY = event.clientY + parseInt(global.divContext.style.height) - global.lastWindowHeight;
-    }
-    
-    global.divContext.style.left = event.clientX - offsetX -10 + 'px';
-    global.divContext.style.top = event.clientY - offsetY -10 + 'px';
+    global.divContext.style.left = Math.min(event.clientX, global.lastWindowWidth - w) + 'px';
+    global.divContext.style.top = Math.min(event.clientY, global.lastWindowHeight - h) + 'px';
     global.divContext.style.display = 'block';
     
     cmenu.isContextMenuVisible = true;
@@ -852,7 +848,7 @@ function addRandomOperations(count) {
 	
 	for (i = 0; i < count; ++i) {
 		++id;
-		var t1 = t + Math.floor(Math.random() * 5000) + 5000;
+		var t1 = t + Math.floor(Math.random() * 25000) + 5000;
 		var t2 = t1 + Math.floor(Math.random() * 5000) + 5000;
 		t = t2;
         
