@@ -154,11 +154,9 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
                     		for (FileKey key : manager.getFileKeys()) {
                     			addFile(key.getFilePath());
                     			for (RuntimeDC dc : manager.getRuntimeDocumentChanges(key)) {
-                    				addOperation(dc.getOriginal(), false);
+                    				addOperation(dc.getOriginal());
                     			}
                     		}
-                    		
-                    		redraw();
             			}
             		});
             	}
@@ -185,7 +183,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 	
 	@Override
 	public void documentChangeAdded(BaseDocumentChangeEvent docChange) {
-		addOperation(docChange, true);
+		addOperation(docChange);
 	}
 
 	private void addFile(String filePath) {
@@ -194,20 +192,16 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 		browser.execute(executeStr);
 	}
 
-	private void addOperation(BaseDocumentChangeEvent docChange, boolean drawImmediately) {
-		String executeStr = String.format("addOperation(%1$d, %2$d, %3$d, %4$d, %5$s);",
+	private void addOperation(BaseDocumentChangeEvent docChange) {
+		String executeStr = String.format("addOperation(%1$d, %2$d, %3$d, %4$d, %5$f, %6$f, %7$s);",
+				EventRecorder.getInstance().getStartTimestamp(),
 				docChange.getCommandIndex(),
 				docChange.getTimestamp(),
 				docChange.getTimestamp2(),
-				getTypeIndex(docChange),
-				drawImmediately);
+				docChange.getY1(),
+				docChange.getY2(),
+				getTypeIndex(docChange));
 		browser.execute(executeStr);
-	}
-	
-	private void redraw() {
-		Display.getDefault().asyncExec(new Runnable() {
-			public void run() { browser.execute("redraw();"); }
-		});
 	}
 	
 	private int getTypeIndex(BaseDocumentChangeEvent docChange) {
@@ -239,8 +233,18 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 	 * @param clearSelection indicates whether the existing selections should be discarded before adding new selections.
 	 */
 	public void addSelection(List<Integer> ids, boolean clearSelection) {
+		long timestamp = EventRecorder.getInstance().getStartTimestamp();
+		
 		StringBuffer buffer = new StringBuffer();
 		buffer.append("addSelectionsByIds([");
+		
+		if (!ids.isEmpty()) {
+			buffer.append(timestamp);
+		}
+		for (int i = 1; i < ids.size(); ++i) {
+			buffer.append(", " + timestamp);
+		}
+		buffer.append("], [");
 		
 		Iterator<Integer> it = ids.iterator();
 		if (it.hasNext()) {

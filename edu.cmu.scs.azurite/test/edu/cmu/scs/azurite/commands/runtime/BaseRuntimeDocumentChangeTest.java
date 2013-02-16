@@ -74,6 +74,8 @@ public class BaseRuntimeDocumentChangeTest {
 			public String getCategoryID() { return null; }
 			public boolean combine(ICommand anotherCommand) { return false; }
 			public void applyToDocument(IDocument doc) {}
+			public double getY1() { return 0; }
+			public double getY2() { return 0; }
 		};
 		
 		exception.expect(IllegalArgumentException.class);
