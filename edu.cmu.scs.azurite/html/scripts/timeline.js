@@ -407,8 +407,6 @@ function initContextMenu() {
             }
             e = e.parentNode;
         }
-        
-        // hideContextMenu();
     };
 }
 
@@ -685,20 +683,18 @@ function showDown() {
     translateY( global.translateY - 1 );
 }
 
-
 function undo() {
     // close context menu if there is any
     hideContextMenu();
     var result = [];
     
-    for(var i in global.selected) {
+    for(var i = 0; i < global.selected.length; ++i) {
         result.push(global.selected[i].id);
     }
     
     if(result.length > 0)
         azurite.selectiveUndo(result);
 }
-    
 
 function updateMaxTimestamp(timestamp, timestamp2) {
     // update global.maxTimestamp if necessary
