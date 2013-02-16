@@ -597,7 +597,8 @@ function addSelections(x1, y1, x2, y2) {
     rect.height = Math.max(y2 - y1, 1);
     
     // Get all the intersecting objects in the SVG.
-    var list = svg.main.node().getIntersectionList(rect);
+    console.log(rect);
+    var list = svg.main.node().getIntersectionList(rect, null);
     
     // Filter only the operation rects.
     d3.selectAll(list).filter('.op_rect').each( function (d, i) {
@@ -685,7 +686,7 @@ function undo() {
     var result = [];
     
     for(var i in global.selected) {
-        result.push(global.selected[i]);
+        result.push(global.selected[i].id);
     }
     
     if(result.length > 0)

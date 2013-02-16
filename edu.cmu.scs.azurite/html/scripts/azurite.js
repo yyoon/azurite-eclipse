@@ -14,9 +14,7 @@ try {
     var alertFn;
     if (console.log) {
         console.log("AZURITE: Running Azurite in a non-editor environment.");
-        alertFn = function () {
-            console.log.apply(console, arguments);
-        };
+        alertFn = function (arg) { console.log(arg); };
     } else {
         alertFn = alert;
     }
