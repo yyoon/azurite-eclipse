@@ -31,6 +31,8 @@ var FILES_PORTION = 0.15;
 
 var HIGHLIGHT_WIDTH = 3;
 
+var INDICATOR_WIDTH = 2;
+
 var CHART_MARGINS = {
     left: 10,
     top: 10,
@@ -52,6 +54,11 @@ fileDraw.yFunc = function (d, i) { return ROW_HEIGHT * (i + global.translateY) *
 var lineDraw = {};
 lineDraw.x2Func = function (d) { return getSvgWidth() * (1.0 - FILES_PORTION); };
 lineDraw.yFunc = function(d, i) { return ROW_HEIGHT * (i + global.translateY) * global.scaleY };
+
+var indicatorDraw = {};
+indicatorDraw.xFunc = function () { return global.maxTimestamp / DEFAULT_RATIO; }
+indicatorDraw.y2Func = function () { return global.files.length * ROW_HEIGHT + getSvgHeight(); }
+indicatorDraw.wFunc = function () { return INDICATOR_WIDTH / global.scaleX; }
 
 /**
  * Global variables. (Always use a pseudo-namespace.)
@@ -141,6 +148,15 @@ function setupSVG() {
         .append('rect');
         
     recalculateClipPaths();
+    
+    svg.subRects
+        .append('line')
+        .attr('id', 'indicator')
+        .attr('stroke', 'yellow')
+        .attr('x1', indicatorDraw.xFunc)
+        .attr('x2', indicatorDraw.xFunc)
+        .attr('y2', indicatorDraw.y2Func)
+        .attr('stroke-width', indicatorDraw.wFunc);
 }
 
 function recalculateClipPaths() {
@@ -244,6 +260,10 @@ function addFile(path) {
     addSeparatingLine();
     
     updateSeparatingLines();
+    
+    // Draw indicator
+    d3.select('#indicator')
+        .attr('y2', indicatorDraw.y2Func);
 }
 
 function addSeparatingLine() {
@@ -670,11 +690,11 @@ function scrollRight(pixels) {
 }
 
 function fileZoomIn() {
-    scaleY( global.scaleY + 0.5 );
+    scaleY( global.scaleY + 0.3 );
 }
 
 function fileZoomOut() {
-    scaleY( global.scaleY - 0.5 );
+    scaleY( global.scaleY - 0.3 );
 }
 
 function showUp() {
@@ -705,6 +725,10 @@ function updateMaxTimestamp(timestamp, timestamp2) {
     } else if (timestamp2 != null && timestamp2 > global.maxTimestamp) {
         global.maxTimestamp = timestamp2;
     }
+    
+    d3.select('#indicator')
+        .attr('x1', indicatorDraw.xFunc)
+        .attr('x2', indicatorDraw.xFunc);
 }
 
 function clamp(value, min, max) {
@@ -738,6 +762,9 @@ function scaleX(sx) {
         .attr('width', rectDraw.wFunc);
     
     updateHighlight();
+    
+    d3.select('#indicator')
+        .attr('stroke-width', indicatorDraw.wFunc);
 }
 
 function scaleY(sy) {
@@ -758,7 +785,7 @@ function scaleY(sy) {
 }
 
 function translateX(tx) {
-    tx = clamp( tx, -global.maxTimestamp / DEFAULT_RATIO, 0 );
+    tx = clamp( tx, (-global.maxTimestamp / DEFAULT_RATIO) * global.scaleX, 0 );
     global.translateX = tx;
     
     updateSubRectsTransform();
