@@ -22,6 +22,13 @@ var MIN_WIDTH = 5;
 var ROW_HEIGHT = 30;
 var DEFAULT_RATIO = 1000;
 
+var CHART_MARGINS = {
+    left: 5,
+    top: 5,
+    right: 5,
+    bottom: 5
+};
+
 
 // mapping functions
 var rectDraw = {};
@@ -119,23 +126,26 @@ function setupSVG() {
 }
 
 function recalculateClipPaths() {
-    var svgWidth = parseInt(svg.main.style('width'));
-    var svgHeight = parseInt(svg.main.style('height'));
+    var svgWidth = parseInt(svg.main.style('width')) - CHART_MARGINS.left - CHART_MARGINS.right;
+    var svgHeight = parseInt(svg.main.style('height')) - CHART_MARGINS.top - CHART_MARGINS.bottom;
     
     var filesPortion = 0.15;
     svg.clipFiles
         .attr('width', (svgWidth * filesPortion) + 'px')
         .attr('height', (svgHeight - 20) + 'px');
     
+    svg.subFiles
+        .attr('transform', 'translate(' + CHART_MARGINS.left + ' ' + CHART_MARGINS.top + ')');
+    
     svg.subRectsWrap
-        .attr('transform', 'translate(' + (svgWidth * filesPortion) + ' 0)');
+        .attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * filesPortion) + ' ' + CHART_MARGINS.top + ')');
         
     svg.clipRectsWrap
         .attr('width', (svgWidth * (1.0 - filesPortion)) + 'px')
         .attr('height', (svgHeight - 20) + 'px');
     
     svg.subTicks
-        .attr('transform', 'translate(' + (svgWidth * filesPortion) + ' ' + (svgHeight - 20) + ')');
+        .attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * filesPortion) + ' ' + (CHART_MARGINS.top + svgHeight - 20) + ')');
 }
 
 /**
