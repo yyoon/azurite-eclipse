@@ -22,7 +22,7 @@ var NUM_TIMESTAMPS = 3;
 var MIN_WIDTH = 5;
 var ROW_HEIGHT = 30;
 var TICKS_HEIGHT = 20;
-var DEFAULT_RATIO = 500;
+var DEFAULT_RATIO = 100;
 
 var FILE_NAME_OFFSET_X = 0;
 var FILE_NAME_OFFSET_Y = 5;
@@ -267,7 +267,6 @@ function updateSeparatingLines() {
  */
 function setStartTimestamp(timestamp) {
     global.startTimestamp = parseInt(timestamp);
-    drawRules();
 }
 
 
