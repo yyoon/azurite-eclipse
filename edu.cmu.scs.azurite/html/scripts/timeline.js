@@ -31,7 +31,7 @@ rectDraw.wFunc = function (d) { return Math.max(MIN_WIDTH / global.scaleX, (d.t2
 rectDraw.hFunc = function (d) { return Math.max(MIN_WIDTH / global.scaleY, ROW_HEIGHT * (d.y2 - d.y1) / 100); };
 
 var fileDraw = {};
-fileDraw.yFunc = function (d, i) { return ROW_HEIGHT * i * global.scaleY + 10; };
+fileDraw.yFunc = function (d, i) { return ROW_HEIGHT * (i + global.translateY) * global.scaleY + 10; };
 
 /**
  * Global variables. (Always use a pseudo-namespace.)
@@ -768,6 +768,9 @@ function translateY(ty) {
     global.translateY = ty;
     
     updateSubRectsTransform();
+        
+    svg.subFiles.selectAll('text')
+        .attr('y', fileDraw.yFunc);
 }
 
 function updateSubRectsTransform() {
