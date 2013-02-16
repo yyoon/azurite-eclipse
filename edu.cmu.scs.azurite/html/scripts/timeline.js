@@ -729,6 +729,9 @@ function updateMaxTimestamp(timestamp, timestamp2) {
     d3.select('#indicator')
         .attr('x1', indicatorDraw.xFunc)
         .attr('x2', indicatorDraw.xFunc);
+    
+    // Auto-scroll to the end.
+    showUntil(global.maxTimestamp);
 }
 
 function clamp(value, min, max) {
@@ -811,7 +814,14 @@ function updateSubRectsTransform() {
 }
 
 function showFrom(timestamp) {
-    var translateX = -(timestamp - global.startTimestamp) / DEFAULT_RATIO;
+    var tx = -(timestamp - global.startTimestamp) / DEFAULT_RATIO;
+}
+
+function showUntil(timestamp) {
+    var tx = -(timestamp / DEFAULT_RATIO) * global.scaleX
+        + getSvgWidth() * (1.0 - FILES_PORTION);
+        
+    translateX(tx);
 }
 
 function test() {
