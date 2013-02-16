@@ -22,6 +22,8 @@ var MIN_WIDTH = 5;
 var ROW_HEIGHT = 30;
 var DEFAULT_RATIO = 1000;
 
+var FILES_PORTION = 0.15;
+
 var CHART_MARGINS = {
     left: 5,
     top: 5,
@@ -39,6 +41,10 @@ rectDraw.hFunc = function (d) { return Math.max(MIN_WIDTH / global.scaleY, ROW_H
 
 var fileDraw = {};
 fileDraw.yFunc = function (d, i) { return ROW_HEIGHT * (i + global.translateY) * global.scaleY + 10; };
+
+var lineDraw = {};
+lineDraw.x2Func = function (d) { return getSvgWidth() * (1.0 - FILES_PORTION); };
+lineDraw.yFunc = function(d, i) { return ROW_HEIGHT * (i + global.translateY) * global.scaleY };
 
 /**
  * Global variables. (Always use a pseudo-namespace.)
@@ -126,26 +132,26 @@ function setupSVG() {
 }
 
 function recalculateClipPaths() {
-    var svgWidth = parseInt(svg.main.style('width')) - CHART_MARGINS.left - CHART_MARGINS.right;
-    var svgHeight = parseInt(svg.main.style('height')) - CHART_MARGINS.top - CHART_MARGINS.bottom;
+    var svgWidth = getSvgWidth();
+    var svgHeight = getSvgHeight();
     
-    var filesPortion = 0.15;
     svg.clipFiles
-        .attr('width', (svgWidth * filesPortion) + 'px')
+        .attr('width', (svgWidth * FILES_PORTION) + 'px')
         .attr('height', (svgHeight - 20) + 'px');
     
     svg.subFiles
         .attr('transform', 'translate(' + CHART_MARGINS.left + ' ' + CHART_MARGINS.top + ')');
     
     svg.subRectsWrap
-        .attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * filesPortion) + ' ' + CHART_MARGINS.top + ')');
+        .attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' ' + CHART_MARGINS.top + ')');
         
     svg.clipRectsWrap
-        .attr('width', (svgWidth * (1.0 - filesPortion)) + 'px')
-        .attr('height', (svgHeight - 20) + 'px');
+        .attr('y', '-1')
+        .attr('width', (svgWidth * (1.0 - FILES_PORTION)) + 'px')
+        .attr('height', (svgHeight - 20 + 2) + 'px');
     
     svg.subTicks
-        .attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * filesPortion) + ' ' + (CHART_MARGINS.top + svgHeight - 20) + ')');
+        .attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' ' + (CHART_MARGINS.top + svgHeight - 20) + ')');
 }
 
 /**
@@ -209,6 +215,33 @@ function addFile(path) {
         .attr('dy', '1em')
         .attr('fill', 'white')
         .text(function (d) { return d.fileName; });
+    
+    // Draw separating lines
+    if ( global.files.length == 1) {
+        addSeparatingLine();
+    }
+    
+    addSeparatingLine();
+    
+    updateSeparatingLines();
+}
+
+function addSeparatingLine() {
+    svg.subRectsWrap.append('line')
+        .attr('class', 'separating_line')
+        .attr('x1', '0')
+        .attr('y1', lineDraw.yFunc)
+        .attr('x2', lineDraw.x2Func)
+        .attr('y2', lineDraw.yFunc)
+        .attr('stroke', 'gray')
+        .attr('stroke-width', '2');
+}
+
+function updateSeparatingLines() {
+    svg.subRectsWrap.selectAll('line.separating_line')
+        .attr('y1', lineDraw.yFunc)
+        .attr('x2', lineDraw.x2Func)
+        .attr('y2', lineDraw.yFunc);
 }
 
 /**
@@ -339,10 +372,8 @@ window.onresize = function (e) {
         global.lastWindowWidth = window.innerWidth;
         global.lastWindowHeight = window.innerHeight;
         
-        var svgWidth = parseInt(svg.main.style('width'));
-        var svgHeight = parseInt(svg.main.style('height'));
-        
         recalculateClipPaths();
+        updateSeparatingLines();
     }
 }
 
@@ -764,6 +795,8 @@ function scaleY(sy) {
         
     svg.subFiles.selectAll('text')
         .attr('y', fileDraw.yFunc);
+    
+    updateSeparatingLines();
 }
 
 function translateX(tx) {
@@ -781,6 +814,8 @@ function translateY(ty) {
         
     svg.subFiles.selectAll('text')
         .attr('y', fileDraw.yFunc);
+    
+    updateSeparatingLines();
 }
 
 function updateSubRectsTransform() {
@@ -825,4 +860,12 @@ function addRandomOperations(count) {
         var y2 = clamp(y1 + Math.floor(Math.random() * 30), y1, 100);
 		addOperation(global.startTimestamp, id, t1, t2, y1, y2, Math.floor(Math.random() * 3));
 	}
+}
+
+function getSvgWidth() {
+    return parseInt(svg.main.style('width')) - CHART_MARGINS.left - CHART_MARGINS.right;
+}
+
+function getSvgHeight() {
+    return parseInt(svg.main.style('height')) - CHART_MARGINS.top - CHART_MARGINS.bottom;
 }
