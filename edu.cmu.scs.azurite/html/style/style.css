@@ -18,11 +18,13 @@ body {
 background-color:black;
 font-family:helvetica;
 font-size:12px;
-margin: 0px;
 }
 
 html, body {
+width: 100%;
 height: 100%;
+margin: 0px;
+padding: 0px;
 }
 
 .file_title {
@@ -70,45 +72,15 @@ height: 100%;
 display: block;
 width: 100%;
 height: 100%;
+/*
 padding-right: 30px;
 padding-bottom: 30px;
+*/
+padding: 5px;
 
 -moz-box-sizing:    border-box;
 -webkit-box-sizing: border-box;
 box-sizing:         border-box;
-}
-
-#svg_position_guide {
-width: 100%;
-height: 100%;
-position: relative;
-}
-
-#svg1_outer_wrap {
-display: inline-block;
-position: absolute;
-overflow-y: hidden;
-padding-bottom: 0px; /* This should be set as slider width */
-height: 100%;
-
--moz-box-sizing:    border-box;
--webkit-box-sizing: border-box;
-box-sizing:         border-box;
-}
-
-#svg1_inner_wrap {
-width: 100%;
-height: 100%;
-overflow-y: hidden;
-}
-
-#svg2_wrap {
-display: inline-block;
-position: absolute;
-overflow: scroll;
-left: 15%;
-top: 0%;
-height: 100%;
 }
 
 button.menu {

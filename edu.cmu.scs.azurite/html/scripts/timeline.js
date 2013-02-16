@@ -22,7 +22,8 @@ var MIN_WIDTH = 5;
 var ROW_HEIGHT = 30;
 var DEFAULT_RATIO = 1000;
 
-var FILE_NAME_OFFSET = 5;
+var FILE_NAME_OFFSET_X = 0;
+var FILE_NAME_OFFSET_Y = 5;
 
 var FILES_PORTION = 0.15;
 
@@ -42,7 +43,7 @@ rectDraw.wFunc = function (d) { return Math.max(MIN_WIDTH / global.scaleX, (d.t2
 rectDraw.hFunc = function (d) { return Math.max(MIN_WIDTH / global.scaleY, ROW_HEIGHT * (d.y2 - d.y1) / 100); };
 
 var fileDraw = {};
-fileDraw.yFunc = function (d, i) { return ROW_HEIGHT * (i + global.translateY) * global.scaleY + FILE_NAME_OFFSET; };
+fileDraw.yFunc = function (d, i) { return ROW_HEIGHT * (i + global.translateY) * global.scaleY + FILE_NAME_OFFSET_Y; };
 
 var lineDraw = {};
 lineDraw.x2Func = function (d) { return getSvgWidth() * (1.0 - FILES_PORTION); };
@@ -212,7 +213,7 @@ function addFile(path) {
     svg.subFiles.selectAll('text').data(global.files)
         .enter()
         .append('text')
-        .attr('x', FILE_NAME_OFFSET + 'px')
+        .attr('x', FILE_NAME_OFFSET_X + 'px')
         .attr('y', fileDraw.yFunc)
         .attr('dy', '1em')
         .attr('fill', 'white')
