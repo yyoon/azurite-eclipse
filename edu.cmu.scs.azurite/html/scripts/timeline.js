@@ -31,10 +31,10 @@ var FILES_PORTION = 0.15;
 var HIGHLIGHT_WIDTH = 3;
 
 var CHART_MARGINS = {
-    left: 15,
-    top: 15,
-    right: 15,
-    bottom: 15
+    left: 10,
+    top: 10,
+    right: 10,
+    bottom: 10
 };
 
 
@@ -243,7 +243,7 @@ function addFile(path) {
 }
 
 function addSeparatingLine() {
-    svg.subRectsWrap.append('line')
+    svg.subRectsWrap.insert('line', ':first-child')
         .attr('class', 'separating_line')
         .attr('x1', '0')
         .attr('y1', lineDraw.yFunc)
@@ -368,8 +368,6 @@ window.onload = function () {
     
     window.onresize();
     initEventHandlers();
-    
-    test();
 }
 
 window.onresize = function (e) {
