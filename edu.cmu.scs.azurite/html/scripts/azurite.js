@@ -9,6 +9,8 @@ try {
     // Being run in an IDE
 	azurite.initialize = __AZURITE__initialize;
 	azurite.selectiveUndo = __AZURITE__selectiveUndo;
+    
+    window.console.log = __AZURITE__log;
 } catch (e) {
     // Being run in a web browser.
     var alertFn;

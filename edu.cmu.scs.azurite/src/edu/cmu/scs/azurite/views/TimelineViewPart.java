@@ -53,6 +53,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 		browser = new Browser(parent, SWT.NONE);
 		new UndoFunction(browser, BROWSER_FUNC_PREFIX + "selectiveUndo");
 		new InitializeFunction(browser, BROWSER_FUNC_PREFIX + "initialize");
+		new LogFunction(browser, BROWSER_FUNC_PREFIX + "log");
 		
 		// Retrieve the full URL of /html/index.html in our project.
 		try {
@@ -162,6 +163,20 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
             	}
             });
             
+			return "ok";
+		}
+	}
+	
+	class LogFunction extends BrowserFunction {
+		
+		public LogFunction(Browser browser, String name) {
+			super(browser, name);
+		}
+		
+		@Override
+		public Object function(Object[] arguments) {
+			System.out.println( arguments[0] );
+			
 			return "ok";
 		}
 	}
