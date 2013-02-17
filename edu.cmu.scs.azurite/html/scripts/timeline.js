@@ -21,7 +21,7 @@ var NUM_TIMESTAMPS = 3;
 
 var MIN_WIDTH = 5;
 var ROW_HEIGHT = 30;
-var TICKS_HEIGHT = 20;
+var TICKS_HEIGHT = 30;
 var DEFAULT_RATIO = 100;
 
 var FILE_NAME_OFFSET_X = 0;
@@ -768,6 +768,8 @@ function scaleX(sx) {
     
     d3.select('#indicator')
         .attr('stroke-width', indicatorDraw.wFunc);
+    
+    updateTicks();
 }
 
 function scaleY(sy) {
@@ -792,6 +794,8 @@ function translateX(tx) {
     global.translateX = tx;
     
     updateSubRectsTransform();
+
+    updateTicks();
 }
 
 function translateY(ty) {
@@ -822,6 +826,35 @@ function showUntil(timestamp) {
         + getSvgWidth() * (1.0 - FILES_PORTION);
         
     translateX(tx);
+}
+
+function updateTicks() {
+    svg.subTicks.selectAll('text').remove();
+    
+    var start = global.startTimestamp - (global.translateX * DEFAULT_RATIO) / global.scaleX;
+    var end = start + getSvgWidth() * (1.0 - FILES_PORTION) * DEFAULT_RATIO / global.scaleX;
+    
+    var timeScale = d3.time.scale()
+        .domain([new Date(start), new Date(end)])
+        .range([0, getSvgWidth() * (1.0 - FILES_PORTION)]);
+    
+    var ticks = timeScale.ticks(NUM_TIMESTAMPS);
+    
+    d3.selectAll(ticks).each(function (d) {
+        svg.subTicks.append('text')
+            .attr('x', timeScale(this))
+            .attr('dy', '1em')
+            .attr('fill', 'white')
+            .attr('text-anchor', 'middle')
+            .text(dateFormat(this, 'hh:MM TT'));
+        
+        svg.subTicks.append('text')
+            .attr('x', timeScale(this))
+            .attr('dy', '2em')
+            .attr('fill', 'white')
+            .attr('text-anchor', 'middle')
+            .text(dateFormat(this, 'mm/dd/yy'));
+    });
 }
 
 function test() {
