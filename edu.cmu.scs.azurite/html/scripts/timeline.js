@@ -846,14 +846,14 @@ function updateTicks() {
             .attr('dy', '1em')
             .attr('fill', 'white')
             .attr('text-anchor', 'middle')
-            .text(dateFormat(this, 'hh:MM TT'));
+            .text(d3.time.format('%I:%M %p')(this));
         
         svg.subTicks.append('text')
             .attr('x', timeScale(this))
             .attr('dy', '2em')
             .attr('fill', 'white')
             .attr('text-anchor', 'middle')
-            .text(dateFormat(this, 'mm/dd/yy'));
+            .text(d3.time.format('%x')(this));
     });
 }
 
