@@ -15,7 +15,7 @@
   </head>
   <body>
   <div id='main' oncontextmenu="return false;">
-    <div class='menu_panel' id='menu_panel' style='z-index:1000'>
+    <div class='menu_panel' id='menu_panel'>
       <div class='menu_subpanel'>
         <button class='menu' onclick='showBefore()'><</button>
         <button class='menu' onclick='showAfter()'>></button>
@@ -45,6 +45,34 @@
     <div id='main_panel'>
       <div id='svg_wrapper'>
         <div id='svg_inner_wrapper'>
+        </div>
+      </div>
+    </div>
+    
+    <div id='hscroll_wrapper'>
+      <div class='scroll_inner_wrapper'>
+        <div id='hscroll_container'>
+          <div id='hscroll_left' onclick='showBefore()'></div>
+          <div id='hscroll_thumbtrack_wrapper'>
+            <div id='hscroll_thumbtrack' class='scroll_thumbtrack'>
+              <div id='hscroll_thumb' class='scroll_thumb'></div>
+            </div>
+          </div>
+          <div id='hscroll_right' onclick='showAfter()'></div>
+        </div>
+      </div>
+    </div>
+    
+    <div id='vscroll_wrapper'>
+      <div class='scroll_inner_wrapper'>
+        <div id='vscroll_container'>
+          <div id='vscroll_up' onclick='showUp()'></div>
+          <div id='vscroll_thumbtrack_wrapper'>
+            <div id='vscroll_thumbtrack' class='scroll_thumbtrack'>
+              <div id='vscroll_thumb' class='scroll_thumb'></div>
+            </div>
+          </div>
+          <div id='vscroll_down' onclick='showDown()'></div>
         </div>
       </div>
     </div>

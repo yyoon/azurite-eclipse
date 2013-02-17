@@ -40,6 +40,8 @@ var CHART_MARGINS = {
     bottom: 10
 };
 
+var MIN_SCROLL_THUMB_SIZE = 30;
+
 
 // mapping functions
 var rectDraw = {};
@@ -264,6 +266,9 @@ function addFile(path) {
     // Draw indicator
     d3.select('#indicator')
         .attr('y2', indicatorDraw.y2Func);
+    
+    // Scrollbar
+    updateVScroll();
 }
 
 function addSeparatingLine() {
@@ -298,7 +303,7 @@ function setStartTimestamp(timestamp) {
  * Add an edit operation to the end of the file.
  * Note that this is called immediately after an edit operation is performed.
  */
-function addOperation(sid, id, t1, t2, y1, y2, type) {
+function addOperation(sid, id, t1, t2, y1, y2, type, scroll) {
     var newOp = new EditOperation(
         parseInt(sid),
         parseInt(id),
@@ -338,6 +343,10 @@ function addOperation(sid, id, t1, t2, y1, y2, type) {
         .attr('height', rectDraw.hFunc)
         .attr('fill', function (d) { return d.color; })
         .attr('vector-effect', 'non-scaling-stroke');
+    
+    if (scroll != null && scroll == true) {
+        showUntil(global.maxTimestamp);
+    }
 }
 
 /**
@@ -729,9 +738,6 @@ function updateMaxTimestamp(timestamp, timestamp2) {
     d3.select('#indicator')
         .attr('x1', indicatorDraw.xFunc)
         .attr('x2', indicatorDraw.xFunc);
-    
-    // Auto-scroll to the end.
-    showUntil(global.maxTimestamp);
 }
 
 function clamp(value, min, max) {
@@ -770,6 +776,7 @@ function scaleX(sx) {
         .attr('stroke-width', indicatorDraw.wFunc);
     
     updateTicks();
+    updateHScroll();
 }
 
 function scaleY(sy) {
@@ -790,16 +797,21 @@ function scaleY(sy) {
 }
 
 function translateX(tx) {
-    tx = clamp( tx, (-global.maxTimestamp / DEFAULT_RATIO) * global.scaleX, 0 );
+    tx = clamp( tx, getMinTranslateX(), 0 );
     global.translateX = tx;
     
     updateSubRectsTransform();
 
     updateTicks();
+    updateHScroll();
+}
+
+function getMinTranslateX() {
+    return (-global.maxTimestamp / DEFAULT_RATIO) * global.scaleX;
 }
 
 function translateY(ty) {
-    ty = clamp( ty, 1 - global.files.length, 0 );
+    ty = clamp( ty, getMinTranslateY(), 0 );
     global.translateY = ty;
     
     updateSubRectsTransform();
@@ -808,6 +820,11 @@ function translateY(ty) {
         .attr('y', fileDraw.yFunc);
     
     updateSeparatingLines();
+    updateVScroll();
+}
+
+function getMinTranslateY() {
+    return 1 - global.files.length;
 }
 
 function updateSubRectsTransform() {
@@ -818,7 +835,9 @@ function updateSubRectsTransform() {
 }
 
 function showFrom(timestamp) {
-    var tx = -(timestamp - global.startTimestamp) / DEFAULT_RATIO;
+    var tx = -(timestamp / DEFAULT_RATIO) * global.scaleX;
+    
+    translateX(tx);
 }
 
 function showUntil(timestamp) {
@@ -826,6 +845,30 @@ function showUntil(timestamp) {
         + getSvgWidth() * (1.0 - FILES_PORTION);
         
     translateX(tx);
+}
+
+function updateHScroll() {
+    var trackSize = $('#hscroll_thumbtrack').width();
+    
+    var thumbSize = Math.max(Math.floor(getSvgWidth() * (1.0 - FILES_PORTION) * trackSize / -getMinTranslateX()), MIN_SCROLL_THUMB_SIZE);
+    
+    var thumbRelativePos = global.translateX / getMinTranslateX();
+    
+    d3.select('#hscroll_thumb')
+        .style('width', thumbSize + 'px')
+        .style('left', Math.floor((trackSize - thumbSize) * thumbRelativePos) + 'px');
+}
+
+function updateVScroll() {
+    var trackSize = $('#vscroll_thumbtrack').height();
+    
+    var thumbSize = Math.max(Math.floor(getSvgHeight() / global.files.length), MIN_SCROLL_THUMB_SIZE);
+    
+    var thumbRelativePos = global.translateY / getMinTranslateY();
+    
+    d3.select('#vscroll_thumb')
+        .style('height', thumbSize + 'px')
+        .style('top', Math.floor((trackSize - thumbSize) * thumbRelativePos) + 'px');
 }
 
 function updateTicks() {
@@ -866,6 +909,8 @@ function test() {
     
 	addFile('Test.java');
 	addRandomOperations(100);
+    
+    showUntil(global.maxTimestamp);
 }
 
 function addRandomOperations(count) {
