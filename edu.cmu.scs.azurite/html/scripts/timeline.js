@@ -881,6 +881,9 @@ function updateHScroll() {
     var thumbSize = Math.max(Math.floor(extent * trackSize / (extent - getMinTranslateX())), MIN_SCROLL_THUMB_SIZE);
     
     var thumbRelativePos = global.translateX / getMinTranslateX();
+	if (global.translateX == 0 || getMinTranslateX() == 0) {
+		thumbRelativePos = 0;
+	}
     
     d3.select('#hscroll_thumb')
         .style('width', thumbSize + 'px')
@@ -890,9 +893,13 @@ function updateHScroll() {
 function updateVScroll() {
     var trackSize = $('#vscroll_thumbtrack').height();
     
-    var thumbSize = Math.max(Math.floor(getSvgHeight() / global.files.length), MIN_SCROLL_THUMB_SIZE);
+    var extent = Math.floor(getSvgHeight() / (ROW_HEIGHT * global.scaleY));
+    var thumbSize = Math.max(Math.floor(trackSize * extent / (global.files.length + extent - 1)), MIN_SCROLL_THUMB_SIZE);
     
     var thumbRelativePos = global.translateY / getMinTranslateY();
+	if (global.translateY == 0 || getMinTranslateY() == 0) {
+		thumbRelativePos = 0;
+	}
     
     d3.select('#vscroll_thumb')
         .style('height', thumbSize + 'px')
