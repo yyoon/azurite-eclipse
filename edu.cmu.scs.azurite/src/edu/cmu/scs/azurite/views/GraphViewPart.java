@@ -36,6 +36,7 @@ import edu.cmu.scs.azurite.model.RuntimeDCListener;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
+import edu.cmu.scs.fluorite.model.Events;
 import edu.cmu.scs.fluorite.util.Utilities;
 
 public class GraphViewPart extends ViewPart implements RuntimeDCListener, MouseListener {
@@ -324,6 +325,12 @@ public class GraphViewPart extends ViewPart implements RuntimeDCListener, MouseL
 
 	@Override
 	public void documentChangeUpdated(BaseDocumentChangeEvent docChange) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void pastLogsRead(List<Events> listEvents) {
 		// TODO Auto-generated method stub
 		
 	}

@@ -43,7 +43,8 @@ var CHART_MARGINS = {
 var MIN_SCROLL_THUMB_SIZE = 30;
 
 
-// mapping functions
+// draw functions
+
 var rectDraw = {};
 rectDraw.xFunc = function (d) { return (d.sid + d.t1 - global.startTimestamp) / DEFAULT_RATIO; };
 rectDraw.yFunc = function (d) { return Math.min(ROW_HEIGHT * d.y1 / 100, ROW_HEIGHT - MIN_WIDTH / global.scaleY); };
@@ -293,7 +294,12 @@ function updateSeparatingLines() {
  * Called by Azurite.
  * Sets the start timestamp.
  */
-function setStartTimestamp(timestamp) {
+function setStartTimestamp(timestamp, adjustMaxTimestamp) {
+	if (adjustMaxTimestamp != null && adjustMaxTimestamp == true) {
+		var newMaxTimestamp = global.maxTimestamp + global.startTimestamp - timestamp;
+		updateMaxTimestamp(newMaxTimestamp, newMaxTimestamp);
+	}
+	
     global.startTimestamp = parseInt(timestamp);
 }
 
@@ -367,6 +373,24 @@ function updateOperationTimestamp2(id, t2) {
     }
 }
 
+function adjustData() {
+	// Sort the rects.
+	svg.subRects.selectAll('rect.op_rect')
+		.sort(function (lhs, rhs) {
+			if (lhs.sid + lhs.t1 < rhs.sid + rhs.t1) {
+				return -1;
+			} else if (lhs.sid + lhs.t1 > rhs.sid + rhs.t1) {
+				return 1;
+			} else {
+				return 0;
+			}
+		});
+	
+	// Update the rects.
+	svg.subRects.selectAll('rect.op_rect')
+		.attr('x', rectDraw.xFunc);
+}
+
 function redraw() {
     var svgWidth = parseInt(svg.main.style('width'));
     var svgHeight = parseInt(svg.main.style('height'));
@@ -411,6 +435,9 @@ window.onresize = function (e) {
         recalculateClipPaths();
         updateSeparatingLines();
         updateDraggableArea();
+		
+		updateHScroll();
+		updateVScroll();
     }
 }
 
@@ -850,7 +877,8 @@ function showUntil(timestamp) {
 function updateHScroll() {
     var trackSize = $('#hscroll_thumbtrack').width();
     
-    var thumbSize = Math.max(Math.floor(getSvgWidth() * (1.0 - FILES_PORTION) * trackSize / -getMinTranslateX()), MIN_SCROLL_THUMB_SIZE);
+	var extent = getSvgWidth() * (1.0 - FILES_PORTION);
+    var thumbSize = Math.max(Math.floor(extent * trackSize / (extent - getMinTranslateX())), MIN_SCROLL_THUMB_SIZE);
     
     var thumbRelativePos = global.translateX / getMinTranslateX();
     

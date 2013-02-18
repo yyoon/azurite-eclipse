@@ -12,8 +12,10 @@ import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.commands.runtime.Segment;
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 import edu.cmu.scs.fluorite.commands.FileOpenCommand;
+import edu.cmu.scs.fluorite.commands.ICommand;
 import edu.cmu.scs.fluorite.model.DocumentChangeListener;
 import edu.cmu.scs.fluorite.model.EventRecorder;
+import edu.cmu.scs.fluorite.model.Events;
 
 public class RuntimeHistoryManager implements DocumentChangeListener {
 	
@@ -97,15 +99,19 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 	 * Otherwise, use <code>getInstance</code> static method instead.
 	 */
 	public RuntimeHistoryManager() {
-		mDocumentChanges = new HashMap<FileKey, List<RuntimeDC>>();
-		mNextIndexToApply = new HashMap<FileKey, Integer>();
-		mCurrentFileKey = null;
+		clearData();
 		
 		mRuntimeDocumentChangeListeners = new ListenerList();
 		
 		mScheduledTasks = new ArrayList<Runnable>();
 		
 		mStarted = false;
+	}
+
+	private void clearData() {
+		mDocumentChanges = new HashMap<FileKey, List<RuntimeDC>>();
+		mNextIndexToApply = new HashMap<FileKey, Integer>();
+		mCurrentFileKey = null;
 	}
 
 	public void scheduleTask(Runnable runnable) {
@@ -188,6 +194,12 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 	private void fireDocumentChangeUpdatedEvent(BaseDocumentChangeEvent docChange) {
 		for (Object listenerObj : mRuntimeDocumentChangeListeners.getListeners()) {
 			((RuntimeDCListener)listenerObj).documentChangeUpdated(docChange);
+		}
+	}
+	
+	private void firePastLogsReadEvent(List<Events> events) {
+		for (Object listenerObj : mRuntimeDocumentChangeListeners.getListeners()) {
+			((RuntimeDCListener)listenerObj).pastLogsRead(events);
 		}
 	}
 	
@@ -285,6 +297,10 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 	}
 	
 	public void documentChangeFinalized(BaseDocumentChangeEvent docChange) {
+		addRuntimeDCFromOriginalDC(docChange);
+	}
+	
+	private void addRuntimeDCFromOriginalDC(BaseDocumentChangeEvent docChange) {
 		RuntimeDC runtimeDocChange = RuntimeDC.createRuntimeDocumentChange(docChange);
 		
 		List<RuntimeDC> list = getRuntimeDocumentChanges();
@@ -364,6 +380,33 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		}
 		mNextIndexToApply.put(fileKey, list.size());
 		return list;
+	}
+	
+	public void pastLogsRead(List<Events> listEvents) {
+		// TODO implement history merging.
+		
+		// Clear the entire history.
+		clearData();
+		
+		// Add document changes from the history.
+		for (Events events : listEvents) {
+			List<ICommand> commands = events.getCommands();
+			for (ICommand command : commands) {
+				if (!(command instanceof BaseDocumentChangeEvent)) {
+					continue;
+				}
+				
+				BaseDocumentChangeEvent docChange = (BaseDocumentChangeEvent)command;
+				if (docChange instanceof FileOpenCommand) {
+					activeFileChanged((FileOpenCommand)docChange);
+				} else {
+					addRuntimeDCFromOriginalDC(docChange);
+				}
+			}
+		}
+
+		// Notify the listeners (mainly, Timeline View)
+		firePastLogsReadEvent(listEvents);
 	}
 	
 }

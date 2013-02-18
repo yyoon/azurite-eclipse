@@ -24,9 +24,12 @@ import edu.cmu.scs.azurite.model.RuntimeHistoryManager.FileKey;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 import edu.cmu.scs.fluorite.commands.Delete;
+import edu.cmu.scs.fluorite.commands.FileOpenCommand;
+import edu.cmu.scs.fluorite.commands.ICommand;
 import edu.cmu.scs.fluorite.commands.Insert;
 import edu.cmu.scs.fluorite.commands.Replace;
 import edu.cmu.scs.fluorite.model.EventRecorder;
+import edu.cmu.scs.fluorite.model.Events;
 
 public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 
@@ -156,9 +159,11 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
                     		for (FileKey key : manager.getFileKeys()) {
                     			addFile(key.getFilePath());
                     			for (RuntimeDC dc : manager.getRuntimeDocumentChanges(key)) {
-                    				addOperation(dc.getOriginal());
+                    				addOperation(dc.getOriginal(), false);
                     			}
                     		}
+                    		
+                    		scrollToEnd();
             			}
             		});
             	}
@@ -199,7 +204,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 	
 	@Override
 	public void documentChangeAdded(BaseDocumentChangeEvent docChange) {
-		addOperation(docChange);
+		addOperation(docChange, true);
 	}
 
 	private void addFile(String filePath) {
@@ -208,15 +213,16 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 		browser.execute(executeStr);
 	}
 
-	private void addOperation(BaseDocumentChangeEvent docChange) {
-		String executeStr = String.format("addOperation(%1$d, %2$d, %3$d, %4$d, %5$f, %6$f, %7$s);",
-				EventRecorder.getInstance().getStartTimestamp(),
+	private void addOperation(BaseDocumentChangeEvent docChange, boolean scroll) {
+		String executeStr = String.format("addOperation(%1$d, %2$d, %3$d, %4$d, %5$f, %6$f, %7$d, %8$s);",
+				docChange.getSessionId(),
 				docChange.getCommandIndex(),
 				docChange.getTimestamp(),
 				docChange.getTimestamp2(),
 				docChange.getY1(),
 				docChange.getY2(),
-				getTypeIndex(docChange));
+				getTypeIndex(docChange),
+				Boolean.toString(scroll));
 		browser.execute(executeStr);
 	}
 	
@@ -279,6 +285,46 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 	
 	public void activateFirebugLite() {
         browser.setUrl("javascript:(function(F,i,r,e,b,u,g,L,I,T,E){if(F.getElementById(b))return;E=F[i+'NS']&&F.documentElement.namespaceURI;E=E?F[i+'NS'](E,'script'):F[i]('script');E[r]('id',b);E[r]('src',I+g+T);E[r](b,u);(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);E=new%20Image;E[r]('src',I+L);})(document,'createElement','setAttribute','getElementsByTagName','FirebugLite','3','releases/lite/1.3/firebug-lite.js','releases/lite/latest/skin/xp/sprite.png','https://getfirebug.com/','#startOpened');");
+	}
+
+	@Override
+	public void pastLogsRead(List<Events> listEvents) {
+		if (listEvents == null) {
+			throw new IllegalArgumentException();
+		}
+		
+		if (listEvents.isEmpty()) { 
+			return;
+		}
+		
+		// Update the start timestamp.
+		browser.execute("setStartTimestamp("
+				+ listEvents.get(0).getStartTimestamp() + ", true);");
+
+		// Add all the things.
+		for (Events events : listEvents) {
+			// Add the operations
+			for (ICommand command : events.getCommands()) {
+				if (!(command instanceof BaseDocumentChangeEvent)) {
+					continue;
+				}
+				
+				BaseDocumentChangeEvent docChange = (BaseDocumentChangeEvent)command;
+				if (docChange instanceof FileOpenCommand) {
+					FileOpenCommand foc = (FileOpenCommand)docChange;
+					activeFileChanged(foc.getProjectName(), foc.getFilePath());
+				} else {
+					addOperation(docChange, false);
+				}
+			}
+		}
+		
+		// Update the data.
+		browser.execute("adjustData();");
+	}
+	
+	private void scrollToEnd() {
+		browser.execute("showUntil(global.maxTimestamp);");
 	}
 	
 }
