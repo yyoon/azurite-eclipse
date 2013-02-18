@@ -850,7 +850,7 @@ function showUntil(timestamp) {
 function updateHScroll() {
     var trackSize = $('#hscroll_thumbtrack').width();
     
-    var extent = getSvgWidth() * (1.0 - FILES_PORTION);
+	var extent = getSvgWidth() * (1.0 - FILES_PORTION);
     var thumbSize = Math.max(Math.floor(trackSize * extent / (extent - getMinTranslateX())), MIN_SCROLL_THUMB_SIZE);
     
     var thumbRelativePos = global.translateX / getMinTranslateX();
@@ -867,7 +867,7 @@ function updateVScroll() {
     var trackSize = $('#vscroll_thumbtrack').height();
     
     var extent = Math.floor(getSvgHeight() / (ROW_HEIGHT * global.scaleY));
-    var thumbSize = Math.max(Math.floor(trackSize * extent / (global.files.length + extent - 1)), MIN_SCROLL_THUMB_SIZE);
+    var thumbSize = clamp(Math.floor(trackSize * extent / (global.files.length + extent - 1)), MIN_SCROLL_THUMB_SIZE, trackSize);
     
     var thumbRelativePos = global.translateY / getMinTranslateY();
 	if (global.translateY == 0 || getMinTranslateY() == 0) {
