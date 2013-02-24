@@ -299,7 +299,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 		
 		// Update the start timestamp.
 		browser.execute("setStartTimestamp("
-				+ listEvents.get(0).getStartTimestamp() + ", true);");
+				+ listEvents.get(0).getStartTimestamp() + ", true, true);");
 
 		// Add all the things.
 		for (Events events : listEvents) {

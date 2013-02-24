@@ -294,13 +294,20 @@ function updateSeparatingLines() {
  * Called by Azurite.
  * Sets the start timestamp.
  */
-function setStartTimestamp(timestamp, adjustMaxTimestamp) {
-	if (adjustMaxTimestamp != null && adjustMaxTimestamp == true) {
-		var newMaxTimestamp = global.maxTimestamp + global.startTimestamp - timestamp;
-		updateMaxTimestamp(newMaxTimestamp, newMaxTimestamp);
-	}
+function setStartTimestamp(timestamp, adjustMaxTimestamp, preservePosition) {
+    var timestampDiff = global.startTimestamp - timestamp;
 	
     global.startTimestamp = parseInt(timestamp);
+    
+	if (adjustMaxTimestamp != null && adjustMaxTimestamp == true) {
+		var newMaxTimestamp = global.maxTimestamp + timestampDiff;
+		updateMaxTimestamp(newMaxTimestamp, newMaxTimestamp);
+	}
+    
+    if (preservePosition != null && preservePosition == true) {
+        var newTimestamp = translateXToTimestamp(global.translateX) + timestampDiff;
+        showFrom(newTimestamp);
+    }
 }
 
 
@@ -336,7 +343,7 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll) {
     global.currentFile.operations.push(newOp);
     global.lastOperation = newOp;
     
-    updateMaxTimestamp(t1, t2);
+    updateMaxTimestamp(t1 + newOp.sid - global.startTimestamp, t2 + newOp.sid - global.startTimestamp);
     
     global.lastRect = global.currentFile.g.append('rect');
     global.lastRect.datum(newOp);
@@ -365,8 +372,9 @@ function updateOperationTimestamp2(id, t2) {
         return;
     
     global.lastOperation.t2 = t2;
+    var newMaxTimestamp = t2 + global.lastOperation.sid - global.startTimestamp;
     
-    updateMaxTimestamp(t2, t2);
+    updateMaxTimestamp(newMaxTimestamp, newMaxTimestamp);
     
     if (global.lastRect != null) {
         global.lastRect.attr('width', rectDraw.wFunc);
@@ -872,6 +880,10 @@ function showUntil(timestamp) {
         + getSvgWidth() * (1.0 - FILES_PORTION);
         
     translateX(tx);
+}
+
+function translateXToTimestamp(tx) {
+    return -global.translateX * DEFAULT_RATIO / global.scaleX;
 }
 
 function updateHScroll() {
