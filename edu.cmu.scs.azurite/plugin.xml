@@ -97,6 +97,11 @@
                icon="icons/firebug.png"
                style="push">
          </command>
+         <command
+               commandId="edu.cmu.scs.azurite.ui.commands.readPreviousLog"
+               icon="icons/previous.png"
+               style="push">
+         </command>
       </menuContribution>
    </extension>
    <extension
@@ -115,6 +120,11 @@
             defaultHandler="edu.cmu.scs.azurite.ui.handlers.ActivateFirebugLiteHandler"
             id="edu.cmu.scs.azurite.ui.commands.activateFirebugLiteCommand"
             name="Activate Firebug Lite">
+      </command>
+      <command
+            defaultHandler="edu.cmu.scs.azurite.ui.handlers.ReadPreviousLogHandler"
+            id="edu.cmu.scs.azurite.ui.commands.readPreviousLog"
+            name="Read Previous Log">
       </command>
    </extension>
 
