@@ -33,6 +33,9 @@ var HIGHLIGHT_WIDTH = 3;
 
 var INDICATOR_WIDTH = 2;
 
+var SCROLLBAR_WIDTH = 10;
+var SCROLLBAR_DIST_THRESHOLD = 50;
+
 var CHART_MARGINS = {
     left: 10,
     top: 10,
@@ -98,6 +101,24 @@ global.draggableArea = {
     right: 0,
     bottom: 0
 };
+
+global.hscrollArea = {
+    left: 0,
+    top: 0,
+    right: 0,
+    bottom: 0
+};
+
+global.vscrollArea = {
+    left: 0,
+    top: 0,
+    right: 0,
+    bottom: 0
+};
+
+global.draggingHScroll = false;
+global.draggingVScroll = false;
+global.dragStartScrollPos = null;
 
 
 // context menu
@@ -450,10 +471,23 @@ window.onresize = function (e) {
 }
 
 function updateDraggableArea() {
-    global.draggableArea.left = CHART_MARGINS.left + getSvgWidth() * FILES_PORTION;
+    var svgWidth = getSvgWidth();
+    var svgHeight = getSvgHeight();
+    
+    global.draggableArea.left = CHART_MARGINS.left + svgWidth * FILES_PORTION;
     global.draggableArea.top = CHART_MARGINS.top;
-    global.draggableArea.right = getSvgWidth() - CHART_MARGINS.right;
-    global.draggableArea.bottom = getSvgHeight() - CHART_MARGINS.bottom;
+    global.draggableArea.right = CHART_MARGINS.left + svgWidth;
+    global.draggableArea.bottom = CHART_MARGINS.top + svgHeight;
+    
+    global.hscrollArea.left = (CHART_MARGINS.left + CHART_MARGINS.right + svgWidth) * FILES_PORTION + SCROLLBAR_WIDTH;
+    global.hscrollArea.top = CHART_MARGINS.top + CHART_MARGINS.bottom + svgHeight;
+    global.hscrollArea.right = CHART_MARGINS.left + CHART_MARGINS.right + svgWidth - SCROLLBAR_WIDTH;
+    global.hscrollArea.bottom = CHART_MARGINS.top + CHART_MARGINS.bottom + svgHeight + SCROLLBAR_WIDTH;
+    
+    global.vscrollArea.left = CHART_MARGINS.left + CHART_MARGINS.right + svgWidth;
+    global.vscrollArea.top = SCROLLBAR_WIDTH;
+    global.vscrollArea.right = CHART_MARGINS.left + CHART_MARGINS.right + svgWidth + SCROLLBAR_WIDTH;
+    global.vscrollArea.bottom = CHART_MARGINS.top + CHART_MARGINS.bottom + svgHeight - SCROLLBAR_WIDTH;
 }
 
 /******************************************************************
@@ -507,14 +541,18 @@ function initEventHandlers() {
         var mouseX = e.clientX - SVG_WRAPPER_PADDING;
         var mouseY = e.clientY - MENU_PANEL_HEIGHT - SVG_WRAPPER_PADDING;
         
-        if(cmenu.isRightButtonDown || mouseX < global.draggableArea.left || mouseX > global.draggableArea.right || mouseY < global.draggableArea.top || mouseY > global.draggableArea.bottom) {
+        if(cmenu.isRightButtonDown) {
             return;
         }
         
-        if(global.dragging)
-            return;
+        global.dragStart[0] = mouseX;
+        global.dragStart[1] = mouseY;
         
+        // Drag select
+        if (cursorInArea(mouseX, mouseY, global.draggableArea)) {
         global.dragging = true;
+            global.draggingHScroll = false;
+            global.draggingVScroll = false;
         
         if(!cmenu.isCtrlDown) {
             global.selected = [];
@@ -525,32 +563,68 @@ function initEventHandlers() {
             .attr('x', mouseX)
             .attr('y', mouseY);
         
-        global.dragStart[0] = mouseX;
-        global.dragStart[1] = mouseY;
+            return;
+        }
+        // HScroll
+        else if (cursorInArea(mouseX, mouseY, global.hscrollArea)) {
+            var thumbSize = $('#hscroll_thumb').width();
+            var thumbStart = parseInt($('#hscroll_thumb').css('left'));
+            var thumbEnd = thumbStart + thumbSize;
+            
+            var mousePos = mouseX - global.hscrollArea.left;
+            
+            if (mousePos < thumbStart) {
+                showPageBefore();
+                return;
+            } else if (mousePos >= thumbEnd) {
+                showPageAfter();
+                return;
+            } else {
+                global.dragging = false;
+                global.draggingHScroll = true;
+                global.draggingVScroll = false;
+
+                global.dragStartScrollPos = thumbStart;
+            return;
+            }
+        }
+        // VScroll
+        else if (cursorInArea(mouseX, mouseY, global.vscrollArea)) {
+            var thumbSize = $('#vscroll_thumb').height();
+            var thumbStart = parseInt($('#vscroll_thumb').css('top'));
+            var thumbEnd = thumbStart + thumbSize;
+        
+            var mousePos = mouseY - global.vscrollArea.top;
+        
+            if (mousePos < thumbStart) {
+                showPageUp();
+                return;
+            } else if (mousePos >= thumbEnd) {
+                showPageDown();
+                return;
+            } else {
+                global.dragging = false;
+                global.draggingHScroll = false;
+                global.draggingVScroll = true;
+                
+                global.dragStartScrollPos = thumbStart;
+                return;
+            }
+        }
+        
+        global.dragging = false;
+        global.draggingHScroll = false;
+        global.draggingVScroll = false;
     };
 
     document.onmousemove = function (e) {
-        if(!global.dragging)
-            return;
-        
-        var newX, newY;
-        
         var mouseX = e.clientX - SVG_WRAPPER_PADDING;
         var mouseY = e.clientY - MENU_PANEL_HEIGHT - SVG_WRAPPER_PADDING;
         
-        if(mouseX < global.draggableArea.left)
-            newX = global.draggableArea.left;
-        else if(mouseX > global.draggableArea.right) 
-            newX = global.draggableArea.right;
-        else
-            newX = mouseX;
-            
-        if(mouseY < global.draggableArea.top)
-            newY = global.draggableArea.top;
-        else if(mouseY > global.draggableArea.bottom)
-            newY = global.draggableArea.bottom;
-        else
-            newY = mouseY;
+        if (global.dragging) {
+            var clampedPos = clampInArea(mouseX, mouseY, global.draggableArea);
+            var newX = clampedPos[0];
+            var newY = clampedPos[1];
         
         if(newX - global.dragStart[0] < 0) {
             d3.select('.selection_box')
@@ -574,6 +648,50 @@ function initEventHandlers() {
         
         d3.select('.selection_box')
             .attr('display', 'block');
+        }
+        // HScroll
+        else if (global.draggingHScroll) {
+            var mousePos = mouseX - global.dragStart[0] + global.dragStartScrollPos;
+            
+            // If the mouse position is too far from the scrollbar,
+            // then return to the original position.
+            if (mouseY < global.hscrollArea.top - SCROLLBAR_DIST_THRESHOLD ||
+                mouseY >= global.hscrollArea.bottom + SCROLLBAR_DIST_THRESHOLD) {
+                
+                mousePos = global.dragStartScrollPos;
+            }
+            
+            var trackSize = $('#hscroll_thumbtrack').width();
+            var thumbSize = $('#hscroll_thumb').width();
+            
+            var ratio = mousePos / (trackSize - thumbSize);
+            ratio = clamp( ratio, 0.0, 1.0 );
+            
+            var newTx = getMinTranslateX() * ratio;
+            translateX( newTx );
+        }
+        // VScroll
+        else if (global.draggingVScroll) {
+            var mousePos = mouseY - global.dragStart[1] + global.dragStartScrollPos;
+            
+            // If the mouse position is too far from the scrollbar,
+            // then return to the original position.
+            if (mouseX < global.vscrollArea.left - SCROLLBAR_DIST_THRESHOLD ||
+                mouseX >= global.vscrollArea.right + SCROLLBAR_DIST_THRESHOLD) {
+                
+                mousePos = global.dragStartScrollPos;
+            }
+            
+            var trackSize = $('#vscroll_thumbtrack').height();
+            var thumbSize = $('#vscroll_thumb').height();
+            
+            var ratio = mousePos / (trackSize - thumbSize);
+            ratio = clamp( ratio, 0.0, 1.0 );
+            
+            var newTy = getMinTranslateY() * ratio;
+            newTy = Math.round( newTy );
+            translateY( newTy );
+        }
     };
     
     document.onmouseup = function (e) {
@@ -582,9 +700,7 @@ function initEventHandlers() {
             return;
         }
     
-        if(!global.dragging)
-            return;
-        
+        if(global.dragging) {
         d3.select('.selection_box')
             .attr('display', 'none');
         
@@ -610,10 +726,24 @@ function initEventHandlers() {
         }
         
         addSelections(x1, y1, x2, y2);
+            global.dragStart = [];
+        }
     
         global.dragging = false;   
-        global.dragStart = [];
+        global.draggingHScroll = false;
+        global.draggingVScroll = false;
     };
+}
+ 
+function cursorInArea(x, y, area) {
+    return  x >= area.left &&
+            x < area.right &&
+            y >= area.top &&
+            y < area.bottom;
+}
+
+function clampInArea(x, y, area) {
+    return [clamp(x, area.left, area.right - 1), clamp(y, area.top, area.bottom - 1)];
 }
  
 function showContextMenu(event) {   
@@ -729,6 +859,16 @@ function showAfter() {
     scrollRight( -100 );
 }
 
+function showPageBefore() {
+    var extent = getSvgWidth() * (1.0 - FILES_PORTION);
+    scrollRight( extent * 0.9 );
+}
+
+function showPageAfter() {
+    var extent = getSvgWidth() * (1.0 - FILES_PORTION);
+    scrollRight( -extent * 0.9 );
+}
+
 function scrollRight(pixels) {
     translateX( global.translateX + pixels );
 }
@@ -747,6 +887,16 @@ function showUp() {
 
 function showDown() {
     translateY( global.translateY - 1 );
+}
+
+function showPageUp() {
+    var extent = Math.floor(getSvgHeight() / (ROW_HEIGHT * global.scaleY));
+    translateY( global.translateY + extent - 1 );
+}
+
+function showPageDown() {
+    var extent = Math.floor(getSvgHeight() / (ROW_HEIGHT * global.scaleY));
+    translateY( global.translateY - extent + 1);
 }
 
 function undo() {
@@ -889,7 +1039,7 @@ function translateXToTimestamp(tx) {
 function updateHScroll() {
     var trackSize = $('#hscroll_thumbtrack').width();
     
-    var extent = getSvgWidth() * (1.0 - FILES_PORTION);
+	var extent = getSvgWidth() * (1.0 - FILES_PORTION);
     var thumbSize = Math.max(Math.floor(extent * trackSize / (extent - getMinTranslateX())), MIN_SCROLL_THUMB_SIZE);
     
     var thumbRelativePos = global.translateX / getMinTranslateX();
