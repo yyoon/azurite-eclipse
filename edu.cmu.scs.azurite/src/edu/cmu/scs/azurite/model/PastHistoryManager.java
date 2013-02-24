@@ -44,6 +44,10 @@ public class PastHistoryManager {
 		return _instance;
 	}
 	
+	public Deque<Events> getPastEvents() {
+		return mPastEvents;
+	}
+	
 	public int readPastLogs(int count) {
 		if (count <= 0) {
 			throw new IllegalArgumentException("Count should be positive!");
@@ -104,14 +108,14 @@ public class PastHistoryManager {
 		}
 		
 		if (!tempEvents.isEmpty()) {
-			// Notify the RuntimeHistoryManager.
-			RuntimeHistoryManager.getInstance().pastLogsRead(tempEvents);
-			
 			// Add in reverse order.
 			Collections.reverse(tempEvents);
 			for (Events events : tempEvents) {
 				mPastEvents.addFirst(events);
 			}
+			
+			// Notify the RuntimeHistoryManager.
+			RuntimeHistoryManager.getInstance().pastLogsRead(tempEvents);
 		}
 		
 		return 0;

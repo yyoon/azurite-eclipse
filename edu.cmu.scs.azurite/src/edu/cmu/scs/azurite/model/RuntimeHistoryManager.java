@@ -1,6 +1,7 @@
 package edu.cmu.scs.azurite.model;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -94,6 +95,9 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 	
 	private boolean mStarted;
 	
+	// Keep the document changes made in the current session separately.
+	private Events mCurrentSessionEvents;
+	
 	/**
 	 * Basic constructor. Only use this public constructor for testing purposes!
 	 * Otherwise, use <code>getInstance</code> static method instead.
@@ -106,6 +110,11 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		mScheduledTasks = new ArrayList<Runnable>();
 		
 		mStarted = false;
+		
+		long startTimestamp = EventRecorder.getInstance().getStartTimestamp();
+		mCurrentSessionEvents = new Events(Collections.<ICommand> emptyList(),
+				"Current Session", Long.toString(startTimestamp), "",
+				startTimestamp);
 	}
 
 	private void clearData() {
@@ -259,7 +268,8 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 	private void setCurrentFileKey(FileKey newFileKey) {
 		mCurrentFileKey = newFileKey;
 	}
-	
+
+	@Override
 	public void activeFileChanged(FileOpenCommand foc) {
 		activeFileChanged(foc.getProjectName(), foc.getFilePath(), foc.getSnapshot());
 	}
@@ -288,14 +298,19 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		}
 	}
 
+	@Override
 	public void documentChanged(BaseDocumentChangeEvent docChange) {
 		fireDocumentChangeAddedEvent(docChange);
+		
+		mCurrentSessionEvents.addCommand(docChange);
 	}
 	
+	@Override
 	public void documentChangeUpdated(BaseDocumentChangeEvent docChange) {
 		fireDocumentChangeUpdatedEvent(docChange);
 	}
 	
+	@Override
 	public void documentChangeFinalized(BaseDocumentChangeEvent docChange) {
 		addRuntimeDCFromOriginalDC(docChange);
 	}
@@ -388,8 +403,13 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		// Clear the entire history.
 		clearData();
 		
+		// Current session data should also be included.
+		List<Events> listAllEvents = new ArrayList<Events>();
+		listAllEvents.addAll(PastHistoryManager.getInstance().getPastEvents());
+		listAllEvents.add(mCurrentSessionEvents);
+		
 		// Add document changes from the history.
-		for (Events events : listEvents) {
+		for (Events events : listAllEvents) {
 			List<ICommand> commands = events.getCommands();
 			for (ICommand command : commands) {
 				if (!(command instanceof BaseDocumentChangeEvent)) {
@@ -406,6 +426,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		}
 
 		// Notify the listeners (mainly, Timeline View)
+		// Timeline view only needs the events newly added.
 		firePastLogsReadEvent(listEvents);
 	}
 	
