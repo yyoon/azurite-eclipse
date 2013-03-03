@@ -497,18 +497,6 @@ function updateDraggableArea() {
  
 function initContextMenu() {
     global.divContext = document.getElementById('context_menu');
-    
-    global.divContext.onmouseover = function() { mouseOverContext = true; };
-    global.divContext.onmouseout = function(e) {
-        e = event.toElement || event.relatedTarget;
-        
-        while(e && e.parentNode && e.parentNode != window) {
-            if(e.parentNode == this || e == this) {
-                return;
-            }
-            e = e.parentNode;
-        }
-    };
 }
 
 function initEventHandlers() {
@@ -533,10 +521,10 @@ function initEventHandlers() {
             hideContextMenu();
         }
         
-        if ("which" in event) { // Gecko (Firefox), WebKit (Safari/Chrome) & Opera
-            cmenu.isRightButtonDown = event.which == 3; 
-        } else if ("button" in event) { // IE, Opera 
-            cmenu.isRightButtonDown = event.button == 2; 
+        if ("which" in e) { // Gecko (Firefox), WebKit (Safari/Chrome) & Opera
+            cmenu.isRightButtonDown = e.which == 3; 
+        } else if ("button" in e) { // IE, Opera 
+            cmenu.isRightButtonDown = e.button == 2; 
         }
         
         var mouseX = e.clientX - SVG_WRAPPER_PADDING;
