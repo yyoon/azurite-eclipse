@@ -210,13 +210,35 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 
 	@Override
 	public void activeFileChanged(FileOpenCommand foc) {
-		activeFileChanged(foc.getProjectName(), foc.getFilePath(), foc.getSnapshot());
+		activeFileChanged(foc.getProjectName(), foc.getFilePath(),
+				foc.getSnapshot());
+		
+		// If there was a change between the two snapshots..
+		// This can only happen for the current session, because the past log
+		// files don't have the prevSnapshot value.
+		if (foc.getSnapshot() != null && foc.getPrevSnapshot() != null) {
+			PastHistoryManager.getInstance().injectDiffDCs(getCurrentFileKey(),
+					foc.getPrevSnapshot(), foc.getSnapshot(),	// before and after.
+					foc.getSessionId(), foc.getTimestamp(),		// sessionid, timestamp.
+					new IAddCommand() {							// what to do with the created diffs.
+						@Override
+						public void addCommand(ICommand command) {
+							if (command instanceof BaseDocumentChangeEvent) {
+								BaseDocumentChangeEvent docChange =
+										(BaseDocumentChangeEvent) command;
+								documentChanged(docChange);
+								documentChangeFinalized(docChange);
+							}
+						}
+					});
+		}
 	}
 
 	/**
 	 * Simply updates the current file path.
 	 */
-	public void activeFileChanged(String projectName, String filePath, String snapshot) {
+	public void activeFileChanged(String projectName, String filePath,
+			String snapshot) {
 		FileKey key = new FileKey(projectName, filePath);
 		setCurrentFileKey(key);
 		

@@ -222,7 +222,7 @@ public class PastHistoryManager implements DocumentChangeListener {
 		mPastEvents.addFirst(events);
 	}
 	
-	private void injectDiffDCs(FileKey key, String before,
+	public void injectDiffDCs(FileKey key, String before,
 			String after, long sessionId, long timestamp, IAddCommand addCommand) {
 		if (before == null || after == null) {
 			throw new IllegalArgumentException("Cannot process null strings.");
