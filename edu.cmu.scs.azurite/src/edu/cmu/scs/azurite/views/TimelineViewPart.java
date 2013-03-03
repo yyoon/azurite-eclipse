@@ -63,7 +63,6 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 			URL indexUrl = FileLocator.toFileURL(Platform.getBundle(
 					"edu.cmu.scs.azurite").getEntry("/html/index.html"));
 			browser.setUrl(indexUrl.toString());
-//			browser.setUrl("http://stackoverflow.com/questions/12003602/eclipse-swt-browser-and-firebug-lite");
 		} catch (IOException e1) {
 			e1.printStackTrace();
 		}
