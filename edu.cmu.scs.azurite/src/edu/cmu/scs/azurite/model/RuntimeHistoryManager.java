@@ -293,7 +293,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		fireRuntimeDCAddedEvent(runtimeDocChange);
 	}
 	
-	public List<RuntimeDC> filterDocumentChangesByIds(final List<Integer> ids) {
+	public List<RuntimeDC> filterDocumentChangesByIds(final List<OperationId> ids) {
 		if (ids == null) {
 			throw new IllegalArgumentException();
 		}
@@ -301,7 +301,11 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		return filterDocumentChanges(new IRuntimeDCFilter() {
 			@Override
 			public boolean filter(RuntimeDC runtimeDC) {
-				return ids.contains(runtimeDC.getOriginal().getCommandIndex());
+				OperationId oid = new OperationId(
+						runtimeDC.getOriginal().getSessionId(),
+						runtimeDC.getOriginal().getCommandIndex());
+				
+				return ids.contains(oid);
 			}
 		});
 	}

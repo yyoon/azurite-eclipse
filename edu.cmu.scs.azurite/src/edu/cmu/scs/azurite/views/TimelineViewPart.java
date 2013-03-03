@@ -19,6 +19,7 @@ import org.eclipse.ui.part.ViewPart;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.model.FileKey;
+import edu.cmu.scs.azurite.model.OperationId;
 import edu.cmu.scs.azurite.model.RuntimeDCListener;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
@@ -108,25 +109,34 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 				return "fail";
 			}
 			
-			Object[] selected = (Object[])arguments[0];
-			
-			// Convert everything into integer.
-			List<Integer> ids = new ArrayList<Integer>();
-			for (Object element : selected) {
-				if (element instanceof Number) {
-					ids.add(((Number)element).intValue());
+			try {
+				Object[] selected = (Object[])arguments[0];
+				
+				// Convert everything into integer.
+				List<OperationId> ids = new ArrayList<OperationId>();
+				for (Object element : selected) {
+					if (!(element instanceof Object[])) { continue; }
+					
+					Object[] idComponents = (Object[])element;
+					if (idComponents.length == 2 &&
+							idComponents[0] instanceof Number &&
+							idComponents[1] instanceof Number) {
+						Number sid = (Number)idComponents[0];
+						Number id = (Number)idComponents[1];
+						
+						ids.add(new OperationId(sid.longValue(), id.longValue()));
+					}
 				}
+				
+				SelectiveUndoEngine.getInstance().doSelectiveUndo(
+						RuntimeHistoryManager.getInstance().filterDocumentChangesByIds(ids));
+				
+				return "ok";
 			}
-			
-			SelectiveUndoEngine.getInstance().doSelectiveUndo(
-					RuntimeHistoryManager.getInstance().filterDocumentChangesByIds(ids));
-			
-/*			for(int i = 0; i < selected.length; i++){
-				System.out.print(selected[i].toString() + ", ");
+			catch (Exception e) {
+				e.printStackTrace();
+				return "fail";
 			}
-			System.out.println("");*/
-			
-			return "ok";
 		}
 
 	}

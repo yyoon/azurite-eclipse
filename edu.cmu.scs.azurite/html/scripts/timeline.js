@@ -215,6 +215,7 @@ function File(path, fileName) {
     this.operations = [];
     
     this.g = svg.subRects.append('g');
+    this.g.attr('class', 'rectgroup');
 }
 
 function OperationId(sid, id) {
@@ -905,7 +906,7 @@ function undo() {
     var result = [];
     
     for(var i = 0; i < global.selected.length; ++i) {
-        result.push(global.selected[i].id);
+        result.push([global.selected[i].sid, global.selected[i].id]);
     }
     
     if(result.length > 0)
@@ -1122,8 +1123,8 @@ function addRandomOperations(count) {
 	
 	for (i = 0; i < count; ++i) {
 		++id;
-		var t1 = t + Math.floor(Math.random() * 25000) + 5000;
-		var t2 = t1 + Math.floor(Math.random() * 5000) + 5000;
+		var t1 = t + Math.floor(Math.random() * 15000) + 1000;
+		var t2 = t1 + Math.floor(Math.random() * 1000) + 1000;
 		t = t2;
         
         var y1 = Math.floor(Math.random() * 100);
