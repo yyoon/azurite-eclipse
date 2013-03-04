@@ -1,7 +1,9 @@
 package edu.cmu.scs.azurite.jface.dialogs;
 
+import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +31,7 @@ import edu.cmu.scs.azurite.compare.PartialCodeCompareLabelProvider;
 import edu.cmu.scs.azurite.compare.SimpleCompareItem;
 import edu.cmu.scs.azurite.model.undo.Chunk;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
+import edu.cmu.scs.fluorite.commands.ICommand;
 
 public class PartialCodeHistoryDialog extends TitleAreaDialog {
 	
@@ -78,7 +81,8 @@ public class PartialCodeHistoryDialog extends TitleAreaDialog {
 		
 		mSelectionText = fileContent.substring(selectionStart, selectionEnd);
 		
-		mCurrentItem = new SimpleCompareItem("Current Version", mSelectionText, false);
+		mCurrentItem = new SimpleCompareItem("[" + (mInvolvedDCs.size() + 1)
+				+ "] Current Version", mSelectionText, false);
 		mHistoryItems = new HashMap<Integer, SimpleCompareItem>();
 		
 		setHelpAvailable(false);
@@ -148,8 +152,12 @@ public class PartialCodeHistoryDialog extends TitleAreaDialog {
 				Math.min(endOffset - mSelectionStart, mSelectionLength),
 				undoResult);
 		
-		SimpleCompareItem historyItem = new SimpleCompareItem("Version: "
-				+ version, historyContent.toString(), false);
+		ICommand originalDC = mInvolvedDCs.get(version).getOriginal();
+		Date date = new Date(originalDC.getSessionId() + originalDC.getTimestamp());
+		String dateString = DateFormat.getDateTimeInstance().format(date);
+		SimpleCompareItem historyItem = new SimpleCompareItem(
+				"[" + version + "] " + dateString,
+				historyContent.toString(), false);
 		
 		// Add to the cache.
 		mHistoryItems.put(version, historyItem);
