@@ -2,7 +2,7 @@ package edu.cmu.scs.azurite.model.undo;
 
 import static org.junit.Assert.assertEquals;
 
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.jface.text.Document;
@@ -11,12 +11,14 @@ import org.junit.Before;
 import org.junit.Test;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
+import edu.cmu.scs.azurite.model.OperationId;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.fluorite.commands.AbstractCommand;
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 import edu.cmu.scs.fluorite.commands.Delete;
 import edu.cmu.scs.fluorite.commands.Insert;
 import edu.cmu.scs.fluorite.commands.Replace;
+import edu.cmu.scs.fluorite.model.EventRecorder;
 
 public class SelectiveUndoTest {
 	
@@ -211,8 +213,14 @@ public class SelectiveUndoTest {
 	}
 	
 	private void undo(Integer ... indices) {
+		long sessionId = EventRecorder.getInstance().getStartTimestamp();
+		List<OperationId> oids = new ArrayList<OperationId>();
+		for (Integer id : indices) {
+			oids.add(new OperationId(sessionId, id));
+		}
+		
 		List<RuntimeDC> runtimeDocChanges = manager
-				.filterDocumentChangesByIds(Arrays.asList(indices));
+				.filterDocumentChangesByIds(oids);
 		
 		engine.doSelectiveUndo(runtimeDocChanges, document);
 	}

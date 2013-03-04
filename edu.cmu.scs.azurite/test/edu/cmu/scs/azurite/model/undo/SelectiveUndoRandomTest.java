@@ -12,12 +12,14 @@ import org.junit.Before;
 import org.junit.Test;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
+import edu.cmu.scs.azurite.model.OperationId;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.fluorite.commands.AbstractCommand;
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 import edu.cmu.scs.fluorite.commands.Delete;
 import edu.cmu.scs.fluorite.commands.Insert;
 import edu.cmu.scs.fluorite.commands.Replace;
+import edu.cmu.scs.fluorite.model.EventRecorder;
 
 public class SelectiveUndoRandomTest {
 	
@@ -65,14 +67,16 @@ public class SelectiveUndoRandomTest {
 				docChanges.add(operation);
 				manager.documentChangeFinalized(operation);
 				
+				long sessionId = EventRecorder.getInstance().getStartTimestamp();
+				
 				// Try backout!
 				for (int j = 0; j <= i; ++j) {
 					Document docCopy = new Document(doc.get());
 					
 					int count = manager.getRuntimeDocumentChanges().size();
-					List<Integer> ids = new ArrayList<Integer>();
+					List<OperationId> ids = new ArrayList<OperationId>();
 					for (int k = count - j - 1; k < count; ++k) {
-						ids.add(k);
+						ids.add(new OperationId(sessionId, k));
 					}
 					
 					List<RuntimeDC> toBeUndone = 
