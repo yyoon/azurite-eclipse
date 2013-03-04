@@ -198,8 +198,11 @@ public class PastHistoryManager implements DocumentChangeListener {
 			}
 			
 			BaseDocumentChangeEvent docChange = (BaseDocumentChangeEvent)command;
-			String updatedContent = docChange.applyToString(localFinalSnapshots.get(curFileKey));
-			localFinalSnapshots.put(curFileKey, updatedContent);
+			String originalContent = localFinalSnapshots.get(curFileKey);
+			if (originalContent != null || docChange instanceof FileOpenCommand) {
+				String updatedContent = docChange.applyToString(originalContent);
+				localFinalSnapshots.put(curFileKey, updatedContent);
+			}
 		}
 		
 		// Inject intermediate diffs.
