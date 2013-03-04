@@ -81,7 +81,7 @@ public class PartialCodeHistoryDialog extends TitleAreaDialog {
 		
 		mSelectionText = fileContent.substring(selectionStart, selectionEnd);
 		
-		mCurrentItem = new SimpleCompareItem("[" + (mInvolvedDCs.size() + 1)
+		mCurrentItem = new SimpleCompareItem("[" + mInvolvedDCs.size()
 				+ "] Current Version", mSelectionText, false);
 		mHistoryItems = new HashMap<Integer, SimpleCompareItem>();
 		
@@ -155,9 +155,9 @@ public class PartialCodeHistoryDialog extends TitleAreaDialog {
 		ICommand originalDC = mInvolvedDCs.get(version).getOriginal();
 		Date date = new Date(originalDC.getSessionId() + originalDC.getTimestamp());
 		String dateString = DateFormat.getDateTimeInstance().format(date);
-		SimpleCompareItem historyItem = new SimpleCompareItem(
-				"[" + version + "] " + dateString,
-				historyContent.toString(), false);
+		SimpleCompareItem historyItem = new SimpleCompareItem("[" + version
+				+ "] " + dateString + " (id:" + originalDC.getCommandIndex()
+				+ ")", historyContent.toString(), false);
 		
 		// Add to the cache.
 		mHistoryItems.put(version, historyItem);
