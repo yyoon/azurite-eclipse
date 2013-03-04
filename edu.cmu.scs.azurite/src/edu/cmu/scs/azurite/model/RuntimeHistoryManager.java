@@ -233,6 +233,8 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 						}
 					});
 		}
+		
+		mCurrentSessionEvents.addCommand(foc);
 	}
 
 	/**
