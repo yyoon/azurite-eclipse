@@ -55,18 +55,8 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 		me = this;
 		
 		browser = new Browser(parent, SWT.NONE);
-		new UndoFunction(browser, BROWSER_FUNC_PREFIX + "selectiveUndo");
-		new InitializeFunction(browser, BROWSER_FUNC_PREFIX + "initialize");
-		new LogFunction(browser, BROWSER_FUNC_PREFIX + "log");
-		
-		// Retrieve the full URL of /html/index.html in our project.
-		try {
-			URL indexUrl = FileLocator.toFileURL(Platform.getBundle(
-					"edu.cmu.scs.azurite").getEntry("/html/index.html"));
-			browser.setUrl(indexUrl.toString());
-		} catch (IOException e1) {
-			e1.printStackTrace();
-		}
+		addBrowserFunctions();
+		moveToIndexPage();
 		
 		browser.addProgressListener(new ProgressListener() {
             
@@ -79,6 +69,23 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 		
 		// Register to the EventRecorder.
 		RuntimeHistoryManager.getInstance().addRuntimeDocumentChangeListener(this);
+	}
+
+	private void moveToIndexPage() {
+		// Retrieve the full URL of /html/index.html in our project.
+		try {
+			URL indexUrl = FileLocator.toFileURL(Platform.getBundle(
+					"edu.cmu.scs.azurite").getEntry("/html/index.html"));
+			browser.setUrl(indexUrl.toString());
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		}
+	}
+
+	private void addBrowserFunctions() {
+		new UndoFunction(browser, BROWSER_FUNC_PREFIX + "selectiveUndo");
+		new InitializeFunction(browser, BROWSER_FUNC_PREFIX + "initialize");
+		new LogFunction(browser, BROWSER_FUNC_PREFIX + "log");
 	}
 
 	@Override
@@ -341,7 +348,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 	}
 	
 	public void refresh() {
-		browser.refresh();
+		moveToIndexPage();
 	}
 	
 }
