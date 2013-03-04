@@ -35,7 +35,7 @@ public abstract class BaseCompareItem implements IStreamContentAccessor, ITypedE
 	}
 
 	public String getType() {
-		return "timelinedJava";
+		return "java";
 	}
 
 	public boolean isEditable() {
