@@ -113,7 +113,7 @@ public class ConflictResolutionDialog extends TitleAreaDialog {
 		// Select the first alternative
 		selectAlternative(0);
 
-		return parent;
+		return composite;
 	}
 
 	private Composite createMainArea(Composite parent) {

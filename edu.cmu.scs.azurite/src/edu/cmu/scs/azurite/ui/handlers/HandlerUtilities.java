@@ -11,14 +11,14 @@ import org.eclipse.ui.texteditor.AbstractTextEditor;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
-import edu.cmu.scs.fluorite.util.Utilities;
+import edu.cmu.scs.fluorite.model.EventRecorder;
 
 public class HandlerUtilities {
 
 	public static List<RuntimeDC> getOperationsInSelectedRegion() {
 		try {
 			// get active editor
-			IEditorPart editorPart = Utilities.getActiveEditor();
+			IEditorPart editorPart = EventRecorder.getInstance().getEditor();
 
 			if (editorPart instanceof AbstractTextEditor) {
 				// check if there is text selection
@@ -43,6 +43,34 @@ public class HandlerUtilities {
 						.filterDocumentChangesByRegion(offset, offset + length);
 				
 				return dcs;
+			}
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+		return null;
+	}
+	
+	public static ITextSelection getSelectedRegion() {
+		try {
+			// get active editor
+			IEditorPart editorPart = EventRecorder.getInstance().getEditor();
+
+			if (editorPart instanceof AbstractTextEditor) {
+				// check if there is text selection
+				IEditorSite iEditorSite = editorPart.getEditorSite();
+				if (iEditorSite != null) {
+					ISelectionProvider selectionProvider = iEditorSite
+							.getSelectionProvider();
+					if (selectionProvider != null) {
+						ISelection iSelection = selectionProvider
+								.getSelection();
+						if (iSelection instanceof ITextSelection) {
+							return (ITextSelection)iSelection;
+						}
+					}
+				}
 			}
 		}
 		catch (Exception e) {

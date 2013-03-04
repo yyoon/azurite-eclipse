@@ -203,7 +203,7 @@ public class SelectiveUndoEngine {
 		return Collections.unmodifiableList(result);
 	}
 	
-	private String doSelectiveUndoChunkWithoutConflicts(
+	public String doSelectiveUndoChunkWithoutConflicts(
 			Chunk chunk, String initialContent) {
 		
 		int initialOffset = chunk.getStartOffset();

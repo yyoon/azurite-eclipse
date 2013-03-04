@@ -185,6 +185,11 @@
                icon="icons/firebug.png"
                style="push">
          </command>
+         <command
+               commandId="edu.cmu.scs.azurite.ui.commands.launchPartialCodeHistory"
+               icon="icons/azurite.gif"
+               style="push">
+         </command>
       </menuContribution>
    </extension>
    <extension
@@ -223,6 +228,11 @@
             defaultHandler="edu.cmu.scs.azurite.ui.handlers.RefreshTimelineHandler"
             id="edu.cmu.scs.azurite.ui.commands.refreshTimeline"
             name="Refresh Timeline">
+      </command>
+      <command
+            defaultHandler="edu.cmu.scs.azurite.ui.handlers.LaunchPartialCodeHistoryHandler"
+            id="edu.cmu.scs.azurite.ui.commands.launchPartialCodeHistory"
+            name="Launch Partial Code History">
       </command>
    </extension>
 
