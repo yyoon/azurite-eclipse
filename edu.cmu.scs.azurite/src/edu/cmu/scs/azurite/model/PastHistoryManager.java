@@ -16,6 +16,7 @@ import name.fraser.neil.plaintext.diff_match_patch;
 import name.fraser.neil.plaintext.diff_match_patch.Diff;
 import edu.cmu.scs.azurite.commands.diff.DiffDelete;
 import edu.cmu.scs.azurite.commands.diff.DiffInsert;
+import edu.cmu.scs.fluorite.commands.AbstractCommand;
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 import edu.cmu.scs.fluorite.commands.FileOpenCommand;
 import edu.cmu.scs.fluorite.commands.ICommand;
@@ -222,8 +223,9 @@ public class PastHistoryManager implements DocumentChangeListener {
 		mPastEvents.addFirst(events);
 	}
 	
-	public void injectDiffDCs(FileKey key, String before,
-			String after, long sessionId, long timestamp, IAddCommand addCommand) {
+	public void injectDiffDCs(FileKey key, String before, String after,
+			long sessionId, long timestamp, boolean autoAssignId,
+			IAddCommand addCommand) {
 		if (before == null || after == null) {
 			throw new IllegalArgumentException("Cannot process null strings.");
 		}
@@ -232,43 +234,54 @@ public class PastHistoryManager implements DocumentChangeListener {
 		LinkedList<Diff> diffs = dmp.diff_main(before, after);
 		int curOffset = 0;
 		int curLength = before.length();
-		for (Diff diff : diffs) {
-			switch (diff.operation) {
-				case INSERT: {
-					DiffInsert di = new DiffInsert(key, curOffset, diff.text, null);
-					di.setSessionId(sessionId);
-					di.setTimestamp(timestamp);
-					di.setTimestamp2(timestamp);
+		
+		boolean incrementCommandID = AbstractCommand.getIncrementCommandID();
+		try {
+			if (autoAssignId == false) {
+				AbstractCommand.setIncrementCommandID(false);
+			}
+			
+			for (Diff diff : diffs) {
+				switch (diff.operation) {
+					case INSERT: {
+						DiffInsert di = new DiffInsert(key, curOffset, diff.text, null);
+						di.setSessionId(sessionId);
+						di.setTimestamp(timestamp);
+						di.setTimestamp2(timestamp);
+						
+						curOffset += diff.text.length();
+						curLength += diff.text.length();
+						
+						di.setDocLength(curLength);
+						
+						addCommand.addCommand(di);
+						break;
+					}
 					
-					curOffset += diff.text.length();
-					curLength += diff.text.length();
+					case DELETE: {
+						DiffDelete dd = new DiffDelete(key, curOffset,
+								diff.text.length(), -1, -1, diff.text, null);
+						dd.setSessionId(sessionId);
+						dd.setTimestamp(timestamp);
+						dd.setTimestamp2(timestamp);
+						
+						curLength -= diff.text.length();
+						
+						dd.setDocLength(curLength);
+						
+						addCommand.addCommand(dd);
+						break;
+					}
 					
-					di.setDocLength(curLength);
-					
-					addCommand.addCommand(di);
-					break;
-				}
-				
-				case DELETE: {
-					DiffDelete dd = new DiffDelete(key, curOffset,
-							diff.text.length(), -1, -1, diff.text, null);
-					dd.setSessionId(sessionId);
-					dd.setTimestamp(timestamp);
-					dd.setTimestamp2(timestamp);
-					
-					curLength -= diff.text.length();
-					
-					dd.setDocLength(curLength);
-					
-					addCommand.addCommand(dd);
-					break;
-				}
-				
-				case EQUAL: {
-					curOffset += diff.text.length();
-					break;
+					case EQUAL: {
+						curOffset += diff.text.length();
+						break;
+					}
 				}
 			}
+		}
+		finally {
+			AbstractCommand.setIncrementCommandID(incrementCommandID);
 		}
 	}
 
@@ -289,13 +302,19 @@ public class PastHistoryManager implements DocumentChangeListener {
 			
 			if (!elem.getSnapshot().equals(finalContent)) {
 				injectDiffDCs(key, finalContent, elem.getSnapshot(),
-						elem.getSessionId(), elem.getTimestamp(),
+						elem.getSessionId(), elem.getTimestamp(), false,
 						new IAddCommand() {
-					@Override
-					public void addCommand(ICommand command) {
-						events.addCommand(command);
-					}
-				});
+							@Override
+							public void addCommand(ICommand command) {
+								ICommand lastCommand = events.getCommands()
+										.get(events.getCommands().size() - 1);
+
+								// Fake the command index.
+								command.setCommandIndex(lastCommand
+										.getCommandIndex() + 1);
+								events.addCommand(command);
+							}
+						});
 			}
 		}
 	}

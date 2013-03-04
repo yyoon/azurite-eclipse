@@ -220,6 +220,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 			PastHistoryManager.getInstance().injectDiffDCs(getCurrentFileKey(),
 					foc.getPrevSnapshot(), foc.getSnapshot(),	// before and after.
 					foc.getSessionId(), foc.getTimestamp(),		// sessionid, timestamp.
+					true,										// auto assign command id in this case.
 					new IAddCommand() {							// what to do with the created diffs.
 						@Override
 						public void addCommand(ICommand command) {

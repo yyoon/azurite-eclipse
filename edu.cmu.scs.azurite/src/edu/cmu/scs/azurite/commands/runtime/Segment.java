@@ -481,6 +481,12 @@ public class Segment {
 					else if (lhs.getEffectiveEndOffset() > rhs.getEffectiveEndOffset()) {
 						return 1;
 					}
+					else if (lhs.getOwner().getOriginal().getSessionId() < rhs.getOwner().getOriginal().getSessionId()) {
+						return -1;
+					}
+					else if (lhs.getOwner().getOriginal().getSessionId() > rhs.getOwner().getOriginal().getSessionId()) {
+						return 1;
+					}
 					else if (lhs.getOwner().getOriginal().getCommandIndex() < rhs.getOwner().getOriginal().getCommandIndex()) {
 						return -1;
 					}
