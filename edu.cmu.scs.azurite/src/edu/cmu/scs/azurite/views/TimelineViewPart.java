@@ -336,4 +336,12 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 		browser.execute("showUntil(global.maxTimestamp);");
 	}
 	
+	public void executeJSCode(String codeToExecute) {
+		browser.execute(codeToExecute);
+	}
+	
+	public void refresh() {
+		browser.refresh();
+	}
+	
 }

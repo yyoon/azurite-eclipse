@@ -10,7 +10,7 @@ document.onselectstart = function () { return false };
 /**
  * Constants. (Always use UPPER_CASE.)
  */
-var MENU_PANEL_HEIGHT = 75;
+var MENU_PANEL_HEIGHT = 0;
 var SVG_WRAPPER_PADDING = 5;
 
 var TYPE_INSERT = 0;
@@ -125,7 +125,7 @@ global.dragStartScrollPos = null;
 var cmenu = {};
 cmenu.isContextMenuVisible = false;
 cmenu.isRightButtonDown = false;
-cmenu.isCtrlDown = false;
+global.isCtrlDown = false;
 
 
 /**
@@ -501,18 +501,45 @@ function initContextMenu() {
 
 function initEventHandlers() {
     svg.main.on("mousewheel", function () {
-        scrollRight( d3.event.wheelDelta / 10 );
+        if (d3.event.shiftKey && d3.event.ctrlKey) {
+            if (d3.event.wheelDelta > 0) {
+                fileZoomIn();
+            } else {
+                fileZoomOut();
+            }
+        }
+        else if (d3.event.shiftKey) {
+            if (d3.event.wheelDelta > 0) {
+                showUp();
+            } else {
+                showDown();
+            }
+        }
+        else if (d3.event.ctrlKey) {
+            if (d3.event.wheelDelta < 0) {
+                barZoomOut();
+            }
+            else {
+                barZoomIn();
+            }
+            
+            d3.event.preventDefault();
+            d3.event.stopPropagation();
+        }
+        else {
+            scrollRight( d3.event.wheelDelta / 10 );
+        }
     });
     
     document.addEventListener("keydown", function(e) {
         if(e.keyCode == 17) 
-            cmenu.isCtrlDown = true;
+            global.isCtrlDown = true;
     }
     , false);
     
     document.addEventListener("keyup", function(e) {
         if(e.keyCode == 17)
-            cmenu.isCtrlDown = false;
+            global.isCtrlDown = false;
     }
     , false);
     
@@ -543,7 +570,7 @@ function initEventHandlers() {
             global.draggingHScroll = false;
             global.draggingVScroll = false;
         
-        if(!cmenu.isCtrlDown) {
+        if(!global.isCtrlDown) {
             global.selected = [];
             svg.subRects.selectAll('rect.highlight_rect').remove();
         }

@@ -93,13 +93,96 @@
             allPopups="false"
             locationURI="toolbar:edu.cmu.scs.azurite.views.TimelineViewPart">
          <command
-               commandId="edu.cmu.scs.azurite.ui.commands.activateFirebugLiteCommand"
-               icon="icons/firebug.png"
+               commandId="edu.cmu.scs.azurite.ui.commands.readPreviousLog"
+               icon="icons/previous.png"
+               style="push">
+         </command>
+         <separator
+               name="edu.cmu.scs.azurite.separator1"
+               visible="true">
+         </separator>
+         <command
+               commandId="edu.cmu.scs.azurite.ui.commands.executeJSCode"
+               icon="icons/old_go_first.png"
+               label="Scroll to Start"
+               style="push"
+               tooltip="Scroll to Start">
+            <parameter
+                  name="edu.cmu.scs.azurite.ui.commands.executeJSCode.codeToExecute"
+                  value="translateX(0);">
+            </parameter>
+         </command>
+         <command
+               commandId="edu.cmu.scs.azurite.ui.commands.executeJSCode"
+               icon="icons/old_go_previous.png"
+               label="Scroll left"
+               style="push"
+               tooltip="Scroll left">
+            <parameter
+                  name="edu.cmu.scs.azurite.ui.commands.executeJSCode.codeToExecute"
+                  value="showBefore();">
+            </parameter>
+         </command>
+         <command
+               commandId="edu.cmu.scs.azurite.ui.commands.executeJSCode"
+               icon="icons/old_go_next.png"
+               label="Scroll Right"
+               style="push"
+               tooltip="Scroll Right">
+            <parameter
+                  name="edu.cmu.scs.azurite.ui.commands.executeJSCode.codeToExecute"
+                  value="showAfter();">
+            </parameter>
+         </command>
+         <command
+               commandId="edu.cmu.scs.azurite.ui.commands.executeJSCode"
+               icon="icons/old_go_last.png"
+               label="Scroll to End"
+               style="push"
+               tooltip="Scroll to End">
+            <parameter
+                  name="edu.cmu.scs.azurite.ui.commands.executeJSCode.codeToExecute"
+                  value="translateX( getMinTranslateX() );">
+            </parameter>
+         </command>
+         <separator
+               name="edu.cmu.scs.azurite.separator2"
+               visible="true">
+         </separator>
+         <command
+               commandId="edu.cmu.scs.azurite.ui.commands.executeJSCode"
+               icon="icons/old_go_up.png"
+               label="Scroll Up"
+               style="push"
+               tooltip="Scroll Up">
+            <parameter
+                  name="edu.cmu.scs.azurite.ui.commands.executeJSCode.codeToExecute"
+                  value="showUp();">
+            </parameter>
+         </command>
+         <command
+               commandId="edu.cmu.scs.azurite.ui.commands.executeJSCode"
+               icon="icons/old_go_down.png"
+               label="Scroll Down"
+               style="push"
+               tooltip="Scroll Down">
+            <parameter
+                  name="edu.cmu.scs.azurite.ui.commands.executeJSCode.codeToExecute"
+                  value="showDown();">
+            </parameter>
+         </command>
+         <separator
+               name="edu.cmu.scs.azurite.separator3"
+               visible="true">
+         </separator>
+         <command
+               commandId="edu.cmu.scs.azurite.ui.commands.refreshTimeline"
+               icon="icons/gtk_refresh.png"
                style="push">
          </command>
          <command
-               commandId="edu.cmu.scs.azurite.ui.commands.readPreviousLog"
-               icon="icons/previous.png"
+               commandId="edu.cmu.scs.azurite.ui.commands.activateFirebugLiteCommand"
+               icon="icons/firebug.png"
                style="push">
          </command>
       </menuContribution>
@@ -125,6 +208,21 @@
             defaultHandler="edu.cmu.scs.azurite.ui.handlers.ReadPreviousLogHandler"
             id="edu.cmu.scs.azurite.ui.commands.readPreviousLog"
             name="Read Previous Log">
+      </command>
+      <command
+            defaultHandler="edu.cmu.scs.azurite.ui.handlers.ExecuteJSCodeHandler"
+            id="edu.cmu.scs.azurite.ui.commands.executeJSCode"
+            name="Execute Javascript Code">
+         <commandParameter
+               id="edu.cmu.scs.azurite.ui.commands.executeJSCode.codeToExecute"
+               name="Code to Execute"
+               optional="false">
+         </commandParameter>
+      </command>
+      <command
+            defaultHandler="edu.cmu.scs.azurite.ui.handlers.RefreshTimelineHandler"
+            id="edu.cmu.scs.azurite.ui.commands.refreshTimeline"
+            name="Refresh Timeline">
       </command>
    </extension>
 
