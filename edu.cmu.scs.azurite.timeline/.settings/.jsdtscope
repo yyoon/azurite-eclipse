@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path=""/>
+	<classpathentry kind="lib" path="/edu.cmu.scs.azurite/html/scripts/azurite.js"/>
+	<classpathentry kind="lib" path="/edu.cmu.scs.azurite/html/scripts/d3.v3.js"/>
+	<classpathentry kind="lib" path="/edu.cmu.scs.azurite/html/scripts/jquery-1.8.2.js"/>
+	<classpathentry kind="lib" path="/edu.cmu.scs.azurite/html/scripts/jquery-ui-1.9.1.custom.js"/>
+	<classpathentry kind="lib" path="/edu.cmu.scs.azurite/html/scripts/jquery.js"/>
+	<classpathentry kind="lib" path="/edu.cmu.scs.azurite/html/scripts/jquery.tipsy.js"/>
+	<classpathentry kind="lib" path="/edu.cmu.scs.azurite/html/scripts/timeline.js"/>
+	<classpathentry kind="lib" path="/edu.cmu.scs.azurite/html/scripts/tooltipsy.source.js"/>
+	<classpathentry kind="con" path="org.eclipse.wst.jsdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="con" path="org.eclipse.wst.jsdt.launching.baseBrowserLibrary"/>
+	<classpathentry kind="output" path=""/>
+</classpath>

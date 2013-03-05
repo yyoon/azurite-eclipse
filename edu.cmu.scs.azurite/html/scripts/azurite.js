@@ -33,5 +33,5 @@ try {
     
     azurite.log = function (msg) {
         alertFn(msg);
-    }
+    };
 }
