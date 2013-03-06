@@ -20,7 +20,7 @@ var TYPE_REPLACE = 2;
 
 var NUM_TIMESTAMPS = 3;
 
-var MIN_WIDTH = 5;
+var MIN_WIDTH = 3;
 var ROW_HEIGHT = 30;
 var TICKS_HEIGHT = 30;
 var DEFAULT_RATIO = 100;
@@ -50,7 +50,7 @@ var MIN_SCROLL_THUMB_SIZE = 30;
 
 var rectDraw = {};
 rectDraw.xFunc = function(d) {
-	return (d.sid + d.t1 - global.startTimestamp) / DEFAULT_RATIO;
+	return (d.t1 - d.fileGroup.session.startAbsTimestamp + d.sid) / DEFAULT_RATIO;
 };
 rectDraw.yFunc = function(d) {
 	return Math.min(ROW_HEIGHT * d.y1 / 100, ROW_HEIGHT - MIN_WIDTH
@@ -65,8 +65,8 @@ rectDraw.hFunc = function(d) {
 };
 
 var fileDraw = {};
-fileDraw.yFunc = function(d, i) {
-	return ROW_HEIGHT * (i + global.translateY) * global.scaleY
+fileDraw.yFunc = function(d) {
+	return ROW_HEIGHT * (d.verticalIndex + global.translateY) * global.scaleY
 			+ FILE_NAME_OFFSET_Y;
 };
 
@@ -79,9 +79,6 @@ lineDraw.yFunc = function(d, i) {
 };
 
 var indicatorDraw = {};
-indicatorDraw.xFunc = function() {
-	return global.maxTimestamp / DEFAULT_RATIO;
-};
 indicatorDraw.y2Func = function() {
 	return global.files.length * ROW_HEIGHT + getSvgHeight();
 };
@@ -94,12 +91,32 @@ indicatorDraw.wFunc = function() {
  */
 var global = {};
 
+global.operationCompareFunc = function (lhs, rhs) {
+	if (lhs.__data__.t1 < rhs.__data__.t1) { return -1; }
+	if (lhs.__data__.t1 > rhs.__data__.t1) { return 1; }
+	if (lhs.__data__.id < rhs.__data__.id) { return -1; }
+	if (lhs.__data__.id > rhs.__data__.id) { return 1; }
+	return 0;
+};
+
 // variables to remember the last window size
 global.lastWindowWidth = null;
 global.lastWindowHeight = null;
 
+// arrays to keep
 global.files = [];
+global.sessions = [];
 global.selected = [];
+
+// layout
+var LayoutEnum = {
+	REALTIME : 0,
+	COMPACT : 1
+};
+
+// Use COMPACT by default.
+// TODO Save this to somewhere in the preferences store.
+global.layout = LayoutEnum.COMPACT;
 
 // transforms
 global.translateX = 0;
@@ -110,10 +127,6 @@ global.scaleY = 1;
 // last file opened
 global.currentFile = null;
 global.lastOperation = null;
-
-// Timestamps
-global.maxTimestamp = 0;
-global.startTimestamp = new Date().valueOf();
 
 // Dragging
 global.dragging = false;
@@ -155,53 +168,58 @@ global.isCtrlDown = false;
 var svg = {};
 
 function setupSVG() {
-	svg.main = d3.select('#svg_inner_wrapper').append('svg').attr('class',
-			'svg');
+	svg.main = d3.select('#svg_inner_wrapper').append('svg')
+		.attr('class', 'svg');
 
-	svg.subFiles = svg.main.append('g').attr('id', 'sub_files').attr(
-			'clip-path', 'url(#clipFiles)');
+	svg.subFiles = svg.main.append('g')
+		.attr('id', 'sub_files')
+		.attr('clip-path', 'url(#clipFiles)');
 
-	svg.subRectsWrap = svg.main.append('g').attr('id', 'sub_rects_wrap').attr(
-			'clip-path', 'url(#clipRectsWrap)');
+	svg.subRectsWrap = svg.main.append('g')
+		.attr('id', 'sub_rects_wrap')
+		.attr('clip-path', 'url(#clipRectsWrap)');
 
-	svg.subRects = svg.subRectsWrap.append('g').attr('id', 'sub_rects');
+	svg.subRects = svg.subRectsWrap.append('g')
+		.attr('id', 'sub_rects');
 
-	svg.subTicks = svg.main.append('g').attr('id', 'sub_ticks');
+	svg.subTicks = svg.main.append('g')
+		.attr('id', 'sub_ticks');
 
-	svg.main.append('rect').attr('class', 'selection_box').style('fill',
-			'yellow').style('opacity', 0.3);
+	svg.main.append('rect')
+		.attr('class', 'selection_box')
+		.style('fill', 'yellow')
+		.style('opacity', 0.3);
 
-	svg.clipFiles = svg.main.append('clipPath').attr('id', 'clipFiles').append(
-			'rect');
+	svg.clipFiles = svg.main.append('clipPath')
+		.attr('id', 'clipFiles')
+		.append('rect');
 
-	svg.clipRectsWrap = svg.main.append('clipPath').attr('id', 'clipRectsWrap')
-			.append('rect');
+	svg.clipRectsWrap = svg.main.append('clipPath')
+		.attr('id', 'clipRectsWrap').append('rect');
 
 	recalculateClipPaths();
-
-	svg.subRects.append('line').attr('id', 'indicator')
-			.attr('stroke', 'yellow').attr('x1', indicatorDraw.xFunc).attr(
-					'x2', indicatorDraw.xFunc).attr('y2', indicatorDraw.y2Func)
-			.attr('stroke-width', indicatorDraw.wFunc);
 }
 
 function recalculateClipPaths() {
 	var svgWidth = getSvgWidth();
 	var svgHeight = getSvgHeight();
 
-	svg.clipFiles.attr('width', (svgWidth * FILES_PORTION) + 'px').attr(
-			'height', (svgHeight - 20) + 'px');
+	svg.clipFiles
+		.attr('width', (svgWidth * FILES_PORTION) + 'px')
+		.attr('height', (svgHeight - 20) + 'px');
 
-	svg.subFiles.attr('transform', 'translate(' + CHART_MARGINS.left + ' '
-			+ CHART_MARGINS.top + ')');
+	svg.subFiles
+		.attr('transform',
+			'translate(' + CHART_MARGINS.left + ' ' + CHART_MARGINS.top + ')');
 
 	svg.subRectsWrap.attr('transform', 'translate('
 			+ (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' '
 			+ CHART_MARGINS.top + ')');
 
-	svg.clipRectsWrap.attr('y', '-1').attr('width',
-			(svgWidth * (1.0 - FILES_PORTION)) + 'px').attr('height',
-			(svgHeight - TICKS_HEIGHT + 2) + 'px');
+	svg.clipRectsWrap
+		.attr('y', '-1')
+		.attr('width', (svgWidth * (1.0 - FILES_PORTION)) + 'px')
+		.attr('height', (svgHeight - TICKS_HEIGHT + 2) + 'px');
 
 	svg.subTicks.attr('transform', 'translate('
 			+ (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' '
@@ -214,21 +232,75 @@ function recalculateClipPaths() {
 function File(path, fileName) {
 	this.path = path;
 	this.fileName = fileName;
-	this.operations = [];
-
-	this.g = svg.subRects.append('g');
-	this.g.attr('class', 'rectgroup');
+	
+	this.verticalIndex = 0;
+	this.visible = true;
 }
 
-function OperationId(sid, id) {
+/**
+ * A session which keeps track of the session id (starting timestamp) and
+ * other meta data.
+ */
+function Session(sid, current) {
 	this.sid = sid;
-	this.id = id;
+	this.fileGroups = [];
+	
+	this.g = svg.subRects.append('g');
+	this.g.attr('class', 'session_group')
+		.attr('id', 'sg_' + this.sid);
+	
+	var color = current ? 'yellow' : 'gray';
+	
+	this.indicator = this.g.append('line');
+	this.indicator.attr('id', 'indicator_' + sid)
+		.attr('class', 'indicator')
+		.attr('stroke', color)
+		.attr('x1', indicatorDraw.xFunc)
+		.attr('x2', indicatorDraw.xFunc)
+		.attr('y2', indicatorDraw.y2Func)
+		.attr('stroke-width', indicatorDraw.wFunc);
+	
+	this.startAbsTimestamp = -1;
+	this.endAbsTimestamp = -1;
+	
+	this.findFileGroup = function (file) {
+		var i;
+		for (i = 0; i < this.fileGroups.length; ++i) {
+			if (this.fileGroups[i].file == file) {
+				return this.fileGroups[i];
+			}
+		}
+		
+		return null;
+	};
+	
+	global.sessions.push(this);
+	global.sessions.sort(function (lhs, rhs) {
+		return lhs.sid - rhs.sid;
+	});
+}
+
+function FileGroup(session, file) {
+	this.session = session;
+	this.file = file;
+	this.operations = [];
+	
+	this.g = this.session.g.append('g');
+	this.g.attr('class', 'file_group')
+		.attr('id', 'fg_' + this.session.sid + '_' + this.file.path)
+		.attr('transform', 'translate(0, ' + (ROW_HEIGHT * file.verticalIndex) + ')');
+	
+	this.session.fileGroups.push(this);
+	
+	this.isVisible = function () {
+		return this.file.visible;
+	};
 }
 
 /**
  * An object for representing an operation itself.
  */
-function EditOperation(sid, id, t1, t2, y1, y2, type) {
+function EditOperation(sid, id, t1, t2, y1, y2, type, fileGroup) {
 	this.sid = sid;
 	this.id = id;
 	this.t1 = t1;
@@ -245,6 +317,20 @@ function EditOperation(sid, id, t1, t2, y1, y2, type) {
 	} else if (type == TYPE_REPLACE) {
 		this.color = "blue";
 	}
+	
+	this.fileGroup = fileGroup;
+	
+	this.isVisible = function () {
+		return this.fileGroup.isVisible();
+	};
+}
+
+/**
+ * A unique identifier for each operation
+ */
+function OperationId(sid, id) {
+	this.sid = sid;
+	this.id = id;
 }
 
 /**
@@ -262,10 +348,7 @@ function addFile(path) {
 	}
 
 	var newFile = new File(path, fileName);
-	newFile.g.attr('transform', 'translate(0 '
-			+ (global.files.length * ROW_HEIGHT) + ')');
-
-	var fileIndex = global.files.length;
+	newFile.verticalIndex = global.files.length;
 
 	global.files.push(newFile);
 	global.currentFile = newFile;
@@ -273,11 +356,11 @@ function addFile(path) {
 	var newText = svg.subFiles.append('text');
 	newText.datum(newFile);
 
-	newText.attr('x', FILE_NAME_OFFSET_X + 'px').attr('y', function(d) {
-		return fileDraw.yFunc(d, fileIndex);
-	}).attr('dy', '1em').attr('fill', 'white').text(function(d) {
-		return d.fileName;
-	});
+	newText.attr('x', FILE_NAME_OFFSET_X + 'px')
+		.attr('y', fileDraw.yFunc)
+		.attr('dy', '1em')
+		.attr('fill', 'white')
+		.text(function(d) { return d.fileName; });
 
 	// Draw separating lines
 	if (global.files.length == 1) {
@@ -313,20 +396,7 @@ function updateSeparatingLines() {
  * Sets the start timestamp.
  */
 function setStartTimestamp(timestamp, adjustMaxTimestamp, preservePosition) {
-	var timestampDiff = global.startTimestamp - timestamp;
-
-	global.startTimestamp = parseInt(timestamp);
-
-	if (adjustMaxTimestamp != null && adjustMaxTimestamp == true) {
-		var newMaxTimestamp = global.maxTimestamp + timestampDiff;
-		updateMaxTimestamp(newMaxTimestamp, newMaxTimestamp);
-	}
-
-	if (preservePosition != null && preservePosition == true) {
-		var newTimestamp = translateXToTimestamp(global.translateX)
-				+ timestampDiff;
-		showFrom(newTimestamp);
-	}
+	// Do nothing.
 }
 
 /**
@@ -335,41 +405,95 @@ function setStartTimestamp(timestamp, adjustMaxTimestamp, preservePosition) {
  * Note that this is called immediately after an edit operation is performed.
  */
 function addOperation(sid, id, t1, t2, y1, y2, type, scroll) {
-	var newOp = new EditOperation(parseInt(sid), parseInt(id), parseInt(t1),
-			parseInt(t2), parseFloat(y1), parseFloat(y2), parseInt(type));
+	if (global.currentFile == null) {
+		return;
+	}
+	
+	sid = parseInt(sid);
+	id = parseInt(id);
+	t1 = parseInt(t1);
+	t2 = parseInt(t2);
+	y1 = parseFloat(y1);
+	y2 = parseFloat(y2);
+	type = parseInt(type);
+	
+	var session = findSession(sid);
+	if (session == null) {
+		session = new Session(sid);
+		session.startAbsTimestamp = sid + t1;
+		session.endAbsTimestamp = sid + t2;
+	}
+	
+	var fileGroup = session.findFileGroup(global.currentFile);
+	if (fileGroup == null) {
+		fileGroup = new FileGroup(session, global.currentFile);
+	}
 
+	var newOp = new EditOperation(sid, id, t1, t2, y1, y2, type, fileGroup);
+
+	fileGroup.operations.push(newOp);
+	global.lastOperation = newOp;
+	
+	session.startAbsTimestamp = Math.min(session.startAbsTimestamp, sid + t1);
+	session.endAbsTimestamp = Math.max(session.endAbsTimestamp, sid + t2);
+
+	var rectToAppend = fileGroup.g.append('rect');
+	rectToAppend.datum(newOp);
+	rectToAppend
+		.attr('id', function(d) { return d.sid + '_' + d.id; })
+		.attr('class', 'op_rect')
+		.attr('y', rectDraw.yFunc)
+		.attr('width', rectDraw.wFunc)
+		.attr('height', rectDraw.hFunc)
+		.attr('fill', function(d) { return d.color; })
+		.attr('vector-effect', 'non-scaling-stroke');
+	
+	if (global.layout == LayoutEnum.COMPACT) {
+		// Find the last visible rect in this session.
+		var rectsInSession = session.g.selectAll('rect.op_rect').filter(function (d) {
+			return d.isVisible() && d != newOp;
+		})[0].slice();
+		rectsInSession.sort(global.operationCompareFunc);
+		
+		var x = 0;
+		if (rectsInSession.length > 0) {
+			var bounds = rectsInSession[rectsInSession.length - 1].getBBox();
+			x = bounds.x + bounds.width;
+		}
+		
+		rectToAppend.attr('x', x);
+	}
+	else if (global.layout == LayoutEnum.REALTIME) {
+		rectToAppend.attr('x', rectDraw.xFunc);
+	}
+	
+	global.lastRect = rectToAppend;
+	
+	// Move the indicator.
+	if (global.layout == LayoutEnum.COMPACT) {
+		var rectBounds = rectToAppend.node().getBBox();
+		var indicatorX = rectBounds.x + rectBounds.width;
+		session.indicator.attr('x1', indicatorX).attr('x2', indicatorX);
+	}
+	else {
+		var indicatorX = (session.endAbsTimestamp - session.startAbsTimestamp) / DEFAULT_RATIO;
+		session.indicator.attr('x1', indicatorX).attr('x2', indicatorX);
+	}
+	
+	if (scroll != null && scroll == true) {
+		showUntil(global.lastOperation.sid + global.lastOperation.t2);
+	}
+}
+
+function findSession(sid) {
 	var i;
-	var fileIndex = -1;
-
-	for (i = 0; i < global.files.length; i++) {
-		if (global.files[i].path == global.currentFile.path) {
-			fileIndex = i;
-			break;
+	for (i = 0; i < global.sessions.length; ++i) {
+		if (global.sessions[i].sid == sid) {
+			return global.sessions[i];
 		}
 	}
-
-	if (fileIndex == -1)
-		return;
-
-	global.currentFile.operations.push(newOp);
-	global.lastOperation = newOp;
-
-	updateMaxTimestamp(t1 + newOp.sid - global.startTimestamp, t2 + newOp.sid
-			- global.startTimestamp);
-
-	global.lastRect = global.currentFile.g.append('rect');
-	global.lastRect.datum(newOp);
-	global.lastRect.attr('id', function(d) {
-		return d.sid + '_' + d.id;
-	}).attr('class', 'op_rect').attr('x', rectDraw.xFunc).attr('y',
-			rectDraw.yFunc).attr('width', rectDraw.wFunc).attr('height',
-			rectDraw.hFunc).attr('fill', function(d) {
-		return d.color;
-	}).attr('vector-effect', 'non-scaling-stroke');
-
-	if (scroll != null && scroll == true) {
-		showUntil(global.maxTimestamp);
-	}
+	
+	return null;
 }
 
 /**
@@ -382,9 +506,6 @@ function updateOperationTimestamp2(id, t2) {
 		return;
 
 	global.lastOperation.t2 = t2;
-	var newMaxTimestamp = t2 + global.lastOperation.sid - global.startTimestamp;
-
-	updateMaxTimestamp(newMaxTimestamp, newMaxTimestamp);
 
 	if (global.lastRect != null) {
 		global.lastRect.attr('width', rectDraw.wFunc);
@@ -407,23 +528,171 @@ function adjustData() {
 	svg.subRects.selectAll('rect.op_rect').attr('x', rectDraw.xFunc);
 }
 
-function redraw() {
-	recalculateClipPaths();
-
-	svg.subRects.selectAll('rect').remove();
-
-	// remove highlights
-	global.selected = [];
-	svg.subRects.selectAll('rect.highlight_rect').remove();
-
-	$('.block').tipsy({
-		gravity : 'se',
-		html : true,
-		title : function() {
-			var d = this.__data__;
-			return 'id: ' + d.id;
+function layout(newLayout) {
+	// Remember the current horizontal scroll position.
+	var leftmostTimestamp = getLeftmostTimestamp();
+	
+	// Change the layout, if specified.
+	if (newLayout !== undefined) {
+		global.layout = newLayout;
+	}
+	
+	global.tempSessionTx = 0;
+	
+	var i, session;
+	for (i = 0; i < global.sessions.length; ++i) {
+		session = global.sessions[i];
+		
+		session.g.attr('transform', 'translate(' + global.tempSessionTx + ' 0)');
+		
+		// Iterate through all the rects.
+		var rects = session.g.selectAll('rect.op_rect')[0].slice();
+		rects.sort(global.operationCompareFunc);
+		
+		// Apply different layout function, depending on the mode.
+		global.tempX = 0;
+		
+		if (global.layout == LayoutEnum.COMPACT) {
+			d3.selectAll(rects).attr('x', function (d) {
+				if (!d.isVisible()) { return 0; }
+				var temp = global.tempX;
+				global.tempX += this.getBBox().width;
+				return temp;
+			});
 		}
-	});
+		else if (global.layout == LayoutEnum.REALTIME) {
+			d3.selectAll(rects).attr('x', rectDraw.xFunc);
+		}
+		
+		// TODO if there is no rectangle at all, don't draw the entire session.
+		
+		// Move the indicator.
+		if (global.layout == LayoutEnum.COMPACT) {
+			session.indicator.attr('x1', global.tempX);
+			session.indicator.attr('x2', global.tempX);
+		}
+		else if (global.layout == LayoutEnum.REALTIME) {
+			session.indicator.attr('x1', (session.endAbsTimestamp - session.startAbsTimestamp) / DEFAULT_RATIO);
+			session.indicator.attr('x2', (session.endAbsTimestamp - session.startAbsTimestamp) / DEFAULT_RATIO);
+		}
+		
+		global.tempSessionTx += session.g.node().getBBox().width;
+	}
+	
+	updateHighlight();
+	updateHScroll();
+	
+	// Restore the scroll position.
+	showFrom(leftmostTimestamp);
+}
+
+function getLeftmostTimestamp() {
+	if (global.sessions.length == 0) {
+		return 0;
+	}
+	
+	if (global.layout == LayoutEnum.COMPACT) {
+		var tx = -global.translateX / global.scaleX;
+		
+		var session = null, dist = 0;
+		
+		// Get the session including the point,
+		// and the dist from the starting of the session group.
+		var i, curWidth = 0;
+		for (i = 0; i < global.sessions.length; ++i) {
+			var width = global.sessions[i].g.node().getBBox().width;
+			
+			if (curWidth <= tx < curWidth + width) {
+				session = global.sessions[i];
+				dist = tx - curWidth;
+				break;
+			}
+			
+			curWidth += width;
+		}
+		
+		if (session == null) {
+			session = global.sessions[i];
+			dist = session.g.node().getBBox().width;
+		}
+		
+		// Collect all the visible rects in this session, and assume they are sorted.
+		var rects = session.g.selectAll('rect.op_rect')
+			.filter(function (d) { return d.isVisible(); })[0];
+		
+		// Binary search through the rects.
+		var startIndex = 0, endIndex = rects.length - 1;
+		var midIndex = Math.floor((startIndex + endIndex) / 2);
+		while (startIndex <= endIndex) {
+			var rect = rects[midIndex];
+			var bounds = rect.getBBox();
+			
+			// The middle rect contains the dist!
+			if (bounds.x <= dist && dist <= bounds.x + bounds.width) {
+				var data = rect.__data__;
+				var result = Math.floor(session.sid + data.t1 + (data.t2 - data.t1) * (dist - bounds.x) / bounds.width);
+				
+				return result;
+			}
+			
+			if (dist < bounds.x) {
+				endIndex = midIndex - 1;
+			}
+			else {
+				startIndex = midIndex + 1;
+			}
+			
+			midIndex = Math.floor((startIndex + endIndex) / 2);
+		}
+		
+		// Couldn't find..
+		if (startIndex == 0) {
+			return session.startAbsTimestamp;
+		}
+		else if (startIndex == rects.length) {
+			return session.endAbsTimestamp;
+		}
+		else {
+			return Math
+					.floor((rects[startIndex - 1].__data__.t2 + rects[startIndex].__data__.t1) / 2)
+					+ session.sid;
+		}
+	}
+	else if (global.layout == LayoutEnum.REALTIME) {
+		var tx = -global.translateX / global.scaleX;
+		
+		var session = null, dist = 0;
+		
+		// Get the session including the point,
+		// and the dist from the starting of the session group.
+		var i, curWidth = 0;
+		for (i = 0; i < global.sessions.length; ++i) {
+			var width = global.sessions[i].g.node().getBBox().width;
+			
+			if (curWidth <= tx < curWidth + width) {
+				session = global.sessions[i];
+				dist = tx - curWidth;
+				break;
+			}
+			
+			curWidth += width;
+		}
+		
+		if (session == null) {
+			session = global.sessions[i];
+			dist = session.g.node().getBBox().width;
+		}
+		
+		var bounds = session.g.node().getBBox();
+		
+		// Then just linearly interpolate.
+		var result = session.startAbsTimestamp
+				+ (session.endAbsTimestamp - session.startAbsTimestamp)
+				* (dist - bounds.x) / bounds.width;
+		return result;
+	}
+	
+	return 0;
 }
 
 /*
@@ -868,6 +1137,10 @@ function scrollRight(pixels) {
 	translateX(global.translateX + pixels);
 }
 
+function scrollToEnd() {
+	translateX(getMinTranslateX() + getSvgWidth() * (1.0 - FILES_PORTION));
+}
+
 function fileZoomIn() {
 	scaleY(global.scaleY + 0.3);
 }
@@ -907,18 +1180,6 @@ function undo() {
 		azurite.selectiveUndo(result);
 }
 
-function updateMaxTimestamp(timestamp, timestamp2) {
-	// update global.maxTimestamp if necessary
-	if (timestamp2 == null && timestamp > global.maxTimestamp) {
-		global.maxTimestamp = timestamp;
-	} else if (timestamp2 != null && timestamp2 > global.maxTimestamp) {
-		global.maxTimestamp = timestamp2;
-	}
-
-	d3.select('#indicator').attr('x1', indicatorDraw.xFunc).attr('x2',
-			indicatorDraw.xFunc);
-}
-
 function clamp(value, min, max) {
 	if (value < min) {
 		value = min;
@@ -950,7 +1211,7 @@ function scaleX(sx) {
 
 	updateHighlight();
 
-	d3.select('#indicator').attr('stroke-width', indicatorDraw.wFunc);
+	d3.selectAll('.indicator').attr('stroke-width', indicatorDraw.wFunc);
 
 	updateTicks();
 	updateHScroll();
@@ -982,7 +1243,13 @@ function translateX(tx) {
 }
 
 function getMinTranslateX() {
-	return (-global.maxTimestamp / DEFAULT_RATIO) * global.scaleX;
+	var result = 0, i;
+	for (i = 0; i < global.sessions.length; ++i) {
+		var session = global.sessions[i];
+		result += session.g.node().getBBox().width;
+	}
+	
+	return -result * global.scaleX;
 }
 
 function translateY(ty) {
@@ -1007,17 +1274,109 @@ function updateSubRectsTransform() {
 			+ 'scale(' + global.scaleX + ' ' + global.scaleY + ')');
 }
 
-function showFrom(timestamp) {
-	var tx = -(timestamp / DEFAULT_RATIO) * global.scaleX;
-
-	translateX(tx);
+function showFrom(absTimestamp) {
+	showTimestamp(absTimestamp, 0);
 }
 
-function showUntil(timestamp) {
-	var tx = -(timestamp / DEFAULT_RATIO) * global.scaleX + getSvgWidth()
-			* (1.0 - FILES_PORTION);
+function showUntil(absTimestamp) {
+	showTimestamp(absTimestamp, getSvgWidth() * (1.0 - FILES_PORTION));
+}
 
-	translateX(tx);
+function showTimestamp(absTimestamp, offsetInPixels) {
+	if (global.sessions.length == 0) {
+		translateX(0);
+		return;
+	}
+	
+	// binary search through the sessions.
+	var startIndex = 0; var endIndex = global.sessions.length - 1;
+	var midIndex = Math.floor((startIndex + endIndex) / 2);
+	
+	while (startIndex <= endIndex) {
+		var midSession = global.sessions[midIndex];
+		
+		// found it.
+		if (midSession.startAbsTimestamp <= absTimestamp &&
+				absTimestamp <= midSession.endAbsTimestamp) {
+			
+			// Get the tx offset.
+			var txOffset = midSession.g.node().getBBox().x;
+			
+			if (global.layout == LayoutEnum.COMPACT) {
+				// again, binary search through the rects.
+				var rects = midSession.g.selectAll('rect.op_rect').filter(function (d) {
+					return d.isVisible();
+				})[0];
+				
+				var startRectIndex = 0, endRectIndex = rects.length - 1;
+				var midRectIndex = Math.floor((startRectIndex + endRectIndex) / 2);
+				
+				while (startRectIndex <= endRectIndex) {
+					var midRect = rects[midRectIndex];
+					var data = midRect.__data__;
+					var absT1 = midSession.sid + data.t1;
+					var absT2 = midSession.sid + data.t2;
+					var rectBounds = midRect.getBBox();
+					
+					// found it.
+					if (absT1 <= absTimestamp && absTimestamp <= absT2) {
+						var tx = txOffset + rectBounds.x + rectBounds.width * (absTimestamp - absT1) / (absT2 - absT1);
+						translateX(-tx * global.scaleX + offsetInPixels);
+						return;
+					}
+					
+					if (absTimestamp < absT1) {
+						endRectIndex = midRectIndex - 1;
+					}
+					else {
+						startRectIndex = midRectIndex + 1;
+					}
+					
+					midRectIndex = Math.floor((startRectIndex + endRectIndex) / 2);
+				}
+				
+				// Not in the middle of a rect.
+				if (startRectIndex == 0) {
+					translateX(-txOffset * global.scaleX + offsetInPixels);
+				}
+				else if (startRectIndex == rects.length) {
+					translateX(-(txOffset + midSession.g.node().getBBox().width) * global.scaleX + offsetInPixels);
+				}
+				else {
+					translateX(-(txOffset + rects[startIndex].getBBox().x) * global.scaleX + offsetInPixels);
+				}
+				
+				return;
+			}
+			else if (global.layout == LayoutEnum.REALTIME) {
+				var sessionBounds = midSession.g.node().getBBox();
+				var tx = txOffset + sessionBounds.width * (absTimestamp - midSession.startAbsTimestamp) / (midSession.endAbsTimestamp - midSession.startAbsTimestamp);
+				translateX(-tx * global.scaleX + offsetInPixels);
+				
+				return;
+			}
+		}
+		
+		if (absTimestamp < midSession.startAbsTimestamp) {
+			endIndex = midIndex - 1;
+		}
+		else {
+			startIndex = midIndex + 1;
+		}
+		
+		midIndex = Math.floor((startIndex + endIndex) / 2);
+	}
+	
+	// Couldn't found. Somewhere in the middle of sessions.
+	if (startIndex == 0) {
+		translateX(0);
+	}
+	else if (startIndex == global.sessions.length) {
+		translateX(getMinTranslateX());
+	}
+	else {
+		translateX(-global.sessions[startIndex].g.node().getBBox().x + offsetInPixels);
+	}
 }
 
 function translateXToTimestamp(tx) {
@@ -1060,7 +1419,7 @@ function updateVScroll() {
 function updateTicks() {
 	svg.subTicks.selectAll('text').remove();
 
-	var start = global.startTimestamp - (global.translateX * DEFAULT_RATIO)
+/*	var start = global.startTimestamp - (global.translateX * DEFAULT_RATIO)
 			/ global.scaleX;
 	var end = start + getSvgWidth() * (1.0 - FILES_PORTION) * DEFAULT_RATIO
 			/ global.scaleX;
@@ -1079,28 +1438,32 @@ function updateTicks() {
 				svg.subTicks.append('text').attr('x', timeScale(this)).attr(
 						'dy', '2em').attr('fill', 'white').attr('text-anchor',
 						'middle').text(d3.time.format('%x')(this));
-			});
+			});*/
 }
 
 function test() {
+	var sid = new Date().valueOf();
+	
 	addFile('Test.java');
-	addRandomOperations(100);
+	addRandomOperations(sid, 100, true);
 
 	addFile('Test2.java');
-	addRandomOperations(200);
+	addRandomOperations(sid, 200, false);
 
 	addFile('Test.java');
-	addRandomOperations(100);
-
-	showUntil(global.maxTimestamp);
+	addRandomOperations(sid, 100, false);
+	
+	layout();
+	
+	scrollToEnd();
 }
 
-function addRandomOperations(count) {
+function addRandomOperations(sid, count, startover) {
 	var i = 0;
 	var id = -1;
 	var t = 0;
 
-	if (global.lastOperation != null) {
+	if (global.lastOperation != null && !startover) {
 		id = global.lastOperation.id;
 		t = global.lastOperation.t2;
 	}
@@ -1113,8 +1476,7 @@ function addRandomOperations(count) {
 
 		var y1 = Math.floor(Math.random() * 100);
 		var y2 = clamp(y1 + Math.floor(Math.random() * 30), y1, 100);
-		addOperation(global.startTimestamp, id, t1, t2, y1, y2, Math.floor(Math
-				.random() * 3));
+		addOperation(sid, id, t1, t2, y1, y2, Math.floor(Math.random() * 3));
 	}
 }
 
