@@ -489,8 +489,56 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll) {
 		session.indicator.attr('x1', indicatorX).attr('x2', indicatorX);
 	}
 	
+	updateHScroll();
+	
 	if (scroll == true) {
-		showUntil(global.lastOperation.sid + global.lastOperation.t2);
+		showUntil(global.lastOperation.getAbsT2());
+	}
+}
+
+/**
+ * Called by Azurite.
+ * Update the timestamp2 value for an existing operation, in case multiple
+ * operations are merged into one.
+ */
+function updateOperation(sid, id, t2, y1, y2, scroll) {
+	var lastOp = global.lastOperation;
+	
+	if (lastOp == null ||
+		lastOp.sid != parseInt(sid) ||
+		lastOp.id != parseInt(id)) {
+		return;
+	}
+
+	lastOp.t2 = t2;
+	lastOp.session.endAbsTimestamp = Math.max(lastOp.session.endAbsTimestamp, lastOp.getAbsT2());
+	
+	lastOp.y1 = y1;
+	lastOp.y2 = y2;
+
+	if (global.lastRect != null) {
+		global.lastRect
+			.attr('width', rectDraw.wFunc)
+			.attr('y', rectDraw.yFunc)
+			.attr('height', rectDraw.hFunc);
+	}
+	
+	var session = lastOp.session;
+	
+	// Move the indicator.
+	if (global.layout == LayoutEnum.COMPACT) {
+		var rectBounds = global.lastRect.node().getBBox();
+		var indicatorX = rectBounds.x + rectBounds.width;
+		session.indicator.attr('x1', indicatorX).attr('x2', indicatorX);
+	}
+	else {
+		var session = lastOp.session;
+		var indicatorX = (session.endAbsTimestamp - session.startAbsTimestamp) / DEFAULT_RATIO;
+		session.indicator.attr('x1', indicatorX).attr('x2', indicatorX);
+	}
+	
+	if (scroll == true) {
+		showUntil(lastOp.getAbsT2());
 	}
 }
 
@@ -503,34 +551,6 @@ function findSession(sid) {
 	}
 	
 	return null;
-}
-
-/**
- * Called by Azurite.
- * Update the timestamp2 value for an existing operation, in case multiple
- * operations are merged into one.
- */
-function updateOperationTimestamp2(id, t2, scroll) {
-	if (global.lastOperation == null || global.lastOperation.id != parseInt(id))
-		return;
-
-	global.lastOperation.t2 = t2;
-
-	if (global.lastRect != null) {
-		global.lastRect.attr('width', rectDraw.wFunc);
-	}
-	
-	// Move the indicator.
-	if (global.layout == LayoutEnum.COMPACT) {
-		var rectBounds = global.lastRect.node().getBBox();
-		var indicatorX = rectBounds.x + rectBounds.width;
-		session.indicator.attr('x1', indicatorX).attr('x2', indicatorX);
-	}
-	else {
-		var session = global.lastOperation.session;
-		var indicatorX = (session.endAbsTimestamp - session.startAbsTimestamp) / DEFAULT_RATIO;
-		session.indicator.attr('x1', indicatorX).attr('x2', indicatorX);
-	}
 }
 
 function adjustData() {

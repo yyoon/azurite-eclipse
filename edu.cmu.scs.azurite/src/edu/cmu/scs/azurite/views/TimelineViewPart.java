@@ -260,8 +260,12 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 	@Override
 	public void documentChangeUpdated(BaseDocumentChangeEvent docChange) {
 		String executeStr = String.format(
-				"updateOperationTimestamp2(%1$d, %2$d);",
-				docChange.getCommandIndex(), docChange.getTimestamp2());
+				"updateOperation(%1$d, %2$d, %3$d, %4$f, %5$f, true);",
+				docChange.getSessionId(),
+				docChange.getCommandIndex(),
+				docChange.getTimestamp2(),
+				docChange.getY1(),
+				docChange.getY2());
 		browser.execute(executeStr);
 	}
 
