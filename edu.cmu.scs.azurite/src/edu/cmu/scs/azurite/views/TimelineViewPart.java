@@ -340,7 +340,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 	}
 	
 	private void scrollToEnd() {
-		browser.execute("showUntil(global.maxTimestamp);");
+		browser.execute("scrollToEnd()");
 	}
 	
 	public void executeJSCode(String codeToExecute) {

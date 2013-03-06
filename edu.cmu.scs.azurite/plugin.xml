@@ -142,7 +142,7 @@
                tooltip="Scroll to End">
             <parameter
                   name="edu.cmu.scs.azurite.ui.commands.executeJSCode.codeToExecute"
-                  value="translateX( getMinTranslateX() );">
+                  value="scrollToEnd();">
             </parameter>
          </command>
          <separator
