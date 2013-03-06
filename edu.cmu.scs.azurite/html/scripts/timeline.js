@@ -50,7 +50,7 @@ var MIN_SCROLL_THUMB_SIZE = 30;
 
 var rectDraw = {};
 rectDraw.xFunc = function(d) {
-	return (d.t1 - d.fileGroup.session.startAbsTimestamp + d.sid) / DEFAULT_RATIO;
+	return (d.t1 - d.session.startAbsTimestamp + d.sid) / DEFAULT_RATIO;
 };
 rectDraw.yFunc = function(d) {
 	return Math.min(ROW_HEIGHT * d.y1 / 100, ROW_HEIGHT - MIN_WIDTH
@@ -319,9 +319,18 @@ function EditOperation(sid, id, t1, t2, y1, y2, type, fileGroup) {
 	}
 	
 	this.fileGroup = fileGroup;
+	this.session = fileGroup.session;
 	
 	this.isVisible = function () {
 		return this.fileGroup.isVisible();
+	};
+	
+	this.getAbsT1 = function() {
+		return this.sid + this.t1;
+	};
+	
+	this.getAbsT2 = function() {
+		return this.sid + this.t2;
 	};
 }
 
@@ -480,7 +489,7 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll) {
 		session.indicator.attr('x1', indicatorX).attr('x2', indicatorX);
 	}
 	
-	if (scroll != null && scroll == true) {
+	if (scroll == true) {
 		showUntil(global.lastOperation.sid + global.lastOperation.t2);
 	}
 }
@@ -501,7 +510,7 @@ function findSession(sid) {
  * Update the timestamp2 value for an existing operation, in case multiple
  * operations are merged into one.
  */
-function updateOperationTimestamp2(id, t2) {
+function updateOperationTimestamp2(id, t2, scroll) {
 	if (global.lastOperation == null || global.lastOperation.id != parseInt(id))
 		return;
 
@@ -509,6 +518,18 @@ function updateOperationTimestamp2(id, t2) {
 
 	if (global.lastRect != null) {
 		global.lastRect.attr('width', rectDraw.wFunc);
+	}
+	
+	// Move the indicator.
+	if (global.layout == LayoutEnum.COMPACT) {
+		var rectBounds = global.lastRect.node().getBBox();
+		var indicatorX = rectBounds.x + rectBounds.width;
+		session.indicator.attr('x1', indicatorX).attr('x2', indicatorX);
+	}
+	else {
+		var session = global.lastOperation.session;
+		var indicatorX = (session.endAbsTimestamp - session.startAbsTimestamp) / DEFAULT_RATIO;
+		session.indicator.attr('x1', indicatorX).attr('x2', indicatorX);
 	}
 }
 
@@ -1443,6 +1464,10 @@ function updateTicks() {
 
 function test() {
 	var sid = new Date().valueOf();
+	// This must be bigger than the last known operation timestamp.
+	if (global.lastOperation != null && sid < global.lastOperation.getAbsT2()) {
+		sid = global.lastOperation.getAbsT2() + Math.floor(Math.random() * 5000);
+	}
 	
 	addFile('Test.java');
 	addRandomOperations(sid, 100, true);
