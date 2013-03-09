@@ -157,15 +157,6 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 		@Override
 		public Object function(Object[] arguments) {
             
-			// Set the start Timestamp.
-            EventRecorder.getInstance().scheduleTask(new Runnable() {
-				public void run() {
-					browser.execute("setStartTimestamp("
-							+ EventRecorder.getInstance().getStartTimestamp()
-							+ ");");
-				}
-            });
-            
             // Read the existing runtime document changes.
             RuntimeHistoryManager.getInstance().scheduleTask(new Runnable() {
             	public void run() {
@@ -224,13 +215,57 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 	}
 
 	private void addFile(String filePath) {
-		String executeStr = String.format("addFile('%1$s');",
-				filePath.replace('\\', '/'));	// avoid escaping..
+		String executeStr = getAddFileString(filePath);
 		browser.execute(executeStr);
 	}
 
+	private String getAddFileString(String filePath) {
+		String executeStr = String.format("addFile('%1$s');",
+				filePath.replace('\\', '/'));	// avoid escaping..
+		return executeStr;
+	}
+
 	private void addOperation(BaseDocumentChangeEvent docChange, boolean scroll) {
-		String executeStr = String.format("addOperation(%1$d, %2$d, %3$d, %4$d, %5$f, %6$f, %7$d, %8$s);",
+		String executeStr = getAddOperationString(docChange, scroll, true);
+		browser.execute(executeStr);
+	}
+
+	private void addOperations(Events events) {
+		// Add the operations
+		StringBuilder builder = new StringBuilder();
+		
+		long start = System.currentTimeMillis();
+		
+		for (ICommand command : events.getCommands()) {
+			if (!(command instanceof BaseDocumentChangeEvent)) {
+				continue;
+			}
+			
+			BaseDocumentChangeEvent docChange = (BaseDocumentChangeEvent)command;
+			if (docChange instanceof FileOpenCommand) {
+				FileOpenCommand foc = (FileOpenCommand)docChange;
+				if (foc.getFilePath() != null) {
+					builder.append(getAddFileString(foc.getFilePath()));
+				}
+//				activeFileChanged(foc.getProjectName(), foc.getFilePath());
+			} else {
+				builder.append(getAddOperationString(docChange, false, false));
+//				addOperation(docChange, false);
+			}
+		}
+		
+		long end = System.currentTimeMillis();
+		System.out.println("Building String: " + (end - start) + "ms");
+		
+		start = System.currentTimeMillis();
+		browser.execute(builder.toString());
+		end = System.currentTimeMillis();
+		System.out.println("Executing String: " + (end - start) + "ms");
+	}
+
+	private String getAddOperationString(BaseDocumentChangeEvent docChange,
+			boolean scroll, boolean layout) {
+		String executeStr = String.format("addOperation(%1$d, %2$d, %3$d, %4$d, %5$f, %6$f, %7$d, %8$s, %9$s);",
 				docChange.getSessionId(),
 				docChange.getCommandIndex(),
 				docChange.getTimestamp(),
@@ -238,8 +273,9 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 				docChange.getY1(),
 				docChange.getY2(),
 				getTypeIndex(docChange),
-				Boolean.toString(scroll));
-		browser.execute(executeStr);
+				Boolean.toString(scroll),
+				Boolean.toString(layout));
+		return executeStr;
 	}
 	
 	private int getTypeIndex(BaseDocumentChangeEvent docChange) {
@@ -316,31 +352,14 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 		if (listEvents.isEmpty()) { 
 			return;
 		}
-		
-		// Update the start timestamp.
-		browser.execute("setStartTimestamp("
-				+ listEvents.get(0).getStartTimestamp() + ", true, true);");
 
 		// Add all the things.
 		for (Events events : listEvents) {
-			// Add the operations
-			for (ICommand command : events.getCommands()) {
-				if (!(command instanceof BaseDocumentChangeEvent)) {
-					continue;
-				}
-				
-				BaseDocumentChangeEvent docChange = (BaseDocumentChangeEvent)command;
-				if (docChange instanceof FileOpenCommand) {
-					FileOpenCommand foc = (FileOpenCommand)docChange;
-					activeFileChanged(foc.getProjectName(), foc.getFilePath());
-				} else {
-					addOperation(docChange, false);
-				}
-			}
+			addOperations(events);
 		}
 		
 		// Update the data.
-		browser.execute("adjustData();");
+		browser.execute("layout();");
 	}
 	
 	private void scrollToEnd() {

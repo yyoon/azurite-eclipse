@@ -413,7 +413,7 @@ function setStartTimestamp(timestamp, adjustMaxTimestamp, preservePosition) {
  * Add an edit operation to the end of the file.
  * Note that this is called immediately after an edit operation is performed.
  */
-function addOperation(sid, id, t1, t2, y1, y2, type, scroll) {
+function addOperation(sid, id, t1, t2, y1, y2, type, scroll, layout) {
 	if (global.currentFile == null) {
 		return;
 	}
@@ -457,23 +457,25 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll) {
 		.attr('fill', function(d) { return d.color; })
 		.attr('vector-effect', 'non-scaling-stroke');
 	
-	if (global.layout == LayoutEnum.COMPACT) {
-		// Find the last visible rect in this session.
-		var rectsInSession = session.g.selectAll('rect.op_rect').filter(function (d) {
-			return d.isVisible() && d != newOp;
-		})[0].slice();
-		rectsInSession.sort(global.operationCompareFunc);
-		
-		var x = 0;
-		if (rectsInSession.length > 0) {
-			var bounds = rectsInSession[rectsInSession.length - 1].getBBox();
-			x = bounds.x + bounds.width;
+	if (layout == true) {
+		if (global.layout == LayoutEnum.COMPACT) {
+			// Find the last visible rect in this session.
+			var rectsInSession = session.g.selectAll('rect.op_rect').filter(function (d) {
+				return d.isVisible() && d != newOp;
+			})[0].slice();
+			rectsInSession.sort(global.operationCompareFunc);
+			
+			var x = 0;
+			if (rectsInSession.length > 0) {
+				var bounds = rectsInSession[rectsInSession.length - 1].getBBox();
+				x = bounds.x + bounds.width;
+			}
+			
+			rectToAppend.attr('x', x);
 		}
-		
-		rectToAppend.attr('x', x);
-	}
-	else if (global.layout == LayoutEnum.REALTIME) {
-		rectToAppend.attr('x', rectDraw.xFunc);
+		else if (global.layout == LayoutEnum.REALTIME) {
+			rectToAppend.attr('x', rectDraw.xFunc);
+		}
 	}
 	
 	global.lastRect = rectToAppend;
@@ -489,7 +491,9 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll) {
 		session.indicator.attr('x1', indicatorX).attr('x2', indicatorX);
 	}
 	
-	updateHScroll();
+	if (layout == true) {
+		updateHScroll();
+	}
 	
 	if (scroll == true) {
 		showUntil(global.lastOperation.getAbsT2());
@@ -551,22 +555,6 @@ function findSession(sid) {
 	}
 	
 	return null;
-}
-
-function adjustData() {
-	// Sort the rects.
-	svg.subRects.selectAll('rect.op_rect').sort(function(lhs, rhs) {
-		if (lhs.sid + lhs.t1 < rhs.sid + rhs.t1) {
-			return -1;
-		} else if (lhs.sid + lhs.t1 > rhs.sid + rhs.t1) {
-			return 1;
-		} else {
-			return 0;
-		}
-	});
-
-	// Update the rects.
-	svg.subRects.selectAll('rect.op_rect').attr('x', rectDraw.xFunc);
 }
 
 function layout(newLayout) {
