@@ -343,6 +343,31 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		}
 	}
 	
+	public RuntimeDC filterDocumentChangeByIdWithoutCalculating(FileKey key, final OperationId id) {
+		if (id == null) {
+			throw new IllegalArgumentException();
+		}
+		
+		List<RuntimeDC> intermediateResult = filterDocumentChanges(key,
+				new IRuntimeDCFilter() {
+			@Override
+			public boolean filter(RuntimeDC runtimeDC) {
+				OperationId oid = new OperationId(
+						runtimeDC.getOriginal().getSessionId(),
+						runtimeDC.getOriginal().getCommandIndex());
+
+				return id.equals(oid);
+			}
+		}, false);
+		
+		if (intermediateResult == null || intermediateResult.isEmpty()) {
+			return null;
+		}
+		else {
+			return intermediateResult.get(0);
+		}
+	}
+	
 	public List<RuntimeDC> filterDocumentChangesByRegion(final int startOffset, final int endOffset) {
 		return filterDocumentChanges(new IRuntimeDCFilter() {
 			@Override
@@ -366,12 +391,17 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 	}
 	
 	public List<RuntimeDC> filterDocumentChanges(FileKey key, IRuntimeDCFilter filter) {
+		return filterDocumentChanges(key, filter, true);
+	}
+	
+	public List<RuntimeDC> filterDocumentChanges(FileKey key, IRuntimeDCFilter filter, boolean calculate) {
 		if (filter == null) {
 			throw new IllegalArgumentException();
 		}
 		
 		// Lazy-evaluation of the dynamic segments!
-		List<RuntimeDC> list = calculateDynamicSegments(key);
+		List<RuntimeDC> list = calculate ? calculateDynamicSegments(key) :
+			getRuntimeDocumentChanges(key);
 		
 		// Then filter the results.
 		List<RuntimeDC> result = new ArrayList<RuntimeDC>();

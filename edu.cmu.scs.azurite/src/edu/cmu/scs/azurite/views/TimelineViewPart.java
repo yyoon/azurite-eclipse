@@ -98,6 +98,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 		new InitializeFunction(browser, BROWSER_FUNC_PREFIX + "initialize");
 		new JumpFunction(browser, BROWSER_FUNC_PREFIX + "jump");
 		new LogFunction(browser, BROWSER_FUNC_PREFIX + "log");
+		new GetInfoFunction(browser, BROWSER_FUNC_PREFIX + "getInfo");
 	}
 
 	@Override
@@ -186,6 +187,8 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
             	}
             });
             
+            browser.execute("layout();");
+            
 			return "ok";
 		}
 	}
@@ -272,6 +275,49 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 		
 	}
 	
+	class GetInfoFunction extends BrowserFunction {
+
+		public GetInfoFunction(Browser browser, String name) {
+			super(browser, name);
+		}
+
+		@Override
+		public Object function(Object[] arguments) {
+			if (arguments == null || arguments.length != 4
+					|| !(arguments[0] instanceof String)
+					|| !(arguments[1] instanceof String)
+					|| !(arguments[2] instanceof Number)
+					|| !(arguments[3] instanceof Number)) {
+				return "fail";
+			}
+			
+			try {
+				String projectName = (String)arguments[0];
+				String filePath = (String)arguments[1];
+				FileKey key = new FileKey(projectName, filePath);
+				
+				long sid = ((Number)arguments[2]).longValue();
+				long id = ((Number)arguments[3]).longValue();
+				OperationId oid = new OperationId(sid, id);
+				
+				RuntimeDC runtimeDC = RuntimeHistoryManager.getInstance()
+						.filterDocumentChangeByIdWithoutCalculating(key, oid);
+				
+				if (runtimeDC != null) {
+					String result = runtimeDC.getHtmlInfo();
+					if (result != null) {
+						return result;
+					}
+				}
+				
+				return "unknown";
+			}
+			catch (Exception e) {
+				return "unknown";
+			}
+		}
+		
+	}
 	@Override
 	public void activeFileChanged(String projectName, String filePath) {
 		if (projectName == null || filePath == null) {

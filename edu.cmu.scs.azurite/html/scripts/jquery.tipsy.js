@@ -189,11 +189,14 @@
         function enter() {
             var tipsy = get(this);
             tipsy.hoverState = 'in';
-            if (options.delayIn === 0) {
-                tipsy.show();
-            } else {
-                tipsy.fixTitle();
-                setTimeout(function() { if (tipsy.hoverState == 'in') tipsy.show(); }, options.delayIn);
+            
+            if (options.checkFn == null || options.checkFn()) {
+                if (options.delayIn === 0) {
+                    tipsy.show();
+                } else {
+                    tipsy.fixTitle();
+                    setTimeout(function() { if (tipsy.hoverState == 'in') tipsy.show(); }, options.delayIn);
+                }
             }
         }
         
@@ -236,6 +239,7 @@
         opacity: 0.8,
         title: 'title',
         trigger: 'hover',
+        checkFn: null,
         hoverlock: false
     };
     

@@ -112,4 +112,10 @@ public abstract class RuntimeDC {
 		
 		return commandIDComparator;
 	}
+	
+	public abstract String getHtmlInfo();
+	
+	protected String transformToHtmlString(String originalCode) {
+		return originalCode.replace("\r\n", "\n").replace("\r", "\n").replace("\n", "&crarr;<br>");
+	}
 }

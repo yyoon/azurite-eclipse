@@ -109,4 +109,18 @@ public class RuntimeReplace extends RuntimeDC {
 				+ getOriginal().getInsertedText() + "\"";
 	}
 
+	@Override
+	public String getHtmlInfo() {
+		StringBuilder builder = new StringBuilder();
+		
+		builder.append("----------\n");
+		builder.append(transformToHtmlString(getOriginal().getDeletedText()));
+		builder.append("\n----------");
+		builder.append("\n++++++++++\n");
+		builder.append(transformToHtmlString(getOriginal().getInsertedText()));
+		builder.append("\n++++++++++");
+		
+		return builder.toString().replace("\n", "<br>");
+	}
+
 }

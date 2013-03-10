@@ -333,6 +333,15 @@ function EditOperation(sid, id, t1, t2, y1, y2, type, fileGroup) {
 	this.getAbsT2 = function() {
 		return this.sid + this.t2;
 	};
+	
+	this.getInfo = function() {
+        var date = new Date(this.sid + this.t1);
+        var info = azurite.getInfo(
+        		this.fileGroup.file.project, this.fileGroup.file.path,
+        		this.sid, this.id);
+        
+        return date.toLocaleString() + '<br>' + info;
+	};
 }
 
 /**
@@ -478,6 +487,17 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, layout) {
 			rectToAppend.attr('x', rectDraw.xFunc);
 		}
 	}
+	
+	// Add tipsy.
+	$(rectToAppend.node()).tipsy({
+        gravity: $.fn.tipsy.autoNS,
+        html: true,
+        checkFn: function() { return !global.dragging; },
+        title: function() {
+              var d = this.__data__;
+              return d.getInfo();
+        }
+    });
 	
 	global.lastRect = rectToAppend;
 	
@@ -1516,13 +1536,13 @@ function test() {
 		sid = global.lastOperation.getAbsT2() + Math.floor(Math.random() * 5000);
 	}
 	
-	addFile('Test.java');
+	addFile('DummyProject', 'Test.java');
 	addRandomOperations(sid, 100, true);
 
-	addFile('Test2.java');
+	addFile('DummyProject', 'Test2.java');
 	addRandomOperations(sid, 200, false);
 
-	addFile('Test.java');
+	addFile('DummyProject', 'Test.java');
 	addRandomOperations(sid, 100, false);
 	
 	layout();

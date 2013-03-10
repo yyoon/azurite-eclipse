@@ -10,6 +10,7 @@ try {
 	azurite.initialize = __AZURITE__initialize;
 	azurite.selectiveUndo = __AZURITE__selectiveUndo;
 	azurite.jump = __AZURITE__jump;
+	azurite.getInfo = __AZURITE__getInfo;
     
     azurite.log = __AZURITE__log;
 } catch (e) {
@@ -32,8 +33,13 @@ try {
 		alertFn(arrayOfIds);
 	};
 	
-	azurite.jump = function (sid, id, path) {
-		alertFn('azurite.jump(' + sid + ', ' + id + ', ' + path + ') call');
+	azurite.jump = function (project, path, sid, id) {
+		alertFn('azurite.jump(' + project + ', ' + path + ', ' + sid + ', ' + id + ') call');
+	};
+	
+	azurite.getInfo = function (project, path, sid, id) {
+		alertFn('azurite.getInfo(' + project + ', ' + path + ', ' + sid + ', ' + id + ') call');
+		return "unknown";
 	};
     
     azurite.log = function (msg) {

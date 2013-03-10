@@ -88,5 +88,16 @@ public class RuntimeInsert extends RuntimeDC {
 		return "[Insert:" + getOriginal().getCommandIndex() + "] \""
 				+ getOriginal().getText() + "\"";
 	}
+
+	@Override
+	public String getHtmlInfo() {
+		StringBuilder builder = new StringBuilder();
+		
+		builder.append("++++++++++\n");
+		builder.append(transformToHtmlString(getOriginal().getText()));
+		builder.append("\n++++++++++");
+		
+		return builder.toString().replace("\n", "<br>");
+	}
 	
 }
