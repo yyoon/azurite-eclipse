@@ -289,6 +289,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 	
 	private void addRuntimeDCFromOriginalDC(BaseDocumentChangeEvent docChange, FileKey key) {
 		RuntimeDC runtimeDocChange = RuntimeDC.createRuntimeDocumentChange(docChange);
+		runtimeDocChange.setBelongsTo(key);
 		
 		List<RuntimeDC> list = getRuntimeDocumentChanges(key);
 		if (list == null) {
@@ -317,6 +318,31 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		});
 	}
 	
+	public RuntimeDC filterDocumentChangeById(FileKey key, final OperationId id) {
+		if (id == null) {
+			throw new IllegalArgumentException();
+		}
+		
+		List<RuntimeDC> intermediateResult = filterDocumentChanges(key,
+				new IRuntimeDCFilter() {
+			@Override
+			public boolean filter(RuntimeDC runtimeDC) {
+				OperationId oid = new OperationId(
+						runtimeDC.getOriginal().getSessionId(),
+						runtimeDC.getOriginal().getCommandIndex());
+
+				return id.equals(oid);
+			}
+		});
+		
+		if (intermediateResult == null || intermediateResult.isEmpty()) {
+			return null;
+		}
+		else {
+			return intermediateResult.get(0);
+		}
+	}
+	
 	public List<RuntimeDC> filterDocumentChangesByRegion(final int startOffset, final int endOffset) {
 		return filterDocumentChanges(new IRuntimeDCFilter() {
 			@Override
@@ -336,13 +362,16 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 	}
 	
 	public List<RuntimeDC> filterDocumentChanges(IRuntimeDCFilter filter) {
+		return filterDocumentChanges(getCurrentFileKey(), filter);
+	}
+	
+	public List<RuntimeDC> filterDocumentChanges(FileKey key, IRuntimeDCFilter filter) {
 		if (filter == null) {
 			throw new IllegalArgumentException();
 		}
 		
 		// Lazy-evaluation of the dynamic segments!
-		FileKey fileKey = getCurrentFileKey();
-		List<RuntimeDC> list = calculateDynamicSegments(fileKey);
+		List<RuntimeDC> list = calculateDynamicSegments(key);
 		
 		// Then filter the results.
 		List<RuntimeDC> result = new ArrayList<RuntimeDC>();

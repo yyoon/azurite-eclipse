@@ -229,7 +229,8 @@ function recalculateClipPaths() {
 /**
  * An object that keeps track of insert, delete and replace for each file.
  */
-function File(path, fileName) {
+function File(project, path, fileName) {
+	this.project = project;
 	this.path = path;
 	this.fileName = fileName;
 	
@@ -346,7 +347,7 @@ function OperationId(sid, id) {
  * Called by Azurite.
  * Adds a new row if the given file is not already in the list.
  */
-function addFile(path) {
+function addFile(project, path) {
 	var fileName = path.match(/[^\\\/]+$/)[0];
 
 	for ( var index in global.files) {
@@ -356,7 +357,7 @@ function addFile(path) {
 		}
 	}
 
-	var newFile = new File(path, fileName);
+	var newFile = new File(project, path, fileName);
 	newFile.verticalIndex = global.files.length;
 
 	global.files.push(newFile);
@@ -789,6 +790,15 @@ function initContextMenu() {
 }
 
 function initEventHandlers() {
+	initMouseWheelHandler();
+	initKeyEventHandlers();
+	initMouseDownHandler();
+	initMouseMoveHandler();
+	initMouseUpHandler();
+	initDblClickHandler();
+}
+
+function initMouseWheelHandler() {
 	svg.main.on("mousewheel", function() {
 		if (d3.event.shiftKey && d3.event.ctrlKey) {
 			if (d3.event.wheelDelta > 0) {
@@ -815,7 +825,9 @@ function initEventHandlers() {
 			scrollRight(d3.event.wheelDelta / 10);
 		}
 	});
+}
 
+function initKeyEventHandlers() {
 	document.addEventListener("keydown", function(e) {
 		if (e.keyCode == 17)
 			global.isCtrlDown = true;
@@ -825,7 +837,9 @@ function initEventHandlers() {
 		if (e.keyCode == 17)
 			global.isCtrlDown = false;
 	}, false);
+}
 
+function initMouseDownHandler() {
 	document.onmousedown = function(e) {
 		if (cmenu.isContextMenuVisible) {
 			hideContextMenu();
@@ -913,7 +927,9 @@ function initEventHandlers() {
 		global.draggingHScroll = false;
 		global.draggingVScroll = false;
 	};
+}
 
+function initMouseMoveHandler() {
 	document.onmousemove = function(e) {
 		var mouseX = e.clientX - SVG_WRAPPER_PADDING;
 		var mouseY = e.clientY - MENU_PANEL_HEIGHT - SVG_WRAPPER_PADDING;
@@ -989,7 +1005,9 @@ function initEventHandlers() {
 			translateY(newTy);
 		}
 	};
+}
 
+function initMouseUpHandler() {
 	document.onmouseup = function(e) {
 		if (cmenu.isRightButtonDown) {
 			showContextMenu(e);
@@ -1027,6 +1045,27 @@ function initEventHandlers() {
 		global.dragging = false;
 		global.draggingHScroll = false;
 		global.draggingVScroll = false;
+	};
+}
+
+function initDblClickHandler() {
+	document.ondblclick = function(e) {
+		var mouseX = e.clientX - SVG_WRAPPER_PADDING;
+		var mouseY = e.clientY - MENU_PANEL_HEIGHT - SVG_WRAPPER_PADDING;
+		
+		var rect = svg.main.node().createSVGRect();
+		rect.x = mouseX;
+		rect.y = mouseY;
+		rect.width = 1;
+		rect.height = 1;
+
+		// Get all the intersecting objects in the SVG.
+		var list = svg.main.node().getIntersectionList(rect, null);
+		var datum = d3.selectAll(list).filter('.op_rect')[0][0].__data__;
+		if (datum != undefined && datum != null) {
+			var file = datum.fileGroup.file;
+			azurite.jump(file.project, file.path, datum.sid, datum.id);
+		}
 	};
 }
 

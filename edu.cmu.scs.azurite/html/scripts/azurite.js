@@ -9,6 +9,7 @@ try {
     // Being run in an IDE
 	azurite.initialize = __AZURITE__initialize;
 	azurite.selectiveUndo = __AZURITE__selectiveUndo;
+	azurite.jump = __AZURITE__jump;
     
     azurite.log = __AZURITE__log;
 } catch (e) {
@@ -29,6 +30,10 @@ try {
 	azurite.selectiveUndo = function (arrayOfIds) {
 		alertFn('azurite.selectiveUndo() call');
 		alertFn(arrayOfIds);
+	};
+	
+	azurite.jump = function (sid, id, path) {
+		alertFn('azurite.jump(' + sid + ', ' + id + ', ' + path + ') call');
 	};
     
     azurite.log = function (msg) {

@@ -1,5 +1,8 @@
 package edu.cmu.scs.azurite.model;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 /**
  * @author YoungSeok Yoon
  * 
@@ -8,11 +11,11 @@ package edu.cmu.scs.azurite.model;
 public class FileKey {
 	
 	private final String mProjectName;
-	private final String mFilePath;
+	private final Path mFilePath;
 	
 	public FileKey(String projectName, String filePath) {
 		mProjectName = projectName;
-		mFilePath = filePath;
+		mFilePath = filePath == null ? null : Paths.get(filePath);
 	}
 	
 	public String getProjectName() {
@@ -20,7 +23,7 @@ public class FileKey {
 	}
 	
 	public String getFilePath() {
-		return mFilePath;
+		return mFilePath == null ? null : mFilePath.toString();
 	}
 
 	@Override

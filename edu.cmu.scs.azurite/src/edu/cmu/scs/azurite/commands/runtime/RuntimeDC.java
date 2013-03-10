@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
+import edu.cmu.scs.azurite.model.FileKey;
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 import edu.cmu.scs.fluorite.commands.Delete;
 import edu.cmu.scs.fluorite.commands.Insert;
@@ -18,6 +19,8 @@ public abstract class RuntimeDC {
 	private BaseDocumentChangeEvent mOriginal;
 	
 	private List<RuntimeDC> mConflicts;
+	
+	private FileKey mBelongsTo;
 	
 	public static RuntimeDC createRuntimeDocumentChange(BaseDocumentChangeEvent original) {
 		if (original instanceof Insert) {
@@ -58,6 +61,14 @@ public abstract class RuntimeDC {
 	
 	protected void addConflict(RuntimeDC docChange) {
 		mConflicts.add(docChange);
+	}
+	
+	public void setBelongsTo(FileKey belongsTo) {
+		mBelongsTo = belongsTo;
+	}
+	
+	public FileKey getBelongsTo() {
+		return mBelongsTo;
 	}
 	
 	public abstract List<Segment> getAllSegments();
