@@ -168,6 +168,8 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 		@Override
 		public Object function(Object[] arguments) {
             
+			final long currentTimestamp = EventRecorder.getInstance().getStartTimestamp();
+			
             // Read the existing runtime document changes.
             RuntimeHistoryManager.getInstance().scheduleTask(new Runnable() {
             	public void run() {
@@ -177,7 +179,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
                     		for (FileKey key : manager.getFileKeys()) {
                     			addFile(key.getProjectName(), key.getFilePath());
                     			for (RuntimeDC dc : manager.getRuntimeDocumentChanges(key)) {
-                    				addOperation(dc.getOriginal(), false);
+                    				addOperation(dc.getOriginal(), false, dc.getOriginal().getSessionId() == currentTimestamp);
                     			}
                     		}
                     		
@@ -335,7 +337,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 	
 	@Override
 	public void documentChangeAdded(BaseDocumentChangeEvent docChange) {
-		addOperation(docChange, true);
+		addOperation(docChange, true, true);
 	}
 
 	private void addFile(String projectName, String filePath) {
@@ -350,8 +352,8 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 		return executeStr;
 	}
 
-	private void addOperation(BaseDocumentChangeEvent docChange, boolean scroll) {
-		String executeStr = getAddOperationString(docChange, scroll, true);
+	private void addOperation(BaseDocumentChangeEvent docChange, boolean scroll, boolean current) {
+		String executeStr = getAddOperationString(docChange, scroll, true, current);
 		browser.execute(executeStr);
 	}
 
@@ -374,7 +376,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 				}
 //				activeFileChanged(foc.getProjectName(), foc.getFilePath());
 			} else {
-				builder.append(getAddOperationString(docChange, false, false));
+				builder.append(getAddOperationString(docChange, false, false, false));
 //				addOperation(docChange, false);
 			}
 		}
@@ -389,8 +391,8 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 	}
 
 	private String getAddOperationString(BaseDocumentChangeEvent docChange,
-			boolean scroll, boolean layout) {
-		String executeStr = String.format("addOperation(%1$d, %2$d, %3$d, %4$d, %5$f, %6$f, %7$d, %8$s, %9$s);",
+			boolean scroll, boolean layout, boolean current) {
+		String executeStr = String.format("addOperation(%1$d, %2$d, %3$d, %4$d, %5$f, %6$f, %7$d, %8$s, %9$s, %10$s);",
 				docChange.getSessionId(),
 				docChange.getCommandIndex(),
 				docChange.getTimestamp(),
@@ -399,7 +401,8 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 				docChange.getY2(),
 				getTypeIndex(docChange),
 				Boolean.toString(scroll),
-				Boolean.toString(layout));
+				Boolean.toString(layout),
+				Boolean.toString(current));
 		return executeStr;
 	}
 	

@@ -236,6 +236,8 @@ function File(project, path, fileName) {
 	
 	this.verticalIndex = 0;
 	this.visible = true;
+	
+	d3.selectAll('.indicator').attr('y2', indicatorDraw.y2Func);
 }
 
 /**
@@ -249,6 +251,7 @@ function Session(sid, current) {
 	this.g = svg.subRects.append('g');
 	this.g.attr('class', 'session_group')
 		.attr('id', 'sg_' + this.sid);
+	this.g.datum(this);
 	
 	var color = current ? 'yellow' : 'gray';
 	
@@ -290,6 +293,7 @@ function FileGroup(session, file) {
 	this.g.attr('class', 'file_group')
 		.attr('id', 'fg_' + this.session.sid + '_' + this.file.path)
 		.attr('transform', 'translate(0, ' + (ROW_HEIGHT * file.verticalIndex) + ')');
+	this.g.datum(this);
 	
 	this.session.fileGroups.push(this);
 	
@@ -423,7 +427,7 @@ function setStartTimestamp(timestamp, adjustMaxTimestamp, preservePosition) {
  * Add an edit operation to the end of the file.
  * Note that this is called immediately after an edit operation is performed.
  */
-function addOperation(sid, id, t1, t2, y1, y2, type, scroll, layout) {
+function addOperation(sid, id, t1, t2, y1, y2, type, scroll, layout, current) {
 	if (global.currentFile == null) {
 		return;
 	}
@@ -438,7 +442,7 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, layout) {
 	
 	var session = findSession(sid);
 	if (session == null) {
-		session = new Session(sid);
+		session = new Session(sid, current);
 		session.startAbsTimestamp = sid + t1;
 		session.endAbsTimestamp = sid + t2;
 	}
