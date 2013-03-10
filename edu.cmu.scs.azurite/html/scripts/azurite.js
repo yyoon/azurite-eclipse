@@ -38,7 +38,7 @@ try {
 	};
 	
 	azurite.getInfo = function (project, path, sid, id) {
-		alertFn('azurite.getInfo(' + project + ', ' + path + ', ' + sid + ', ' + id + ') call');
+//		alertFn('azurite.getInfo(' + project + ', ' + path + ', ' + sid + ', ' + id + ') call');
 		return "unknown";
 	};
     
