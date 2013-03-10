@@ -1140,7 +1140,16 @@ function initMouseUpHandler() {
 			cmenu.mousePos = [mouseX, mouseY];
 			
 			if (cursorInArea(mouseX, mouseY, global.draggableArea)) {
-				showContextMenu(e, '#cmenu_main');
+				if (global.selected.length == 0) {
+					addSelections(mouseX, mouseY, mouseX + 1, mouseY + 1);
+				}
+				
+				if (global.selected.length == 1) {
+					showContextMenu(e, '#cmenu_main_single');
+				}
+				else if (global.selected.length > 0) {
+					showContextMenu(e, '#cmenu_main');
+				}
 			}
 			else if (cursorInArea(mouseX, mouseY, global.fileArea)) {
 				var numVisibleFiles = global.getVisibleFiles().length + global.translateY;
@@ -1424,6 +1433,10 @@ function scaleX(sx) {
 
 	updateTicks();
 	updateHScroll();
+	
+	if (global.layout == LayoutEnum.COMPACT) {
+		layout();
+	}
 }
 
 function scaleY(sy) {
@@ -1746,4 +1759,19 @@ function showAllFilesInProject() {
 	
 	layoutFiles();
 	layout();
+}
+
+function jumpToLocation() {
+	if (global.selected.length == 0) { return; }
+	
+	var selection = global.selected[0];
+	var rect = $('rect#' + selection.sid + '_' + selection.id).get(0);
+	
+	if (rect != null) {
+		var datum = rect.__data__;
+		if (datum != undefined && datum != null) {
+			var file = datum.fileGroup.file;
+			azurite.jump(file.project, file.path, datum.sid, datum.id);
+		}
+	}
 }
