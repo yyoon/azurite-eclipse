@@ -299,13 +299,17 @@ height: 10px;
 background-image: url('../images/down_rollover.png');
 }
 
-#cssmenu {
+text {
+	pointer-events: none;
+}
+
+.context_menu {
 	display: none;
 	position: absolute;
 }
 
 /* Some stylesheet reset */
-#cssmenu > ul{
+.context_menu > ul{
 	list-style: none;
 	margin: 0;
 	padding: 0;
@@ -314,13 +318,13 @@ background-image: url('../images/down_rollover.png');
 }
 
 /* The container */
-#cssmenu > ul {
+.context_menu > ul {
 	display: block;
 	position: relative;
 }
 
 	/* The list elements which contain the links */
-	#cssmenu > ul li {
+	.context_menu > ul li {
 		display: block;
 		position: relative;
 		margin: 0;
@@ -328,7 +332,7 @@ background-image: url('../images/down_rollover.png');
 	}
 
 		/* General link styling */
-		#cssmenu > ul li a {
+		.context_menu > ul li a {
 			/* Layout */
 			display: block;
 			position: relative;
@@ -350,27 +354,27 @@ background-image: url('../images/down_rollover.png');
 			background: #eaeaea;
 		}
 		
-		#cssmenu > ul li.disabled a {
+		.context_menu > ul li.disabled a {
 			color: gray;
 		}
 
 		/* Rounded corners for the first link of the menu/submenus */
-		#cssmenu > ul li:first-child>a {
-			border-top-left-radius: 3px;
-			border-top-right-radius: 3px;
+		.context_menu > ul li:first-child>a {
+			border-top-left-radius: 2px;
+			border-top-right-radius: 2px;
 			border-top: 0;
 		}
 
 		/* Rounded corners for the last link of the menu/submenus */
-		#cssmenu > ul li:last-child>a {
-			border-bottom-left-radius: 3px;
-			border-bottom-right-radius: 3px;
+		.context_menu > ul li:last-child>a {
+			border-bottom-left-radius: 2px;
+			border-bottom-right-radius: 2px;
 			border-bottom: 0;
 		}
 
 
 		/* The hover state of the menu/submenu links */
-		#cssmenu > ul li>a:hover, #cssmenu > ul li:hover>a {
+		.context_menu > ul li>a:hover, .context_menu > ul li:hover>a {
 			color: #fff;
 			text-shadow: 0 1px 0 rgba(0, 0, 0, .3);
 			background: #54cdf1;
@@ -381,13 +385,13 @@ background-image: url('../images/down_rollover.png');
 			border-color: transparent;
 		}
 		
-		#cssmenu > ul li.disabled>a:hover, #cssmenu > ul li.disabled:hover>a {
+		.context_menu > ul li.disabled>a:hover, #cssmenu > ul li.disabled:hover>a {
 			color: gray;
 			text-shadow: 0 1px 0 #fff;
 		}
 
 		/* The arrow indicating a submenu */
-		#cssmenu > ul .has-sub>a::after {
+		.context_menu > ul .has-sub>a::after {
 			content: '';
 			position: absolute;
 			top: 16px;
@@ -401,7 +405,7 @@ background-image: url('../images/down_rollover.png');
 		}
 
 		/* The same arrow, but with a darker color, to create the shadow effect */
-		#cssmenu > ul .has-sub>a::before {
+		.context_menu > ul .has-sub>a::before {
 			content: '';
 			position: absolute;
 			top: 17px;
@@ -415,10 +419,10 @@ background-image: url('../images/down_rollover.png');
 		}
 
 		/* Changing the color of the arrow on hover */
-		#cssmenu > ul li>a:hover::after, #cssmenu > ul li:hover>a::after {
+		.context_menu > ul li>a:hover::after, .context_menu > ul li:hover>a::after {
 			border-left: 4px solid #fff;
 		}
 
-		#cssmenu > ul li>a:hover::before, #cssmenu > ul li:hover>a::before {
+		.context_menu > ul li>a:hover::before, .context_menu > ul li:hover>a::before {
 			border-left: 4px solid rgba(0, 0, 0, .25);
 		}

@@ -362,6 +362,12 @@ function addFile(project, path) {
 	for ( var index in global.files) {
 		if (global.files[index].path == path) {
 			global.currentFile = global.files[index];
+			
+			global.files.splice(index, 1);
+			global.files.splice(0, 0, global.currentFile);
+			
+			layoutFiles();
+			
 			return;
 		}
 	}
@@ -792,7 +798,6 @@ window.onload = function() {
 	azurite.initialize();
 
 	setupSVG();
-	initContextMenu();
 
 	window.onresize();
 	initEventHandlers();
@@ -844,10 +849,6 @@ function updateDraggableArea() {
 /******************************************************************
  MOUSE EVENT FUNCTIONS
  ******************************************************************/
-
-function initContextMenu() {
-	global.divContext = document.getElementById('cssmenu');
-}
 
 function initEventHandlers() {
 	initMouseWheelHandler();
@@ -1070,7 +1071,11 @@ function initMouseMoveHandler() {
 function initMouseUpHandler() {
 	document.onmouseup = function(e) {
 		if (cmenu.isRightButtonDown) {
-			showContextMenu(e);
+			var mouseX = e.clientX - SVG_WRAPPER_PADDING;
+			var mouseY = e.clientY - MENU_PANEL_HEIGHT - SVG_WRAPPER_PADDING;
+			if (cursorInArea(mouseX, mouseY, global.draggableArea)) {
+				showContextMenu(e, '#cmenu_main');
+			}
 			return;
 		}
 
@@ -1141,25 +1146,22 @@ function clampInArea(x, y, area) {
 			clamp(y, area.top, area.bottom - 1) ];
 }
 
-function showContextMenu(event) {
+function showContextMenu(event, divId) {
 
-	var $contextMenu = $('#cssmenu');
+	var $contextMenu = $(divId);
 	var w = $contextMenu.outerWidth();
 	var h = $contextMenu.outerHeight();
-
-	global.divContext.style.left = Math.min(event.clientX,
-			global.lastWindowWidth - w)
-			+ 'px';
-	global.divContext.style.top = Math.min(event.clientY,
-			global.lastWindowHeight - h)
-			+ 'px';
-	global.divContext.style.display = 'block';
+	
+	var menu = d3.select(divId);
+	menu.style('left', Math.min(event.clientX, global.lastWindowWidth - w) + 'px');
+	menu.style('top', Math.min(event.clientY, global.lastWindowHeight - h) + 'px');
+	menu.style('display', 'block');
 
 	cmenu.isContextMenuVisible = true;
 }
 
 function hideContextMenu() {
-	global.divContext.style.display = 'none';
+	d3.selectAll('div.context_menu').style('display', 'none');
 	cmenu.isContextMenuVisible = false;
 }
 
