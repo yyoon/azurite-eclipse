@@ -25,7 +25,7 @@ var ROW_HEIGHT = 30;
 var TICKS_HEIGHT = 30;
 var DEFAULT_RATIO = 100;
 
-var FILE_NAME_OFFSET_X = 0;
+var FILE_NAME_OFFSET_X = 5;
 var FILE_NAME_OFFSET_Y = 5;
 
 var FILES_PORTION = 0.15;
@@ -68,6 +68,17 @@ var fileDraw = {};
 fileDraw.yFunc = function(d, i) {
 	return ROW_HEIGHT * (i + global.translateY) * global.scaleY
 			+ FILE_NAME_OFFSET_Y;
+};
+
+var fileRectDraw = {};
+fileRectDraw.yFunc = function (d, i) {
+	return ROW_HEIGHT * (i + global.translateY) * global.scaleY;
+};
+fileRectDraw.wFunc = function (d) {
+	return getSvgWidth() * FILES_PORTION;
+};
+fileRectDraw.hFunc = function (d, i) {
+	return ROW_HEIGHT * global.scaleY;
 };
 
 var lineDraw = {};
@@ -219,8 +230,10 @@ function recalculateClipPaths() {
 	var svgHeight = getSvgHeight();
 
 	svg.clipFiles
-		.attr('width', (svgWidth * FILES_PORTION) + 'px')
-		.attr('height', (svgHeight - 20) + 'px');
+		.attr('x', '-1')
+		.attr('y', '-1')
+		.attr('width', (svgWidth * FILES_PORTION + 2) + 'px')
+		.attr('height', (svgHeight - 20 + 2) + 'px');
 
 	svg.subFiles
 		.attr('transform',
@@ -655,17 +668,33 @@ function layoutFiles() {
 		visibleFiles.push(file);
 	}
 	
+	// Rects surrounding the file names.
+	var rects = svg.subFiles.selectAll('rect.file_rect').data(visibleFiles);
+	rects.enter().insert('rect', ':first-child')
+		.attr('class', 'file_rect')
+		.attr('rx', '10')
+		.attr('ry', '10')
+		.attr('fill', 'lightgray')
+		.attr('stroke', 'gray')
+		.attr('stroke-width', '2')
+		.attr('vector-effect', 'non-scaling-stroke');
+	
+	rects.exit().remove();
+	
+	rects.attr('x', 0)
+		.attr('y', fileRectDraw.yFunc)
+		.attr('width', fileRectDraw.wFunc)
+		.attr('height', fileRectDraw.hFunc);
+	
 	// Labels
 	var labels = svg.subFiles.selectAll('text').data(visibleFiles);
-	
 	labels.enter().append('text');
-	
 	labels.exit().remove();
 	
-	labels.attr('x', FILE_NAME_OFFSET_X + 'px')
+	labels.attr('x', FILE_NAME_OFFSET_X)
 		.attr('y', fileDraw.yFunc)
 		.attr('dy', '1em')
-		.attr('fill', 'white')
+		.attr('fill', 'black')
 		.text(function(d) { return d.fileName; });
 	
 	// Separating Lines
@@ -823,6 +852,8 @@ window.onresize = function(e) {
 
 		updateHScroll();
 		updateVScroll();
+		
+		svg.subFiles.selectAll('rect.file_rect').attr('width', fileRectDraw.wFunc);
 	}
 };
 
@@ -1404,6 +1435,9 @@ function scaleY(sy) {
 	svg.subRects.selectAll('rect.op_rect').attr('height', rectDraw.hFunc);
 
 	svg.subFiles.selectAll('text').attr('y', fileDraw.yFunc);
+	svg.subFiles.selectAll('rect.file_rect')
+		.attr('y', fileRectDraw.yFunc)
+		.attr('height', fileRectDraw.hFunc);
 
 	updateSeparatingLines();
 
@@ -1437,6 +1471,7 @@ function translateY(ty) {
 	updateSubRectsTransform();
 
 	svg.subFiles.selectAll('text').attr('y', fileDraw.yFunc);
+	svg.subFiles.selectAll('rect.file_rect').attr('y', fileRectDraw.yFunc);
 
 	updateSeparatingLines();
 	updateVScroll();
