@@ -663,7 +663,7 @@ function layoutFiles() {
 	var lines = svg.subRectsWrap.selectAll('line.separating_line')
 		.data(range(0, visibleFiles.length + 1));
 	
-	lines.enter().insert('line', ':before')
+	lines.enter().insert('line', ':first-child')
 		.attr('class', 'separating_line')
 		.attr('x1', '0')
 		.attr('stroke', 'gray')
@@ -1121,10 +1121,13 @@ function initDblClickHandler() {
 
 		// Get all the intersecting objects in the SVG.
 		var list = svg.main.node().getIntersectionList(rect, null);
-		var datum = d3.selectAll(list).filter('.op_rect')[0][0].__data__;
-		if (datum != undefined && datum != null) {
-			var file = datum.fileGroup.file;
-			azurite.jump(file.project, file.path, datum.sid, datum.id);
+		var oprect = d3.selectAll(list).filter('.op_rect');
+		if (oprect.length > 0 && oprect[0].length > 0) {
+			var datum = oprect[0][0].__data__;
+			if (datum != undefined && datum != null) {
+				var file = datum.fileGroup.file;
+				azurite.jump(file.project, file.path, datum.sid, datum.id);
+			}
 		}
 	};
 }
