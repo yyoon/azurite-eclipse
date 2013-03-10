@@ -902,13 +902,32 @@ function initMouseWheelHandler() {
 
 function initKeyEventHandlers() {
 	document.addEventListener("keydown", function(e) {
-		if (e.keyCode == 17)
+		if (e.keyCode == 17) {
 			global.isCtrlDown = true;
+		}
+		else if (e.keyCode == 107) {
+			if (e.shiftKey) {
+				fileZoomIn();
+			}
+			else {
+				barZoomIn();
+			}
+		}
+		else if (e.keyCode == 109) {
+			if (e.shiftKey) {
+				fileZoomOut();
+			}
+			else {
+				barZoomOut();
+			}
+		}
+		
 	}, false);
 
 	document.addEventListener("keyup", function(e) {
-		if (e.keyCode == 17)
+		if (e.keyCode == 17) {
 			global.isCtrlDown = false;
+		}
 	}, false);
 }
 
