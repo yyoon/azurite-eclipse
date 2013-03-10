@@ -65,8 +65,8 @@ rectDraw.hFunc = function(d) {
 };
 
 var fileDraw = {};
-fileDraw.yFunc = function(d) {
-	return ROW_HEIGHT * (d.verticalIndex + global.translateY) * global.scaleY
+fileDraw.yFunc = function(d, i) {
+	return ROW_HEIGHT * (i + global.translateY) * global.scaleY
 			+ FILE_NAME_OFFSET_Y;
 };
 
@@ -74,8 +74,8 @@ var lineDraw = {};
 lineDraw.x2Func = function(d) {
 	return getSvgWidth() * (1.0 - FILES_PORTION);
 };
-lineDraw.yFunc = function(d, i) {
-	return ROW_HEIGHT * (i + global.translateY) * global.scaleY;
+lineDraw.yFunc = function(d) {
+	return ROW_HEIGHT * (d + global.translateY) * global.scaleY;
 };
 
 var indicatorDraw = {};
@@ -234,10 +234,7 @@ function File(project, path, fileName) {
 	this.path = path;
 	this.fileName = fileName;
 	
-	this.verticalIndex = 0;
 	this.visible = true;
-	
-	d3.selectAll('.indicator').attr('y2', indicatorDraw.y2Func);
 }
 
 /**
@@ -291,8 +288,7 @@ function FileGroup(session, file) {
 	
 	this.g = this.session.g.append('g');
 	this.g.attr('class', 'file_group')
-		.attr('id', 'fg_' + this.session.sid + '_' + this.file.path)
-		.attr('transform', 'translate(0, ' + (ROW_HEIGHT * file.verticalIndex) + ')');
+		.attr('id', 'fg_' + this.session.sid + '_' + this.file.path);
 	this.g.datum(this);
 	
 	this.session.fileGroups.push(this);
@@ -371,7 +367,6 @@ function addFile(project, path) {
 	}
 
 	var newFile = new File(project, path, fileName);
-	newFile.verticalIndex = global.files.length;
 
 	global.files.push(newFile);
 	global.currentFile = newFile;
@@ -384,34 +379,21 @@ function addFile(project, path) {
 		.attr('dy', '1em')
 		.attr('fill', 'white')
 		.text(function(d) { return d.fileName; });
-
-	// Draw separating lines
-	if (global.files.length == 1) {
-		addSeparatingLine();
-	}
-
-	addSeparatingLine();
-
-	updateSeparatingLines();
+	
+	layoutFiles();
 
 	// Draw indicator
-	d3.select('#indicator').attr('y2', indicatorDraw.y2Func);
+	d3.selectAll('.indicator').attr('y2', indicatorDraw.y2Func);
 
 	// Scrollbar
 	updateVScroll();
 }
 
-function addSeparatingLine() {
-	svg.subRectsWrap.insert('line', ':first-child').attr('class',
-			'separating_line').attr('x1', '0').attr('y1', lineDraw.yFunc).attr(
-			'x2', lineDraw.x2Func).attr('y2', lineDraw.yFunc).attr('stroke',
-			'gray').attr('stroke-width', '2');
-}
-
 function updateSeparatingLines() {
-	svg.subRectsWrap.selectAll('line.separating_line').attr('y1',
-			lineDraw.yFunc).attr('x2', lineDraw.x2Func).attr('y2',
-			lineDraw.yFunc);
+	svg.subRectsWrap.selectAll('line.separating_line')
+		.attr('y1', lineDraw.yFunc)
+		.attr('x2', lineDraw.x2Func)
+		.attr('y2', lineDraw.yFunc);
 }
 
 /**
@@ -638,6 +620,60 @@ function layout(newLayout) {
 	
 	// Restore the scroll position.
 	showFrom(leftmostTimestamp);
+}
+
+function layoutFiles() {
+	var i;
+	var visibleFiles = [];
+	
+	for (i = 0; i < global.files.length; ++i) {
+		var file = global.files[i];
+		
+		var fileGroups = svg.subRects.selectAll('g.file_group').filter(function (d) {
+			return d.file == file;
+		});
+		
+		if (file.visible) {
+			fileGroups.style('display', '');
+		}
+		else {
+			fileGroups.style('display', 'none');
+			continue;
+		}
+		
+		fileGroups.attr('transform', 'translate(0 ' + (visibleFiles.length * ROW_HEIGHT) + ')');
+		
+		visibleFiles.push(file);
+	}
+	
+	// Labels
+	var labels = svg.subFiles.selectAll('text').data(visibleFiles);
+	
+	labels.enter().append('text');
+	
+	labels.exit().remove();
+	
+	labels.attr('x', FILE_NAME_OFFSET_X + 'px')
+		.attr('y', fileDraw.yFunc)
+		.attr('dy', '1em')
+		.attr('fill', 'white')
+		.text(function(d) { return d.fileName; });
+	
+	// Separating Lines
+	var lines = svg.subRectsWrap.selectAll('line.separating_line')
+		.data(range(0, visibleFiles.length + 1));
+	
+	lines.enter().insert('line', ':before')
+		.attr('class', 'separating_line')
+		.attr('x1', '0')
+		.attr('stroke', 'gray')
+		.attr('stroke-width', '2');
+	
+	lines.exit().remove();
+	
+	updateSeparatingLines();
+	
+	updateVScroll();
 }
 
 function getLeftmostTimestamp() {
@@ -1545,6 +1581,9 @@ function test() {
 
 	addFile('DummyProject', 'Test2.java');
 	addRandomOperations(sid, 200, false);
+
+	addFile('DummyProject', 'Test3.java');
+	addRandomOperations(sid, 50, false);
 
 	addFile('DummyProject', 'Test.java');
 	addRandomOperations(sid, 100, false);
