@@ -80,7 +80,7 @@ lineDraw.yFunc = function(d) {
 
 var indicatorDraw = {};
 indicatorDraw.y2Func = function() {
-	return global.files.length * ROW_HEIGHT + getSvgHeight();
+	return global.getVisibleFiles().length * ROW_HEIGHT + getSvgHeight();
 };
 indicatorDraw.wFunc = function() {
 	return INDICATOR_WIDTH / global.scaleX;
@@ -107,6 +107,12 @@ global.lastWindowHeight = null;
 global.files = [];
 global.sessions = [];
 global.selected = [];
+
+global.getVisibleFiles = function () {
+	return global.files.filter(function (e, i, a) {
+		return e.isVisible();
+	});
+};
 
 // layout
 var LayoutEnum = {
@@ -138,6 +144,13 @@ global.draggableArea = {
 	bottom : 0
 };
 
+global.fileArea = {
+	left: 0,
+	top: 0,
+	right: 0,
+	bottom: 0
+};
+
 global.hscrollArea = {
 	left : 0,
 	top : 0,
@@ -160,6 +173,7 @@ global.dragStartScrollPos = null;
 var cmenu = {};
 cmenu.isContextMenuVisible = false;
 cmenu.isRightButtonDown = false;
+cmenu.mousePos = [];
 global.isCtrlDown = false;
 
 /**
@@ -235,6 +249,10 @@ function File(project, path, fileName) {
 	this.fileName = fileName;
 	
 	this.visible = true;
+	
+	this.isVisible = function () {
+		return this.visible;
+	};
 }
 
 /**
@@ -376,23 +394,8 @@ function addFile(project, path) {
 
 	global.files.push(newFile);
 	global.currentFile = newFile;
-
-	var newText = svg.subFiles.append('text');
-	newText.datum(newFile);
-
-	newText.attr('x', FILE_NAME_OFFSET_X + 'px')
-		.attr('y', fileDraw.yFunc)
-		.attr('dy', '1em')
-		.attr('fill', 'white')
-		.text(function(d) { return d.fileName; });
 	
 	layoutFiles();
-
-	// Draw indicator
-	d3.selectAll('.indicator').attr('y2', indicatorDraw.y2Func);
-
-	// Scrollbar
-	updateVScroll();
 }
 
 function updateSeparatingLines() {
@@ -679,6 +682,10 @@ function layoutFiles() {
 	
 	updateSeparatingLines();
 	
+	// Draw indicator
+	d3.selectAll('.indicator').attr('y2', indicatorDraw.y2Func);
+
+	// VScroll
 	updateVScroll();
 }
 
@@ -812,14 +819,14 @@ window.onresize = function(e) {
 
 		recalculateClipPaths();
 		updateSeparatingLines();
-		updateDraggableArea();
+		updateAreas();
 
 		updateHScroll();
 		updateVScroll();
 	}
 };
 
-function updateDraggableArea() {
+function updateAreas() {
 	var svgWidth = getSvgWidth();
 	var svgHeight = getSvgHeight();
 
@@ -827,6 +834,11 @@ function updateDraggableArea() {
 	global.draggableArea.top = CHART_MARGINS.top;
 	global.draggableArea.right = CHART_MARGINS.left + svgWidth;
 	global.draggableArea.bottom = CHART_MARGINS.top + svgHeight;
+	
+	global.fileArea.left = CHART_MARGINS.left;
+	global.fileArea.top = CHART_MARGINS.top;
+	global.fileArea.right = CHART_MARGINS.left + svgWidth * FILES_PORTION;
+	global.fileArea.bottom = CHART_MARGINS.top + svgHeight;
 
 	global.hscrollArea.left = (CHART_MARGINS.left + CHART_MARGINS.right + svgWidth)
 			* FILES_PORTION + SCROLLBAR_WIDTH;
@@ -1071,11 +1083,25 @@ function initMouseMoveHandler() {
 function initMouseUpHandler() {
 	document.onmouseup = function(e) {
 		if (cmenu.isRightButtonDown) {
+			
 			var mouseX = e.clientX - SVG_WRAPPER_PADDING;
 			var mouseY = e.clientY - MENU_PANEL_HEIGHT - SVG_WRAPPER_PADDING;
+			
+			cmenu.mousePos = [mouseX, mouseY];
+			
 			if (cursorInArea(mouseX, mouseY, global.draggableArea)) {
 				showContextMenu(e, '#cmenu_main');
 			}
+			else if (cursorInArea(mouseX, mouseY, global.fileArea)) {
+				var numVisibleFiles = global.getVisibleFiles().length + global.translateY;
+				if (mouseY < numVisibleFiles * ROW_HEIGHT * global.scaleY) {
+					showContextMenu(e, '#cmenu_file_in');
+				}
+				else {
+					showContextMenu(e, '#cmenu_file_out');
+				}
+			}
+			
 			return;
 		}
 
@@ -1398,7 +1424,7 @@ function translateY(ty) {
 }
 
 function getMinTranslateY() {
-	return 1 - global.files.length;
+	return 1 - global.files.filter(function (e, i, a) { return e.visible; }).length;
 }
 
 function updateSubRectsTransform() {
@@ -1586,6 +1612,9 @@ function test() {
 
 	addFile('DummyProject', 'Test2.java');
 	addRandomOperations(sid, 200, false);
+	
+	addFile('OtherProject', 'OtherProject.java');
+	addRandomOperations(sid, 100, false);
 
 	addFile('DummyProject', 'Test3.java');
 	addRandomOperations(sid, 50, false);
@@ -1628,4 +1657,39 @@ function getSvgWidth() {
 function getSvgHeight() {
 	return parseInt(svg.main.style('height')) - CHART_MARGINS.top
 			- CHART_MARGINS.bottom;
+}
+
+function showAllFiles() {
+	for (var i in global.files) {
+		global.files[i].visible = true;
+	}
+	
+	layoutFiles();
+	layout();
+}
+
+function showSelectedFile() {
+	var index = Math.floor(cmenu.mousePos[1] / (ROW_HEIGHT * global.scaleY)) - global.translateY;
+	var file = global.getVisibleFiles()[index];
+	
+	var i;
+	for (i = 0; i < global.files.length; ++i) {
+		global.files[i].visible = global.files[i] == file;
+	}
+	
+	layoutFiles();
+	layout();
+}
+
+function showAllFilesInProject() {
+	var index = Math.floor(cmenu.mousePos[1] / (ROW_HEIGHT * global.scaleY)) - global.translateY;
+	var file = global.getVisibleFiles()[index];
+	
+	var i;
+	for (i = 0; i < global.files.length; ++i) {
+		global.files[i].visible = global.files[i].project == file.project;
+	}
+	
+	layoutFiles();
+	layout();
 }
