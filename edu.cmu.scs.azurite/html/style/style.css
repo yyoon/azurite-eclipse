@@ -106,29 +106,6 @@ margin: 0;
 list-style-type: none;
 }
 
-#context_menu {
-z-index: 10000;
-background-color: white;
-border: 2px solid #FFA500;
-display: none;
-position: absolute;
-height:150;
-}
-
-#context_menu div:hover {
-cursor:pointer;
-background-color:#ADD8E6;
-}
-
-.context_menu_item {
-font-size: 14px;
-padding: 3px;
-}
-
-.disabled {
-color: gray;
-}
-
 #scroll_wrapper {
 position: absolute;
 left: 0px;
@@ -321,3 +298,127 @@ height: 10px;
 #vscroll_down:hover {
 background-image: url('../images/down_rollover.png');
 }
+
+#cssmenu {
+	display: none;
+	position: absolute;
+}
+
+/* Some stylesheet reset */
+#cssmenu > ul{
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	vertical-align: baseline;
+	line-height: 1;
+}
+
+/* The container */
+#cssmenu > ul {
+	display: block;
+	position: relative;
+}
+
+	/* The list elements which contain the links */
+	#cssmenu > ul li {
+		display: block;
+		position: relative;
+		margin: 0;
+		padding: 0;
+	}
+
+		/* General link styling */
+		#cssmenu > ul li a {
+			/* Layout */
+			display: block;
+			position: relative;
+			margin: 0;
+			border-top: 1px dotted #fff;
+			border-bottom: 1px dotted #d9d9d9;
+			padding: 10px 10px;
+
+			/* Typography */
+			font-family:  Helvetica, Arial, sans-serif;
+			color: #3dafea;
+			text-decoration: none;
+			text-transform: uppercase;
+			text-shadow: 0 1px 0 #fff;
+			font-size: 13px;
+			font-weight: 300;
+
+			/* Background & effects */
+			background: #eaeaea;
+		}
+		
+		#cssmenu > ul li.disabled a {
+			color: gray;
+		}
+
+		/* Rounded corners for the first link of the menu/submenus */
+		#cssmenu > ul li:first-child>a {
+			border-top-left-radius: 3px;
+			border-top-right-radius: 3px;
+			border-top: 0;
+		}
+
+		/* Rounded corners for the last link of the menu/submenus */
+		#cssmenu > ul li:last-child>a {
+			border-bottom-left-radius: 3px;
+			border-bottom-right-radius: 3px;
+			border-bottom: 0;
+		}
+
+
+		/* The hover state of the menu/submenu links */
+		#cssmenu > ul li>a:hover, #cssmenu > ul li:hover>a {
+			color: #fff;
+			text-shadow: 0 1px 0 rgba(0, 0, 0, .3);
+			background: #54cdf1;
+			background: -webkit-linear-gradient(bottom, #54cdf1, #74d7f3);
+			background: -ms-linear-gradient(bottom, #54cdf1, #74d7f3); 
+			background: -moz-linear-gradient(bottom, #54cdf1, #74d7f3);
+			background: -o-linear-gradient(bottom, #54cdf1, #74d7f3);
+			border-color: transparent;
+		}
+		
+		#cssmenu > ul li.disabled>a:hover, #cssmenu > ul li.disabled:hover>a {
+			color: gray;
+			text-shadow: 0 1px 0 #fff;
+		}
+
+		/* The arrow indicating a submenu */
+		#cssmenu > ul .has-sub>a::after {
+			content: '';
+			position: absolute;
+			top: 16px;
+			right: 10px;
+			width: 0px;
+			height: 0px;
+
+			/* Creating the arrow using borders */
+			border: 4px solid transparent;
+			border-left: 4px solid #3dafea; 
+		}
+
+		/* The same arrow, but with a darker color, to create the shadow effect */
+		#cssmenu > ul .has-sub>a::before {
+			content: '';
+			position: absolute;
+			top: 17px;
+			right: 10px;
+			width: 0px;
+			height: 0px;
+
+			/* Creating the arrow using borders */
+			border: 4px solid transparent;
+			border-left: 4px solid #fff;
+		}
+
+		/* Changing the color of the arrow on hover */
+		#cssmenu > ul li>a:hover::after, #cssmenu > ul li:hover>a::after {
+			border-left: 4px solid #fff;
+		}
+
+		#cssmenu > ul li>a:hover::before, #cssmenu > ul li:hover>a::before {
+			border-left: 4px solid rgba(0, 0, 0, .25);
+		}

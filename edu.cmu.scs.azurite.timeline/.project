@@ -21,6 +21,16 @@
 			<locationURI>AZURITE_ROOT/edu.cmu.scs.azurite/html/scripts/azurite.js</locationURI>
 		</link>
 		<link>
+			<name>index.html</name>
+			<type>1</type>
+			<locationURI>AZURITE_ROOT/edu.cmu.scs.azurite/html/index.html</locationURI>
+		</link>
+		<link>
+			<name>style.css</name>
+			<type>1</type>
+			<locationURI>AZURITE_ROOT/edu.cmu.scs.azurite/html/style/style.css</locationURI>
+		</link>
+		<link>
 			<name>timeline.js</name>
 			<type>1</type>
 			<locationURI>AZURITE_ROOT/edu.cmu.scs.azurite/html/scripts/timeline.js</locationURI>

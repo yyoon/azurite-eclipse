@@ -846,7 +846,7 @@ function updateDraggableArea() {
  ******************************************************************/
 
 function initContextMenu() {
-	global.divContext = document.getElementById('context_menu');
+	global.divContext = document.getElementById('cssmenu');
 }
 
 function initEventHandlers() {
@@ -1143,7 +1143,7 @@ function clampInArea(x, y, area) {
 
 function showContextMenu(event) {
 
-	var $contextMenu = $('#context_menu');
+	var $contextMenu = $('#cssmenu');
 	var w = $contextMenu.outerWidth();
 	var h = $contextMenu.outerHeight();
 
