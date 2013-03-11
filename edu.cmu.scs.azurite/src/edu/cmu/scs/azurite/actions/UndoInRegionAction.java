@@ -62,14 +62,10 @@ public class UndoInRegionAction implements IObjectActionDelegate {
 
 	@Override
 	public void selectionChanged(IAction action, ISelection selection) {
-		// TODO Auto-generated method stub
-
 	}
 
 	@Override
 	public void setActivePart(IAction action, IWorkbenchPart targetPart) {
-		// TODO Auto-generated method stub
-
 	}
 
 }

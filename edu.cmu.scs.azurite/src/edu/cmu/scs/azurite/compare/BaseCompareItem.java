@@ -43,12 +43,10 @@ public abstract class BaseCompareItem implements IStreamContentAccessor, ITypedE
 	}
 
 	public void setContent(byte[] newContent) {
-		// TODO Auto-generated method stub
 		
 	}
 
 	public ITypedElement replace(ITypedElement dest, ITypedElement src) {
-		// TODO Auto-generated method stub
 		return null;
 	}
 }

@@ -3,7 +3,6 @@ package edu.cmu.scs.azurite.views;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.eclipse.compare.CompareUI;
 import org.eclipse.draw2d.IFigure;
 import org.eclipse.draw2d.Label;
 import org.eclipse.swt.SWT;
@@ -16,7 +15,6 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MenuItem;
-import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.part.ViewPart;
 import org.eclipse.zest.core.widgets.Graph;
 import org.eclipse.zest.core.widgets.GraphConnection;
@@ -28,16 +26,12 @@ import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDelete;
 import edu.cmu.scs.azurite.commands.runtime.RuntimeInsert;
 import edu.cmu.scs.azurite.commands.runtime.RuntimeReplace;
-import edu.cmu.scs.azurite.compare.CompareInput;
-import edu.cmu.scs.azurite.compare.HistoryCompareItem;
-import edu.cmu.scs.azurite.compare.SimpleCompareItem;
 import edu.cmu.scs.azurite.jface.widgets.NonMovableGraph;
 import edu.cmu.scs.azurite.model.RuntimeDCListener;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 import edu.cmu.scs.fluorite.model.Events;
-import edu.cmu.scs.fluorite.util.Utilities;
 
 public class GraphViewPart extends ViewPart implements RuntimeDCListener, MouseListener {
 	
@@ -135,8 +129,6 @@ public class GraphViewPart extends ViewPart implements RuntimeDCListener, MouseL
 
 	@Override
 	public void setFocus() {
-		// TODO Auto-generated method stub
-
 	}
 	
 	public void documentChangeFinalized(final BaseDocumentChangeEvent docChange) {
@@ -271,17 +263,13 @@ public class GraphViewPart extends ViewPart implements RuntimeDCListener, MouseL
 	}
 
 	public void mouseDown(MouseEvent e) {
-		// TODO Auto-generated method stub
-		
 	}
 
 	public void mouseUp(MouseEvent e) {
-		// TODO Auto-generated method stub
-		
 	}
 	
 	private void launchCompareUI(BaseDocumentChangeEvent docChange) {
-		IEditorPart activeEditor = Utilities.getActiveEditor();
+/*		IEditorPart activeEditor = Utilities.getActiveEditor();
 		
 		CompareInput input = new CompareInput(
 				new HistoryCompareItem(
@@ -297,7 +285,7 @@ public class GraphViewPart extends ViewPart implements RuntimeDCListener, MouseL
 		CompareUI.openCompareEditor(input);
 		
 		CompareInput.setLastCompareInput(input);
-	}
+*/	}
 
 	private void updateEnabled() {
 		mSelectiveUndoMenuItem.setEnabled( mGraph.getSelection().size() > 0 );
@@ -319,20 +307,14 @@ public class GraphViewPart extends ViewPart implements RuntimeDCListener, MouseL
 
 	@Override
 	public void documentChangeAdded(BaseDocumentChangeEvent docChange) {
-		// TODO Auto-generated method stub
-		
 	}
 
 	@Override
 	public void documentChangeUpdated(BaseDocumentChangeEvent docChange) {
-		// TODO Auto-generated method stub
-		
 	}
 
 	@Override
 	public void pastLogsRead(List<Events> listEvents) {
-		// TODO Auto-generated method stub
-		
 	}
 
 }
