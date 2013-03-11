@@ -7,8 +7,6 @@ import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.ITextSelection;
-import org.eclipse.swt.widgets.Display;
-import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IViewPart;
 import org.eclipse.ui.IWorkbenchPage;
@@ -17,7 +15,6 @@ import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
-import edu.cmu.scs.azurite.jface.dialogs.PartialCodeHistoryDialog;
 import edu.cmu.scs.azurite.views.PartialCodeHistoryViewPart;
 import edu.cmu.scs.fluorite.model.EventRecorder;
 import edu.cmu.scs.fluorite.util.Utilities;
@@ -29,7 +26,7 @@ public class LaunchPartialCodeHistoryHandler extends AbstractHandler {
 
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
-		final Shell parentShell = Display.getDefault().getActiveShell();
+//		final Shell parentShell = Display.getDefault().getActiveShell();
 		
 		List<RuntimeDC> dcs = HandlerUtilities.getOperationsInSelectedRegion();
 		if (dcs == null || dcs.isEmpty()) {
