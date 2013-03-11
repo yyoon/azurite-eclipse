@@ -37,6 +37,9 @@ var INDICATOR_WIDTH = 2;
 var SCROLLBAR_WIDTH = 10;
 var SCROLLBAR_DIST_THRESHOLD = 50;
 
+var MARKER_SIZE = 10;
+var MARKER_COLOR = 'red';
+
 var CHART_MARGINS = {
 	left : 10,
 	top : 10,
@@ -180,6 +183,12 @@ global.draggingHScroll = false;
 global.draggingVScroll = false;
 global.dragStartScrollPos = null;
 
+global.draggingMarker = false;
+global.dragStartMarkerPos = null;
+
+global.markerTimestamp = 0;
+global.markerPos = null;
+
 // context menu
 var cmenu = {};
 cmenu.isContextMenuVisible = false;
@@ -206,6 +215,38 @@ function setupSVG() {
 
 	svg.subRects = svg.subRectsWrap.append('g')
 		.attr('id', 'sub_rects');
+	
+	svg.subMarkerWrap = svg.main.append('g')
+		.attr('id', 'sub_marker_wrap')
+		.attr('clip-path', 'url(#clipMarkerWrap)');
+	
+	svg.subMarkers = svg.subMarkerWrap.append('g')
+		.attr('id', 'sub_markers');
+	
+	svg.subMarker = svg.subMarkers.append('g')
+		.attr('id', 'sub_marker')
+		.style('display', 'none');	// hidden initially.
+	
+	svg.subMarker.append('line')
+		.attr('id', 'marker_line')
+		.attr('class', 'marker')
+		.attr('y1', -MARKER_SIZE / 2)
+		.attr('stroke-width', 2)
+		.attr('stroke', MARKER_COLOR);
+	svg.subMarker.append('path')
+		.attr('id', 'marker_upper_triangle')
+		.attr('class', 'marker')
+		.attr('d', 'M 0 0 L '
+				+ (-MARKER_SIZE) + ' ' + (-MARKER_SIZE) + ' '
+				+ MARKER_SIZE + ' ' + (-MARKER_SIZE))
+		.attr('fill', MARKER_COLOR);
+	svg.subMarker.append('path')
+		.attr('id', 'marker_lower_triangle')
+		.attr('class', 'marker')
+		.attr('d', 'M 0 0 L '
+				+ (-MARKER_SIZE) + ' ' + MARKER_SIZE + ' '
+				+ MARKER_SIZE + ' ' + MARKER_SIZE)
+		.attr('fill', MARKER_COLOR);
 
 	svg.subTicks = svg.main.append('g')
 		.attr('id', 'sub_ticks');
@@ -221,6 +262,9 @@ function setupSVG() {
 
 	svg.clipRectsWrap = svg.main.append('clipPath')
 		.attr('id', 'clipRectsWrap').append('rect');
+	
+	svg.clipMarkerWrap = svg.main.append('clipPath')
+		.attr('id', 'clipMarkerWrap').append('rect');
 
 	recalculateClipPaths();
 }
@@ -247,6 +291,20 @@ function recalculateClipPaths() {
 		.attr('y', '-1')
 		.attr('width', (svgWidth * (1.0 - FILES_PORTION)) + 'px')
 		.attr('height', (svgHeight - TICKS_HEIGHT + 2) + 'px');
+	
+	svg.subMarkerWrap.attr('transform', 'translate('
+			+ (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' '
+			+ CHART_MARGINS.top + ')');
+	svg.subMarker.select('#marker_line').attr('y2', svgHeight - TICKS_HEIGHT + MARKER_SIZE / 2);
+	svg.subMarker.select('#marker_lower_triangle').attr('transform', 'translate(0, ' + (svgHeight - TICKS_HEIGHT) + ')');
+	
+	// TODO remove this.
+	svg.subMarker.attr('transform', 'translate(100 0)');
+	
+	svg.clipMarkerWrap
+		.attr('y', -MARKER_SIZE)
+		.attr('width', (svgWidth * (1.0 - FILES_PORTION)))
+		.attr('height', (svgHeight - TICKS_HEIGHT + 2 * MARKER_SIZE));
 
 	svg.subTicks.attr('transform', 'translate('
 			+ (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' '
@@ -639,6 +697,7 @@ function layout(newLayout) {
 	
 	updateHighlight();
 	updateHScroll();
+	updateMarkerPosition();
 	
 	// Restore the scroll position.
 	showFrom(leftmostTimestamp);
@@ -719,12 +778,20 @@ function layoutFiles() {
 }
 
 function getLeftmostTimestamp() {
+	return screenPixelToTimestamp(0);
+}
+
+function screenPixelToTimestamp(screenPixel) {
+	return pixelToTimestamp(-global.translateX + screenPixel);
+}
+
+function pixelToTimestamp(pixel) {
 	if (global.sessions.length == 0) {
 		return 0;
 	}
 	
 	if (global.layout == LayoutEnum.COMPACT) {
-		var tx = -global.translateX / global.scaleX;
+		var tx = pixel / global.scaleX;
 		
 		var session = null, dist = 0;
 		
@@ -744,7 +811,7 @@ function getLeftmostTimestamp() {
 		}
 		
 		if (session == null) {
-			session = global.sessions[i];
+			session = global.sessions[i - 1];
 			dist = session.g.node().getBBox().width;
 		}
 		
@@ -792,7 +859,7 @@ function getLeftmostTimestamp() {
 		}
 	}
 	else if (global.layout == LayoutEnum.REALTIME) {
-		var tx = -global.translateX / global.scaleX;
+		var tx = pixel / global.scaleX;
 		
 		var session = null, dist = 0;
 		
@@ -867,7 +934,7 @@ function updateAreas() {
 	global.draggableArea.left = CHART_MARGINS.left + svgWidth * FILES_PORTION;
 	global.draggableArea.top = CHART_MARGINS.top;
 	global.draggableArea.right = CHART_MARGINS.left + svgWidth;
-	global.draggableArea.bottom = CHART_MARGINS.top + svgHeight;
+	global.draggableArea.bottom = CHART_MARGINS.top + svgHeight - TICKS_HEIGHT;
 	
 	global.fileArea.left = CHART_MARGINS.left;
 	global.fileArea.top = CHART_MARGINS.top;
@@ -992,6 +1059,7 @@ function initMouseDownHandler() {
 			global.dragging = true;
 			global.draggingHScroll = false;
 			global.draggingVScroll = false;
+			global.draggingMarker = false;
 
 			if (!global.isCtrlDown) {
 				global.selected = [];
@@ -1020,6 +1088,7 @@ function initMouseDownHandler() {
 				global.dragging = false;
 				global.draggingHScroll = true;
 				global.draggingVScroll = false;
+				global.draggingMarker = false;
 
 				global.dragStartScrollPos = thumbStart;
 				return;
@@ -1043,8 +1112,30 @@ function initMouseDownHandler() {
 				global.dragging = false;
 				global.draggingHScroll = false;
 				global.draggingVScroll = true;
+				global.draggingMarker = false;
 
 				global.dragStartScrollPos = thumbStart;
+				return;
+			}
+		}
+		// Check if the marker is clicked
+		else {
+			var rect = svg.main.node().createSVGRect();
+			rect.x = mouseX;
+			rect.y = mouseY;
+			rect.width = 1;
+			rect.height = 1;
+
+			// Get all the intersecting objects in the SVG.
+			var list = svg.main.node().getIntersectionList(rect, null);
+
+			if (d3.selectAll(list).filter('.marker')[0].length > 0) {
+				global.dragging = false;
+				global.draggingHScroll = false;
+				global.draggingVScroll = false;
+				global.draggingMarker = true;
+				
+				global.dragStartMarkerPos = global.markerPos;
 				return;
 			}
 		}
@@ -1052,6 +1143,7 @@ function initMouseDownHandler() {
 		global.dragging = false;
 		global.draggingHScroll = false;
 		global.draggingVScroll = false;
+		global.draggingMarker = false;
 	};
 }
 
@@ -1130,6 +1222,17 @@ function initMouseMoveHandler() {
 			newTy = Math.round(newTy);
 			translateY(newTy);
 		}
+		else if (global.draggingMarker) {
+			var markerPos = mouseX - global.dragStart[0] + global.dragStartMarkerPos;
+			global.markerPos = markerPos;
+			global.markerTimestamp = pixelToTimestamp(markerPos);
+			
+			svg.subMarker.attr('transform', 'translate(' + markerPos + ' 0)');
+			
+			// Tell Azurite about this marker move!
+			azurite.log(global.markerTimestamp);
+			azurite.markerMove(global.markerTimestamp);
+		}
 	};
 }
 
@@ -1198,6 +1301,7 @@ function initMouseUpHandler() {
 		global.dragging = false;
 		global.draggingHScroll = false;
 		global.draggingVScroll = false;
+		global.draggingMarker = false;
 	};
 }
 
@@ -1440,6 +1544,8 @@ function scaleX(sx) {
 	if (global.layout == LayoutEnum.COMPACT) {
 		layout();
 	}
+	
+	updateMarkerPosition();
 }
 
 function scaleY(sy) {
@@ -1501,6 +1607,7 @@ function updateSubRectsTransform() {
 	svg.subRects.attr('transform', 'translate(' + global.translateX + ' '
 			+ (global.translateY * ROW_HEIGHT * global.scaleY) + ') '
 			+ 'scale(' + global.scaleX + ' ' + global.scaleY + ')');
+	svg.subMarkers.attr('transform', 'translate(' + global.translateX + ' 0)');
 }
 
 function showFrom(absTimestamp) {
@@ -1512,9 +1619,12 @@ function showUntil(absTimestamp) {
 }
 
 function showTimestamp(absTimestamp, offsetInPixels) {
+	translateX(-timestampToPixel(absTimestamp) + offsetInPixels);
+}
+
+function timestampToPixel(absTimestamp) {
 	if (global.sessions.length == 0) {
-		translateX(0);
-		return;
+		return 0;
 	}
 	
 	// binary search through the sessions.
@@ -1554,9 +1664,14 @@ function showTimestamp(absTimestamp, offsetInPixels) {
 					
 					// found it.
 					if (absT1 <= absTimestamp && absTimestamp <= absT2) {
-						var tx = txOffset + rectBounds.x + rectBounds.width * (absTimestamp - absT1) / (absT2 - absT1);
-						translateX(-tx * global.scaleX + offsetInPixels);
-						return;
+					    if (absT2 == absT1) {
+					        var tx = txOffset + rectBounds.x + rectBounds.width / 2;
+					        return tx * global.scaleX;
+					    }
+						else {
+							var tx = txOffset + rectBounds.x + rectBounds.width * (absTimestamp - absT1) / (absT2 - absT1);
+							return tx * global.scaleX;
+						}
 					}
 					
 					if (absTimestamp < absT1) {
@@ -1571,23 +1686,19 @@ function showTimestamp(absTimestamp, offsetInPixels) {
 				
 				// Not in the middle of a rect.
 				if (startRectIndex == 0) {
-					translateX(-txOffset * global.scaleX + offsetInPixels);
+					return txOffset * global.scaleX;
 				}
 				else if (startRectIndex == rects.length) {
-					translateX(-(txOffset + midSession.g.node().getBBox().width) * global.scaleX + offsetInPixels);
+					return (txOffset + midSession.g.node().getBBox().width) * global.scaleX;
 				}
 				else {
-					translateX(-(txOffset + rects[startIndex].getBBox().x) * global.scaleX + offsetInPixels);
+					return (txOffset + rects[startIndex].getBBox().x) * global.scaleX;
 				}
-				
-				return;
 			}
 			else if (global.layout == LayoutEnum.REALTIME) {
 				var sessionBounds = midSession.g.node().getBBox();
 				var tx = txOffset + sessionBounds.width * (absTimestamp - midSession.startAbsTimestamp) / (midSession.endAbsTimestamp - midSession.startAbsTimestamp);
-				translateX(-tx * global.scaleX + offsetInPixels);
-				
-				return;
+				return tx * global.scaleX;
 			}
 		}
 		
@@ -1603,18 +1714,14 @@ function showTimestamp(absTimestamp, offsetInPixels) {
 	
 	// Couldn't found. Somewhere in the middle of sessions.
 	if (startIndex == 0) {
-		translateX(0);
+		return 0;
 	}
 	else if (startIndex == global.sessions.length) {
-		translateX(getMinTranslateX());
+		return -getMinTranslateX();
 	}
 	else {
-		translateX(-global.sessions[startIndex].g.node().getBBox().x + offsetInPixels);
+		return global.sessions[startIndex].g.node().getBBox().x * global.scaleX;
 	}
-}
-
-function translateXToTimestamp(tx) {
-	return -global.translateX * DEFAULT_RATIO / global.scaleX;
 }
 
 function updateHScroll() {
@@ -1824,4 +1931,24 @@ function showAllFilesEditedTogether() {
 	
 	layoutFiles();
 	layout();
+}
+
+function showMarker(absTimestamp) {
+	if (absTimestamp != undefined) {
+		global.markerTimestamp = absTimestamp;
+	}
+	
+	updateMarkerPosition();
+	svg.subMarker.style('display', '');
+}
+
+function updateMarkerPosition() {
+	var t = global.markerTimestamp;
+	var tx = timestampToPixel(t);
+	global.markerPos = tx;
+	svg.subMarker.attr('transform', 'translate(' + tx + ' 0)');
+}
+
+function hideMarker() {
+	svg.subMarker.style('display', 'none');
 }

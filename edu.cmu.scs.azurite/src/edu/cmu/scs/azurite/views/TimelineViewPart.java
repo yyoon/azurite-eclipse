@@ -99,6 +99,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 		new JumpFunction(browser, BROWSER_FUNC_PREFIX + "jump");
 		new LogFunction(browser, BROWSER_FUNC_PREFIX + "log");
 		new GetInfoFunction(browser, BROWSER_FUNC_PREFIX + "getInfo");
+		new MarkerMoveFunction(browser, BROWSER_FUNC_PREFIX + "markerMove");
 	}
 
 	@Override
@@ -321,6 +322,29 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 		}
 		
 	}
+	
+	class MarkerMoveFunction extends BrowserFunction {
+
+		public MarkerMoveFunction(Browser browser, String name) {
+			super(browser, name);
+		}
+
+		@Override
+		public Object function(Object[] arguments) {
+			if (arguments.length != 1 || !(arguments[0] instanceof Number)) {
+				return "fail";
+			}
+			
+			long absTimestamp = ((Number)arguments[0]).longValue();
+			
+			if (PartialCodeHistoryViewPart.getInstance() != null) {
+				PartialCodeHistoryViewPart.getInstance().selectVersionWithAbsTimestamp(absTimestamp);
+			}
+			return "ok";
+		}
+		
+	}
+	
 	@Override
 	public void activeFileChanged(String projectName, String filePath) {
 		if (projectName == null || filePath == null) {
@@ -501,6 +525,14 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 	
 	public void refresh() {
 		moveToIndexPage();
+	}
+	
+	public void showMarker(long absTimestamp) {
+		browser.execute("showMarker(" + absTimestamp + ");");
+	}
+	
+	public void hideMarker() {
+		browser.execute("hideMarker();");
 	}
 	
 }
