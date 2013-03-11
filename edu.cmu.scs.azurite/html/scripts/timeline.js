@@ -734,7 +734,7 @@ function getLeftmostTimestamp() {
 		for (i = 0; i < global.sessions.length; ++i) {
 			var width = global.sessions[i].g.node().getBBox().width;
 			
-			if (curWidth <= tx < curWidth + width) {
+			if (curWidth <= tx && tx < curWidth + width) {
 				session = global.sessions[i];
 				dist = tx - curWidth;
 				break;
@@ -750,7 +750,8 @@ function getLeftmostTimestamp() {
 		
 		// Collect all the visible rects in this session, and assume they are sorted.
 		var rects = session.g.selectAll('rect.op_rect')
-			.filter(function (d) { return d.isVisible(); })[0];
+			.filter(function (d) { return d.isVisible(); })[0].slice(0);
+		rects.sort(global.operationCompareFunc);
 		
 		// Binary search through the rects.
 		var startIndex = 0, endIndex = rects.length - 1;
@@ -1528,13 +1529,18 @@ function showTimestamp(absTimestamp, offsetInPixels) {
 				absTimestamp <= midSession.endAbsTimestamp) {
 			
 			// Get the tx offset.
-			var txOffset = midSession.g.node().getBBox().x;
+			var txOffset = 0;
+			var i;
+			for (i = 0; i < midIndex; ++i) {
+				txOffset += global.sessions[i].g.node().getBBox().width;
+			}
 			
 			if (global.layout == LayoutEnum.COMPACT) {
 				// again, binary search through the rects.
 				var rects = midSession.g.selectAll('rect.op_rect').filter(function (d) {
 					return d.isVisible();
-				})[0];
+				})[0].slice();
+				rects.sort(global.operationCompareFunc);
 				
 				var startRectIndex = 0, endRectIndex = rects.length - 1;
 				var midRectIndex = Math.floor((startRectIndex + endRectIndex) / 2);
