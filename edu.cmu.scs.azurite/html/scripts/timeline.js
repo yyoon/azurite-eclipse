@@ -837,6 +837,8 @@ window.onload = function() {
 
 	window.onresize();
 	initEventHandlers();
+	
+	setTimeout(layout, 100);
 };
 
 window.onresize = function(e) {
@@ -1774,4 +1776,46 @@ function jumpToLocation() {
 			azurite.jump(file.project, file.path, datum.sid, datum.id);
 		}
 	}
+}
+
+function showAllFilesEditedTogether() {
+	if (global.selected.length <= 1) { return; }
+	
+	var sortedSelection = global.selected.slice(0);
+	sortedSelection.sort(function (lhs, rhs) {
+		if (lhs.sid < rhs.sid) { return -1; }
+		if (lhs.sid > rhs.sid) { return 1; }
+		if (lhs.id < rhs.id) { return -1; }
+		if (lhs.id > rhs.id) { return 1; }
+		return 0;
+	});
+	
+	var start = global.selected[0];
+	var end = global.selected[global.selected.length - 1];
+	
+	var startRect = $('rect#' + start.sid + '_' + start.id).get(0);
+	var endRect = $('rect#' + end.sid + '_' + end.id).get(0);
+	
+	var sortedRects = svg.subRects.selectAll('rect.op_rect')[0].slice(0);
+	sortedRects.sort(global.operationCompareFunc);
+	
+	var startIndex = sortedRects.indexOf(startRect);
+	var endIndex = sortedRects.indexOf(endRect);
+	
+	if (startIndex == -1 || endIndex == -1) {
+		return;
+	}
+	
+	// Make all files invisible for the moment.
+	var i;
+	for (i = 0; i < global.files.length; ++i) {
+		global.files[i].visible = false;
+	}
+	
+	for (i = startIndex; i <= endIndex; ++i) {
+		sortedRects[i].__data__.fileGroup.file.visible = true;
+	}
+	
+	layoutFiles();
+	layout();
 }
