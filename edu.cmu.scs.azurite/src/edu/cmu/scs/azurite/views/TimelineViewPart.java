@@ -112,6 +112,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 
 	@Override
 	public void setFocus() {
+		browser.setFocus();
 	}
 
 

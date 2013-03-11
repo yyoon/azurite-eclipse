@@ -20,7 +20,7 @@ var TYPE_REPLACE = 2;
 
 var NUM_TIMESTAMPS = 3;
 
-var MIN_WIDTH = 3;
+var MIN_WIDTH = 6;
 var ROW_HEIGHT = 30;
 var TICKS_HEIGHT = 30;
 var DEFAULT_RATIO = 100;

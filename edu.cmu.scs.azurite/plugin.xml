@@ -18,9 +18,17 @@
       <view
             category="edu.cmu.scs.azurite"
             class="edu.cmu.scs.azurite.views.TimelineViewPart"
-            icon="icons/azurite.gif"
+            icon="icons/timeline_marker.png"
             id="edu.cmu.scs.azurite.views.TimelineViewPart"
             name="Timeline View"
+            restorable="true">
+      </view>
+      <view
+            category="edu.cmu.scs.azurite"
+            class="edu.cmu.scs.azurite.views.PartialCodeHistoryViewPart"
+            icon="icons/time_machine.png"
+            id="edu.cmu.scs.azurite.views.PartialCodeHistoryViewPart"
+            name="Partial Code History View"
             restorable="true">
       </view>
    </extension>
@@ -95,6 +103,11 @@
          <command
                commandId="edu.cmu.scs.azurite.ui.commands.readPreviousLog"
                icon="icons/previous.png"
+               style="push">
+         </command>
+         <command
+               commandId="edu.cmu.scs.azurite.ui.commands.launchPartialCodeHistory"
+               icon="icons/time_machine.png"
                style="push">
          </command>
          <separator
@@ -177,17 +190,7 @@
          </separator>
          <command
                commandId="edu.cmu.scs.azurite.ui.commands.refreshTimeline"
-               icon="icons/gtk_refresh.png"
-               style="push">
-         </command>
-         <command
-               commandId="edu.cmu.scs.azurite.ui.commands.activateFirebugLiteCommand"
-               icon="icons/firebug.png"
-               style="push">
-         </command>
-         <command
-               commandId="edu.cmu.scs.azurite.ui.commands.launchPartialCodeHistory"
-               icon="icons/azurite.gif"
+               icon="icons/refresh_red.png"
                style="push">
          </command>
       </menuContribution>
@@ -234,6 +237,14 @@
             id="edu.cmu.scs.azurite.ui.commands.launchPartialCodeHistory"
             name="Launch Partial Code History">
       </command>
+   </extension>
+   <extension
+         point="org.eclipse.ui.bindings">
+      <key
+            commandId="edu.cmu.scs.azurite.ui.commands.activateFirebugLiteCommand"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="M1+M2+M3+F">
+      </key>
    </extension>
 
 </plugin>
