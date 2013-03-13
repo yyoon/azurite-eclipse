@@ -18,7 +18,7 @@ var TYPE_INSERT = 0;
 var TYPE_DELETE = 1;
 var TYPE_REPLACE = 2;
 
-var NUM_TIMESTAMPS = 3;
+var TIMETICK_INTERVAL = 100;
 
 var MIN_WIDTH = 6;
 var ROW_HEIGHT = 30;
@@ -298,9 +298,6 @@ function recalculateClipPaths() {
 	svg.subMarker.select('#marker_line').attr('y2', svgHeight - TICKS_HEIGHT + MARKER_SIZE / 2);
 	svg.subMarker.select('#marker_lower_triangle').attr('transform', 'translate(0, ' + (svgHeight - TICKS_HEIGHT) + ')');
 	
-	// TODO remove this.
-	svg.subMarker.attr('transform', 'translate(100 0)');
-	
 	svg.clipMarkerWrap
 		.attr('y', -MARKER_SIZE)
 		.attr('width', (svgWidth * (1.0 - FILES_PORTION)))
@@ -411,8 +408,10 @@ function EditOperation(sid, id, t1, t2, y1, y2, type, fileGroup) {
 	this.fileGroup = fileGroup;
 	this.session = fileGroup.session;
 	
+	this.visible = true;
+	
 	this.isVisible = function () {
-		return this.fileGroup.isVisible();
+		return this.fileGroup.isVisible() && this.visible;
 	};
 	
 	this.getAbsT1 = function() {
@@ -779,6 +778,10 @@ function layoutFiles() {
 
 function getLeftmostTimestamp() {
 	return screenPixelToTimestamp(0);
+}
+
+function getRightmostTimestamp() {
+	return screenPixelToTimestamp(getSvgWidth() * (1.0 - FILES_PORTION));
 }
 
 function screenPixelToTimestamp(screenPixel) {
@@ -1230,7 +1233,6 @@ function initMouseMoveHandler() {
 			svg.subMarker.attr('transform', 'translate(' + markerPos + ' 0)');
 			
 			// Tell Azurite about this marker move!
-			azurite.log(global.markerTimestamp);
 			azurite.markerMove(global.markerTimestamp);
 		}
 	};
@@ -1759,27 +1761,31 @@ function updateVScroll() {
 
 function updateTicks() {
 	svg.subTicks.selectAll('text').remove();
-
-/*	var start = global.startTimestamp - (global.translateX * DEFAULT_RATIO)
-			/ global.scaleX;
-	var end = start + getSvgWidth() * (1.0 - FILES_PORTION) * DEFAULT_RATIO
-			/ global.scaleX;
-
-	var timeScale = d3.time.scale().domain([ new Date(start), new Date(end) ])
-			.range([ 0, getSvgWidth() * (1.0 - FILES_PORTION) ]);
-
-	var ticks = timeScale.ticks(NUM_TIMESTAMPS);
-
-	d3.selectAll(ticks).each(
-			function(d) {
-				svg.subTicks.append('text').attr('x', timeScale(this)).attr(
-						'dy', '1em').attr('fill', 'white').attr('text-anchor',
-						'middle').text(d3.time.format('%I:%M %p')(this));
-
-				svg.subTicks.append('text').attr('x', timeScale(this)).attr(
-						'dy', '2em').attr('fill', 'white').attr('text-anchor',
-						'middle').text(d3.time.format('%x')(this));
-			});*/
+	
+	var totalWidth = getSvgWidth() * (1.0 - FILES_PORTION) - TIMETICK_INTERVAL;
+	var numIntervals = Math.floor(totalWidth / TIMETICK_INTERVAL);
+	var intervalSize = totalWidth / numIntervals;
+	
+	var i;
+	for (i = 0; i <= numIntervals; ++i) {
+		var screenPixel = TIMETICK_INTERVAL / 2 + intervalSize * i;
+		var timestamp = screenPixelToTimestamp(screenPixel);
+		var dateObj = new Date(timestamp);
+		
+		svg.subTicks.append('text')
+			.attr('x', screenPixel)
+			.attr('dy', '1em')
+			.attr('fill', 'white')
+			.attr('text-anchor', 'middle')
+			.text(d3.time.format('%I:%M %p')(dateObj));
+		
+		svg.subTicks.append('text')
+			.attr('x', screenPixel)
+			.attr('dy', '2em')
+			.attr('fill', 'white')
+			.attr('text-anchor', 'middle')
+			.text(d3.time.format('%x')(dateObj));
+	}
 }
 
 function test() {
