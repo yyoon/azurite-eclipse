@@ -29,6 +29,7 @@ import edu.cmu.scs.azurite.compare.SimpleCompareItem;
 import edu.cmu.scs.azurite.model.undo.Chunk;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
 import edu.cmu.scs.azurite.plugin.Activator;
+import edu.cmu.scs.azurite.views.TimelineViewPart;
 import edu.cmu.scs.fluorite.commands.ICommand;
 
 public class PartialCodeHistoryViewer extends Composite {
@@ -69,6 +70,7 @@ public class PartialCodeHistoryViewer extends Composite {
 		
 		mInvolvedDCs = new ArrayList<RuntimeDC>();
 		mInvolvedDCs.addAll(involvedDCs);
+		Collections.sort(mInvolvedDCs, RuntimeDC.getCommandIDComparator());
 		
 		mFileContent = fileContent;
 		mSelectionStart = selectionStart;
@@ -159,12 +161,43 @@ public class PartialCodeHistoryViewer extends Composite {
 			throw new IllegalStateException();
 		}
 		
+		if (getCurrentVersion() == version) {
+			return;
+		}
+		
 		SimpleCompareItem leftItem = getCompareItemOfVersion(version);
 		
 		mCompareViewerSwitchingPane.setInput(new PartialCodeCompareInput(
 				leftItem, mCurrentItem));
 		
 		mCurrentVersion = version;
+		
+		if (TimelineViewPart.getInstance() != null) {
+			if (version == mInvolvedDCs.size()) {
+				RuntimeDC dc = mInvolvedDCs.get(mInvolvedDCs.size() - 1);
+				TimelineViewPart.getInstance().showMarker(
+						dc.getOriginal().getSessionId() + dc.getOriginal().getTimestamp2() + 1);
+			}
+			else {
+				RuntimeDC dc = mInvolvedDCs.get(version);
+				TimelineViewPart.getInstance().showMarker(
+						dc.getOriginal().getSessionId() + dc.getOriginal().getTimestamp());
+			}
+		}
+	}
+	
+	public void selectVersionWithAbsTimestamp(long absTimestamp) {
+		for (int i = 0; i < mInvolvedDCs.size(); ++i) {
+			long t = mInvolvedDCs.get(i).getOriginal().getSessionId()
+					+ mInvolvedDCs.get(i).getOriginal().getTimestamp();
+			
+			if (absTimestamp <= t) {
+				selectVersion(i);
+				return;
+			}
+		}
+		
+		selectVersion(mInvolvedDCs.size());
 	}
 	
 	private SimpleCompareItem getCompareItemOfVersion(int version) {
@@ -183,7 +216,18 @@ public class PartialCodeHistoryViewer extends Composite {
 		List<RuntimeDC> subList = mInvolvedDCs.subList(version, mInvolvedDCs.size());
 		Chunk chunk = new Chunk();
 		for (RuntimeDC dc : subList) {
-			chunk.addAll(dc.getAllSegments());
+			for (Segment segment : dc.getAllSegments()) {
+				if (segment.isDeletion()) {
+					if (mSelectionStart < segment.getOffset() && segment.getOffset() < mSelectionEnd) {
+						chunk.add(segment);
+					}
+				}
+				else {
+					if (segment.getOffset() < mSelectionEnd && segment.getEndOffset() > mSelectionStart) {
+						chunk.add(segment);
+					}
+				}
+			}
 		}
 		Collections.sort(chunk, Segment.getLocationComparator());
 		

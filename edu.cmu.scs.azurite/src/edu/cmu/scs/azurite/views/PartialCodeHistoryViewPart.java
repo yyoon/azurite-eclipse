@@ -5,6 +5,8 @@ import java.util.List;
 import org.eclipse.compare.CompareConfiguration;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CTabFolder;
+import org.eclipse.swt.custom.CTabFolder2Listener;
+import org.eclipse.swt.custom.CTabFolderEvent;
 import org.eclipse.swt.custom.CTabItem;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.part.ViewPart;
@@ -31,6 +33,36 @@ public class PartialCodeHistoryViewPart extends ViewPart {
 		me = this;
 		
 		folder = new CTabFolder(parent, SWT.NONE);
+		folder.setMinimizeVisible(false);
+		folder.setMaximizeVisible(false);
+		folder.setSimple(false);
+		
+		folder.addCTabFolder2Listener(new CTabFolder2Listener() {
+			
+			@Override
+			public void showList(CTabFolderEvent event) {
+			}
+			
+			@Override
+			public void restore(CTabFolderEvent event) {
+			}
+			
+			@Override
+			public void minimize(CTabFolderEvent event) {
+			}
+			
+			@Override
+			public void maximize(CTabFolderEvent event) {
+			}
+			
+			@Override
+			public void close(CTabFolderEvent event) {
+				if (folder.getItemCount() == 1) {
+					hideMarker();
+				}
+			}
+		});
+		
 		mConfiguration = createConfiguration();
 		viewerCount = 0;
 	}
@@ -44,7 +76,15 @@ public class PartialCodeHistoryViewPart extends ViewPart {
 	public void dispose() {
 		me = null;
 		
+		hideMarker();
+		
 		super.dispose();
+	}
+
+	private void hideMarker() {
+		if (TimelineViewPart.getInstance() != null) {
+			TimelineViewPart.getInstance().hideMarker();
+		}
 	}
 
 	private CompareConfiguration createConfiguration() {
@@ -80,6 +120,15 @@ public class PartialCodeHistoryViewPart extends ViewPart {
 		tabItem.setControl(viewer);
 		folder.setSelection(tabItem);
 		folder.setFocus();
+	}
+	
+	public void selectVersionWithAbsTimestamp(long absTimestamp) {
+		for (CTabItem item : folder.getItems()) {
+			PartialCodeHistoryViewer viewer = 
+					(PartialCodeHistoryViewer)item.getControl();
+			
+			viewer.selectVersionWithAbsTimestamp(absTimestamp);
+		}
 	}
 
 }

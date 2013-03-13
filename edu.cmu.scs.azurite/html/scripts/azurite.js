@@ -11,6 +11,7 @@ try {
 	azurite.selectiveUndo = __AZURITE__selectiveUndo;
 	azurite.jump = __AZURITE__jump;
 	azurite.getInfo = __AZURITE__getInfo;
+	azurite.markerMove = __AZURITE__markerMove;
     
     azurite.log = __AZURITE__log;
 } catch (e) {
@@ -40,6 +41,10 @@ try {
 	azurite.getInfo = function (project, path, sid, id) {
 //		alertFn('azurite.getInfo(' + project + ', ' + path + ', ' + sid + ', ' + id + ') call');
 		return "unknown";
+	};
+	
+	azurite.markerMove = function (absTimestamp) {
+		alertFn('azurite.markerMove(' + absTimestamp + ') call');
 	};
     
     azurite.log = function (msg) {
