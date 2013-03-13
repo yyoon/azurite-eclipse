@@ -1296,7 +1296,7 @@ function initMouseUpHandler() {
 				y2 = global.dragStart[1];
 			}
 
-			addSelections(x1, y1, x2, y2);
+			addSelections(x1, y1, x2, y2, true);
 			global.dragStart = [];
 		}
 
@@ -1373,7 +1373,7 @@ function addSelectionsByIds(sids, ids, clearPreviousSelection) {
 	updateHighlight();
 }
 
-function addSelections(x1, y1, x2, y2) {
+function addSelections(x1, y1, x2, y2, toggle) {
 	var rect = svg.main.node().createSVGRect();
 	rect.x = x1;
 	rect.y = y1;
@@ -1387,8 +1387,18 @@ function addSelections(x1, y1, x2, y2) {
 	d3.selectAll(list).filter('.op_rect').each(function(d, i) {
 		var sid = d.sid;
 		var id = d.id;
+		
+		var index = indexOfSelected(sid, id);
 
-		if (!isSelected(sid, id)) {
+		if (toggle == true) {
+			if (index != -1) {
+				global.selected.splice(index, 1);
+			}
+			else {
+				global.selected.push(new OperationId(sid, id));
+			}
+		}
+		else if (!isSelected(sid, id)) {
 			global.selected.push(new OperationId(sid, id));
 		}
 	});
@@ -1397,14 +1407,18 @@ function addSelections(x1, y1, x2, y2) {
 }
 
 function isSelected(sid, id) {
+	return (indexOfSelected(sid, id) != -1);
+}
+
+function indexOfSelected(sid, id) {
 	var i;
 	for (i = 0; i < global.selected.length; ++i) {
 		if (global.selected[i].sid == sid && global.selected[i].id == id) {
-			return true;
+			return i;
 		}
 	}
 
-	return false;
+	return -1;
 }
 
 function updateHighlight() {
