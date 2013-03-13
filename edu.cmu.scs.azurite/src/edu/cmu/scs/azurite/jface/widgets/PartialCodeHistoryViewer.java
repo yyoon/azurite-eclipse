@@ -216,7 +216,18 @@ public class PartialCodeHistoryViewer extends Composite {
 		List<RuntimeDC> subList = mInvolvedDCs.subList(version, mInvolvedDCs.size());
 		Chunk chunk = new Chunk();
 		for (RuntimeDC dc : subList) {
-			chunk.addAll(dc.getAllSegments());
+			for (Segment segment : dc.getAllSegments()) {
+				if (segment.isDeletion()) {
+					if (mSelectionStart < segment.getOffset() && segment.getOffset() < mSelectionEnd) {
+						chunk.add(segment);
+					}
+				}
+				else {
+					if (segment.getOffset() < mSelectionEnd && segment.getEndOffset() > mSelectionStart) {
+						chunk.add(segment);
+					}
+				}
+			}
 		}
 		Collections.sort(chunk, Segment.getLocationComparator());
 		
