@@ -24,7 +24,7 @@ import org.eclipse.swt.widgets.Composite;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.commands.runtime.Segment;
-import edu.cmu.scs.azurite.compare.PartialCodeCompareInput;
+import edu.cmu.scs.azurite.compare.CodeHistoryCompareInput;
 import edu.cmu.scs.azurite.compare.SimpleCompareItem;
 import edu.cmu.scs.azurite.model.undo.Chunk;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
@@ -32,7 +32,7 @@ import edu.cmu.scs.azurite.plugin.Activator;
 import edu.cmu.scs.azurite.views.TimelineViewPart;
 import edu.cmu.scs.fluorite.commands.ICommand;
 
-public class PartialCodeHistoryViewer extends Composite {
+public class CodeHistoryDiffViewer extends Composite {
 	
 	private CompareViewerSwitchingPane mCompareViewerSwitchingPane;
 	private CompareConfiguration mConfiguration;
@@ -53,7 +53,7 @@ public class PartialCodeHistoryViewer extends Composite {
 	private IAction mPrevAction;
 	private IAction mNextAction;
 
-	public PartialCodeHistoryViewer(Composite parent, int style) {
+	public CodeHistoryDiffViewer(Composite parent, int style) {
 		super(parent, style);
 		
 		setLayout(new GridLayout());
@@ -113,10 +113,10 @@ public class PartialCodeHistoryViewer extends Composite {
 			@Override
 			protected Viewer getViewer(Viewer oldViewer, Object input) {
 				Viewer v = CompareUI.findContentViewer(oldViewer, input, this, mConfiguration);
-				v.getControl().setData(CompareUI.COMPARE_VIEWER_TITLE, "Partial Code History Compare");
+				v.getControl().setData(CompareUI.COMPARE_VIEWER_TITLE, "Code History Diff");
 				
 				ToolBarManager tbm = CompareViewerSwitchingPane.getToolBarManager(this);
-				String navGroupId = "pchnav";
+				String navGroupId = "historyDiffNav";
 				
 				// Check if the actions are added or not.
 				boolean added = false;
@@ -167,7 +167,7 @@ public class PartialCodeHistoryViewer extends Composite {
 		
 		SimpleCompareItem leftItem = getCompareItemOfVersion(version);
 		
-		mCompareViewerSwitchingPane.setInput(new PartialCodeCompareInput(
+		mCompareViewerSwitchingPane.setInput(new CodeHistoryCompareInput(
 				leftItem, mCurrentItem));
 		
 		mCurrentVersion = version;

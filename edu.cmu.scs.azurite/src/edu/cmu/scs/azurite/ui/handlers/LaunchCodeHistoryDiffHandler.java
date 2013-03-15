@@ -15,14 +15,14 @@ import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
-import edu.cmu.scs.azurite.views.PartialCodeHistoryViewPart;
+import edu.cmu.scs.azurite.views.CodeHistoryDiffViewPart;
 import edu.cmu.scs.fluorite.model.EventRecorder;
 import edu.cmu.scs.fluorite.util.Utilities;
 
-public class LaunchPartialCodeHistoryHandler extends AbstractHandler {
+public class LaunchCodeHistoryDiffHandler extends AbstractHandler {
 	
-	private static final String PARTIAL_CODE_HISTORY_VIEW_ID =
-			"edu.cmu.scs.azurite.views.PartialCodeHistoryViewPart";
+	private static final String CODE_HISTORY_DIFF_VIEW_ID =
+			"edu.cmu.scs.azurite.views.CodeHistoryDiffViewPart";
 
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
@@ -59,14 +59,14 @@ public class LaunchPartialCodeHistoryHandler extends AbstractHandler {
 			IWorkbenchPage page = window.getActivePage();
 			if (page != null) {
 				try {
-					IViewPart viewPart = page.showView(PARTIAL_CODE_HISTORY_VIEW_ID);
-					if (viewPart instanceof PartialCodeHistoryViewPart) {
-						PartialCodeHistoryViewPart pchView =
-								(PartialCodeHistoryViewPart) viewPart;
+					IViewPart viewPart = page.showView(CODE_HISTORY_DIFF_VIEW_ID);
+					if (viewPart instanceof CodeHistoryDiffViewPart) {
+						CodeHistoryDiffViewPart chdView =
+								(CodeHistoryDiffViewPart) viewPart;
 						
 						String fileName = editor.getEditorInput().getName();
 						
-						pchView.addPartialHistoryViewer(
+						chdView.addCodeHistoryDiffViewer(
 								fileName,
 								fileContent,
 								selection.getOffset(),

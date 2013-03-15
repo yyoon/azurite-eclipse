@@ -4,7 +4,7 @@ import org.eclipse.compare.ICompareInputLabelProvider;
 import org.eclipse.jface.viewers.ILabelProviderListener;
 import org.eclipse.swt.graphics.Image;
 
-public class PartialCodeCompareLabelProvider implements
+public class CodeHistoryCompareLabelProvider implements
 		ICompareInputLabelProvider {
 
 	@Override
@@ -46,8 +46,8 @@ public class PartialCodeCompareLabelProvider implements
 
 	@Override
 	public String getLeftLabel(Object input) {
-		if (input instanceof PartialCodeCompareInput) {
-			return ((PartialCodeCompareInput)input).getLeft().getName();
+		if (input instanceof CodeHistoryCompareInput) {
+			return ((CodeHistoryCompareInput)input).getLeft().getName();
 		}
 		
 		return null;
@@ -55,8 +55,8 @@ public class PartialCodeCompareLabelProvider implements
 
 	@Override
 	public Image getLeftImage(Object input) {
-		if (input instanceof PartialCodeCompareInput) {
-			return ((PartialCodeCompareInput)input).getLeft().getImage();
+		if (input instanceof CodeHistoryCompareInput) {
+			return ((CodeHistoryCompareInput)input).getLeft().getImage();
 		}
 		
 		return null;
@@ -64,8 +64,8 @@ public class PartialCodeCompareLabelProvider implements
 
 	@Override
 	public String getRightLabel(Object input) {
-		if (input instanceof PartialCodeCompareInput) {
-			return ((PartialCodeCompareInput)input).getRight().getName();
+		if (input instanceof CodeHistoryCompareInput) {
+			return ((CodeHistoryCompareInput)input).getRight().getName();
 		}
 		
 		return null;
@@ -73,8 +73,8 @@ public class PartialCodeCompareLabelProvider implements
 
 	@Override
 	public Image getRightImage(Object input) {
-		if (input instanceof PartialCodeCompareInput) {
-			return ((PartialCodeCompareInput)input).getRight().getImage();
+		if (input instanceof CodeHistoryCompareInput) {
+			return ((CodeHistoryCompareInput)input).getRight().getImage();
 		}
 		
 		return null;

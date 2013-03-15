@@ -25,10 +25,10 @@
       </view>
       <view
             category="edu.cmu.scs.azurite"
-            class="edu.cmu.scs.azurite.views.PartialCodeHistoryViewPart"
+            class="edu.cmu.scs.azurite.views.CodeHistoryDiffViewPart"
             icon="icons/time_machine.png"
-            id="edu.cmu.scs.azurite.views.PartialCodeHistoryViewPart"
-            name="Partial Code History View"
+            id="edu.cmu.scs.azurite.views.CodeHistoryDiffViewPart"
+            name="Code History Diff View"
             restorable="true">
       </view>
    </extension>
@@ -106,7 +106,7 @@
                style="push">
          </command>
          <command
-               commandId="edu.cmu.scs.azurite.ui.commands.launchPartialCodeHistory"
+               commandId="edu.cmu.scs.azurite.ui.commands.launchCodeHistoryDiff"
                icon="icons/time_machine.png"
                style="push">
          </command>
@@ -233,9 +233,9 @@
             name="Refresh Timeline">
       </command>
       <command
-            defaultHandler="edu.cmu.scs.azurite.ui.handlers.LaunchPartialCodeHistoryHandler"
-            id="edu.cmu.scs.azurite.ui.commands.launchPartialCodeHistory"
-            name="Launch Partial Code History">
+            defaultHandler="edu.cmu.scs.azurite.ui.handlers.LaunchCodeHistoryDiffHandler"
+            id="edu.cmu.scs.azurite.ui.commands.launchCodeHistoryDiff"
+            name="Launch Code History Diff">
       </command>
    </extension>
    <extension

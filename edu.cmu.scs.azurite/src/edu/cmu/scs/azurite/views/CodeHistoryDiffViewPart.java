@@ -12,19 +12,19 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.part.ViewPart;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
-import edu.cmu.scs.azurite.compare.PartialCodeCompareLabelProvider;
-import edu.cmu.scs.azurite.jface.widgets.PartialCodeHistoryViewer;
+import edu.cmu.scs.azurite.compare.CodeHistoryCompareLabelProvider;
+import edu.cmu.scs.azurite.jface.widgets.CodeHistoryDiffViewer;
 
-public class PartialCodeHistoryViewPart extends ViewPart {
+public class CodeHistoryDiffViewPart extends ViewPart {
 	
 	private CTabFolder folder;
 	private int viewerCount;
 	
 	private CompareConfiguration mConfiguration;
 	
-	private static PartialCodeHistoryViewPart me = null;
+	private static CodeHistoryDiffViewPart me = null;
 	
-	public static PartialCodeHistoryViewPart getInstance() {
+	public static CodeHistoryDiffViewPart getInstance() {
 		return me;
 	}
 
@@ -90,17 +90,17 @@ public class PartialCodeHistoryViewPart extends ViewPart {
 	private CompareConfiguration createConfiguration() {
 		CompareConfiguration configuration = new CompareConfiguration();
 		configuration
-				.setDefaultLabelProvider(new PartialCodeCompareLabelProvider());
+				.setDefaultLabelProvider(new CodeHistoryCompareLabelProvider());
 		return configuration;
 	}
 	
-	public void addPartialHistoryViewer(String fileName, String fileContent,
+	public void addCodeHistoryDiffViewer(String fileName, String fileContent,
 			int selectionStart, int selectionEnd, List<RuntimeDC> involvedDCs) {
-		addPartialHistoryViewer(fileName, fileContent, selectionStart,
+		addCodeHistoryDiffViewer(fileName, fileContent, selectionStart,
 				selectionEnd, involvedDCs, -1, -1);
 	}
 
-	public void addPartialHistoryViewer(String fileName, String fileContent,
+	public void addCodeHistoryDiffViewer(String fileName, String fileContent,
 			int selectionStart, int selectionEnd, List<RuntimeDC> involvedDCs,
 			int startLine, int endLine) {
 		CTabItem tabItem = new CTabItem(folder, SWT.CLOSE);
@@ -112,8 +112,8 @@ public class PartialCodeHistoryViewPart extends ViewPart {
 		
 		tabItem.setText(title);
 		
-		PartialCodeHistoryViewer viewer =
-				new PartialCodeHistoryViewer(folder, SWT.NONE);
+		CodeHistoryDiffViewer viewer =
+				new CodeHistoryDiffViewer(folder, SWT.NONE);
 		viewer.setParameters(mConfiguration, fileContent, selectionStart, selectionEnd, involvedDCs);
 		viewer.create();
 		
@@ -124,8 +124,8 @@ public class PartialCodeHistoryViewPart extends ViewPart {
 	
 	public void selectVersionWithAbsTimestamp(long absTimestamp) {
 		for (CTabItem item : folder.getItems()) {
-			PartialCodeHistoryViewer viewer = 
-					(PartialCodeHistoryViewer)item.getControl();
+			CodeHistoryDiffViewer viewer = 
+					(CodeHistoryDiffViewer)item.getControl();
 			
 			viewer.selectVersionWithAbsTimestamp(absTimestamp);
 		}

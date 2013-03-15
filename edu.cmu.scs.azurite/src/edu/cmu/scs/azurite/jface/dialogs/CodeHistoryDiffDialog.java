@@ -26,14 +26,14 @@ import org.eclipse.swt.widgets.Shell;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.commands.runtime.Segment;
-import edu.cmu.scs.azurite.compare.PartialCodeCompareInput;
-import edu.cmu.scs.azurite.compare.PartialCodeCompareLabelProvider;
+import edu.cmu.scs.azurite.compare.CodeHistoryCompareInput;
+import edu.cmu.scs.azurite.compare.CodeHistoryCompareLabelProvider;
 import edu.cmu.scs.azurite.compare.SimpleCompareItem;
 import edu.cmu.scs.azurite.model.undo.Chunk;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
 import edu.cmu.scs.fluorite.commands.ICommand;
 
-public class PartialCodeHistoryDialog extends TitleAreaDialog {
+public class CodeHistoryDiffDialog extends TitleAreaDialog {
 	
 	private static final int MINIMUM_COMPARE_WIDTH = 700;
 	private static final int MINIMUM_COMPARE_HEIGHT = 400;
@@ -61,7 +61,7 @@ public class PartialCodeHistoryDialog extends TitleAreaDialog {
 	private int mSelectionEnd;
 	private int mSelectionLength;
 
-	public PartialCodeHistoryDialog(Shell parent, List<RuntimeDC> involvedDCs,
+	public CodeHistoryDiffDialog(Shell parent, List<RuntimeDC> involvedDCs,
 			String fileContent, int selectionStart, int selectionEnd) {
 		super(parent);
 		
@@ -91,7 +91,7 @@ public class PartialCodeHistoryDialog extends TitleAreaDialog {
 	private CompareConfiguration createConfiguration() {
 		CompareConfiguration configuration = new CompareConfiguration();
 		configuration
-				.setDefaultLabelProvider(new PartialCodeCompareLabelProvider());
+				.setDefaultLabelProvider(new CodeHistoryCompareLabelProvider());
 		return configuration;
 	}
 
@@ -115,7 +115,7 @@ public class PartialCodeHistoryDialog extends TitleAreaDialog {
 		
 		SimpleCompareItem leftItem = getCompareItemOfVersion(version);
 		
-		mCompareViewerSwitchingPane.setInput(new PartialCodeCompareInput(
+		mCompareViewerSwitchingPane.setInput(new CodeHistoryCompareInput(
 				leftItem, mCurrentItem));
 	}
 	

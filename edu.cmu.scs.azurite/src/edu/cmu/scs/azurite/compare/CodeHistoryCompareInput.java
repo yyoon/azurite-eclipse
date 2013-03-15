@@ -5,12 +5,12 @@ import org.eclipse.compare.structuremergeviewer.ICompareInput;
 import org.eclipse.compare.structuremergeviewer.ICompareInputChangeListener;
 import org.eclipse.swt.graphics.Image;
 
-public class PartialCodeCompareInput implements ICompareInput {
+public class CodeHistoryCompareInput implements ICompareInput {
 	
 	private ITypedElement mLeft;
 	private ITypedElement mRight;
 	
-	public PartialCodeCompareInput(ITypedElement left, ITypedElement right) {
+	public CodeHistoryCompareInput(ITypedElement left, ITypedElement right) {
 		mLeft = left;
 		mRight = right;
 	}

@@ -145,6 +145,7 @@ global.scaleX = 1;
 global.scaleY = 1;
 
 // last file opened
+global.currentFileIndex = -1;
 global.currentFile = null;
 global.lastOperation = null;
 
@@ -453,11 +454,7 @@ function addFile(project, path) {
 	for ( var index in global.files) {
 		if (global.files[index].path == path) {
 			global.currentFile = global.files[index];
-			
-			global.files.splice(index, 1);
-			global.files.splice(0, 0, global.currentFile);
-			
-			layoutFiles();
+			global.currentFileIndex = index;
 			
 			return;
 		}
@@ -467,6 +464,7 @@ function addFile(project, path) {
 
 	global.files.push(newFile);
 	global.currentFile = newFile;
+	global.currentFileIndex = global.files.length - 1;
 	
 	layoutFiles();
 }
@@ -523,6 +521,14 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, layout, current) {
 	}
 
 	var newOp = new EditOperation(sid, id, t1, t2, y1, y2, type, fileGroup);
+
+	if (global.currenFile != global.files[0]) {
+		global.files.splice(global.currentFileIndex, 1);
+		global.files.splice(0, 0, global.currentFile);
+		global.currentFileIndex = 0;
+		
+		layoutFiles();
+	}
 
 	fileGroup.operations.push(newOp);
 	global.lastOperation = newOp;
