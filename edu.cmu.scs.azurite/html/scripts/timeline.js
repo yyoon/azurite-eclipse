@@ -189,6 +189,9 @@ global.dragStartMarkerPos = null;
 global.markerTimestamp = 0;
 global.markerPos = null;
 
+// profile flag
+global.profile = false;
+
 // context menu
 var cmenu = {};
 cmenu.isContextMenuVisible = false;
@@ -493,6 +496,12 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, layout, current) {
 		return;
 	}
 	
+	// profiling
+	var _startTick = new Date().valueOf();
+	if (global.profile) {
+		console.log("addOperation() start: " + _startTick);
+	}
+	
 	sid = parseInt(sid);
 	id = parseInt(id);
 	t1 = parseInt(t1);
@@ -584,6 +593,13 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, layout, current) {
 	if (scroll == true) {
 		showUntil(global.lastOperation.getAbsT2());
 	}
+	
+	// profiling
+	var _endTick = new Date().valueOf();
+	if (global.profile) {
+		console.log("addOperation() end: " + _endTick);
+		console.log("addOperation() took: " + (_endTick - _startTick));
+	}
 }
 
 /**
@@ -644,6 +660,12 @@ function findSession(sid) {
 }
 
 function layout(newLayout) {
+	// profiling
+	var _startTick = new Date().valueOf();
+	if (global.profile) {
+		console.log("layout() start: " + _startTick);
+	}
+	
 	// Remember the current horizontal scroll position.
 	var leftmostTimestamp = getLeftmostTimestamp();
 	
@@ -700,6 +722,13 @@ function layout(newLayout) {
 	
 	// Restore the scroll position.
 	showFrom(leftmostTimestamp);
+	
+	// profiling
+	var _endTick = new Date().valueOf();
+	if (global.profile) {
+		console.log("layout() end: " + _endTick);
+		console.log("layout() took: " + (_endTick - _startTick));
+	}
 }
 
 function layoutFiles() {
@@ -1583,6 +1612,12 @@ function scaleY(sy) {
 }
 
 function translateX(tx) {
+	// profiling
+	var _startTick = new Date().valueOf();
+	if (global.profile) {
+		console.log("translateX() start: " + _startTick);
+	}
+	
 	tx = clamp(tx, getMinTranslateX(), 0);
 	global.translateX = tx;
 
@@ -1590,6 +1625,13 @@ function translateX(tx) {
 
 	updateTicks();
 	updateHScroll();
+	
+	// profiling
+	var _endTick = new Date().valueOf();
+	if (global.profile) {
+		console.log("translateX() end: " + _endTick);
+		console.log("translateX() took: " + (_endTick - _startTick));
+	}
 }
 
 function getMinTranslateX() {
@@ -1603,6 +1645,12 @@ function getMinTranslateX() {
 }
 
 function translateY(ty) {
+	// profiling
+	var _startTick = new Date().valueOf();
+	if (global.profile) {
+		console.log("translateX() start: " + _startTick);
+	}
+	
 	ty = clamp(ty, getMinTranslateY(), 0);
 	global.translateY = ty;
 
@@ -1613,6 +1661,13 @@ function translateY(ty) {
 
 	updateSeparatingLines();
 	updateVScroll();
+	
+	// profiling
+	var _endTick = new Date().valueOf();
+	if (global.profile) {
+		console.log("translateX() end: " + _endTick);
+		console.log("translateX() took: " + (_endTick - _startTick));
+	}
 }
 
 function getMinTranslateY() {
@@ -1802,27 +1857,31 @@ function updateTicks() {
 	}
 }
 
-function test() {
-	var sid = new Date().valueOf();
-	// This must be bigger than the last known operation timestamp.
-	if (global.lastOperation != null && sid < global.lastOperation.getAbsT2()) {
-		sid = global.lastOperation.getAbsT2() + Math.floor(Math.random() * 5000);
+function test(count) {
+	if (count == undefined) { count = 1; }
+	
+	for (var i =0; i < count; ++i) {
+		var sid = new Date().valueOf();
+		// This must be bigger than the last known operation timestamp.
+		if (global.lastOperation != null && sid < global.lastOperation.getAbsT2()) {
+			sid = global.lastOperation.getAbsT2() + Math.floor(Math.random() * 5000);
+		}
+		
+		addFile('DummyProject', 'Test.java');
+		addRandomOperations(sid, 100, true);
+
+		addFile('DummyProject', 'Test2.java');
+		addRandomOperations(sid, 200, false);
+		
+		addFile('OtherProject', 'OtherProject.java');
+		addRandomOperations(sid, 40, false);
+
+		addFile('DummyProject', 'Test3.java');
+		addRandomOperations(sid, 60, false);
+
+		addFile('DummyProject', 'Test.java');
+		addRandomOperations(sid, 100, false);
 	}
-	
-	addFile('DummyProject', 'Test.java');
-	addRandomOperations(sid, 100, true);
-
-	addFile('DummyProject', 'Test2.java');
-	addRandomOperations(sid, 200, false);
-	
-	addFile('OtherProject', 'OtherProject.java');
-	addRandomOperations(sid, 100, false);
-
-	addFile('DummyProject', 'Test3.java');
-	addRandomOperations(sid, 50, false);
-
-	addFile('DummyProject', 'Test.java');
-	addRandomOperations(sid, 100, false);
 	
 	layout();
 	
@@ -1971,4 +2030,8 @@ function updateMarkerPosition() {
 
 function hideMarker() {
 	svg.subMarker.style('display', 'none');
+}
+
+function hideFirebugUI() {
+	$('#FirebugUI').css('display', 'none');
 }
