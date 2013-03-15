@@ -248,8 +248,9 @@ public class PartialCodeHistoryViewer extends Composite {
 		Date date = new Date(originalDC.getSessionId() + originalDC.getTimestamp());
 		String dateString = DateFormat.getDateTimeInstance().format(date);
 		SimpleCompareItem historyItem = new SimpleCompareItem("[" + version
-				+ "] " + dateString + " (id:" + originalDC.getCommandIndex()
-				+ ")", historyContent.toString(), false);
+				+ "/" + mInvolvedDCs.size() + "] " + dateString + " (id:"
+				+ originalDC.getCommandIndex() + ")",
+				historyContent.toString(), false);
 		
 		// Add to the cache.
 		mHistoryItems.put(version, historyItem);
