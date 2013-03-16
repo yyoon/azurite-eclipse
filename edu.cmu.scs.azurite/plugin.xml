@@ -123,6 +123,15 @@
                visible="true">
          </separator>
          <command
+               commandId="edu.cmu.scs.azurite.ui.commands.compactModeCommand"
+               icon="icons/compress.png"
+               style="toggle">
+         </command>
+         <separator
+               name="edu.cmu.scs.azurite.separator2"
+               visible="true">
+         </separator>
+         <command
                commandId="edu.cmu.scs.azurite.ui.commands.executeJSCode"
                icon="icons/old_go_first.png"
                label="Scroll to Start"
@@ -167,7 +176,7 @@
             </parameter>
          </command>
          <separator
-               name="edu.cmu.scs.azurite.separator2"
+               name="edu.cmu.scs.azurite.separator3"
                visible="true">
          </separator>
          <command
@@ -193,7 +202,7 @@
             </parameter>
          </command>
          <separator
-               name="edu.cmu.scs.azurite.separator3"
+               name="edu.cmu.scs.azurite.separator4"
                visible="true">
          </separator>
          <command
@@ -249,6 +258,15 @@
             defaultHandler="edu.cmu.scs.azurite.ui.handlers.HistorySearchHandler"
             id="edu.cmu.scs.azurite.ui.commands.historySearchCommand"
             name="History Search">
+      </command>
+      <command
+            defaultHandler="edu.cmu.scs.azurite.ui.handlers.CompactModeHandler"
+            id="edu.cmu.scs.azurite.ui.commands.compactModeCommand"
+            name="Compact Mode">
+         <state
+               class="org.eclipse.ui.handlers.RegistryToggleState:true"
+               id="org.eclipse.ui.commands.toggleState">
+         </state>
       </command>
    </extension>
    <extension
