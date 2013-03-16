@@ -497,7 +497,7 @@ function setStartTimestamp(timestamp, adjustMaxTimestamp, preservePosition) {
  * Add an edit operation to the end of the file.
  * Note that this is called immediately after an edit operation is performed.
  */
-function addOperation(sid, id, t1, t2, y1, y2, type, scroll, layout, current) {
+function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current) {
 	if (global.currentFile == null) {
 		return;
 	}
@@ -516,16 +516,24 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, layout, current) {
 	y2 = parseFloat(y2);
 	type = parseInt(type);
 	
+	var layoutDirty = false;
+	var filesLayoutDirty = false;
+	
 	var session = findSession(sid);
 	if (session == null) {
 		session = new Session(sid, current);
 		session.startAbsTimestamp = sid + t1;
 		session.endAbsTimestamp = sid + t2;
+		
+		if (autolayout == true) {
+			layoutDirty = true;
+		}
 	}
 	
 	var fileGroup = session.findFileGroup(global.currentFile);
 	if (fileGroup == null) {
 		fileGroup = new FileGroup(session, global.currentFile);
+		filesLayoutDirty = true;
 	}
 
 	var newOp = new EditOperation(sid, id, t1, t2, y1, y2, type, fileGroup);
@@ -535,7 +543,7 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, layout, current) {
 		global.files.splice(0, 0, global.currentFile);
 		global.currentFileIndex = 0;
 		
-		layoutFiles();
+		filesLayoutDirty = true;
 	}
 
 	fileGroup.operations.push(newOp);
@@ -555,7 +563,7 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, layout, current) {
 		.attr('fill', function(d) { return d.color; })
 		.attr('vector-effect', 'non-scaling-stroke');
 	
-	if (layout == true) {
+	if (autolayout == true) {
 		if (global.layout == LayoutEnum.COMPACT) {
 			// Find the last visible rect in this session.
 			var rectsInSession = session.g.selectAll('rect.op_rect').filter(function (d) {
@@ -600,7 +608,14 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, layout, current) {
 		session.indicator.attr('x1', indicatorX).attr('x2', indicatorX);
 	}
 	
-	if (layout == true) {
+	if (filesLayoutDirty == true) {
+		layoutFiles();
+	}
+	if (layoutDirty == true) {
+		layout();
+	}
+	
+	if (autolayout == true) {
 		updateHScroll();
 	}
 	
