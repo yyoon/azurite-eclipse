@@ -95,6 +95,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 
 	private void addBrowserFunctions() {
 		new UndoFunction(browser, BROWSER_FUNC_PREFIX + "selectiveUndo");
+		new UndoEverythingAfterSelectionFunction(browser, BROWSER_FUNC_PREFIX + "undoEverythingAfterSelection");
 		new InitializeFunction(browser, BROWSER_FUNC_PREFIX + "initialize");
 		new JumpFunction(browser, BROWSER_FUNC_PREFIX + "jump");
 		new LogFunction(browser, BROWSER_FUNC_PREFIX + "log");
@@ -159,6 +160,38 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 			}
 		}
 
+	}
+	
+	class UndoEverythingAfterSelectionFunction extends BrowserFunction {
+
+		public UndoEverythingAfterSelectionFunction(Browser browser, String name) {
+			super(browser, name);
+		}
+
+		@Override
+		public Object function(Object[] arguments) {
+			if (arguments == null || arguments.length != 2
+					|| !(arguments[0] instanceof Number)
+					|| !(arguments[1] instanceof Number)) {
+				return "fail";
+			}
+			
+			try {
+				long sid = ((Number)arguments[0]).longValue();
+				long id = ((Number)arguments[1]).longValue();
+				
+				SelectiveUndoEngine.getInstance().doSelectiveUndo(
+						RuntimeHistoryManager.getInstance()
+								.filterDocumentChangesGreaterThanId(
+										new OperationId(sid, id)));				
+				
+				return "ok";
+			}
+			catch (Exception e) {
+				return "fail";
+			}
+		}
+		
 	}
 	
 	class InitializeFunction extends BrowserFunction {

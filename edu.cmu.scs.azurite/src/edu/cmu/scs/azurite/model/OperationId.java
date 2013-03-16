@@ -1,6 +1,6 @@
 package edu.cmu.scs.azurite.model;
 
-public class OperationId {
+public class OperationId implements Comparable<OperationId> {
 
 	public final long sid;
 	public final long id;
@@ -33,6 +33,16 @@ public class OperationId {
 		if (sid != other.sid)
 			return false;
 		return true;
+	}
+
+	@Override
+	public int compareTo(OperationId other) {
+		if (this.sid < other.sid) { return -1; }
+		if (this.sid > other.sid) { return 1; }
+		if (this.id < other.id) { return -1; }
+		if (this.id > other.id) { return 1; }
+		
+		return 0;
 	}
 	
 }

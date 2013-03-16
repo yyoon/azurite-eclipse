@@ -9,6 +9,7 @@ try {
     // Being run in an IDE
 	azurite.initialize = __AZURITE__initialize;
 	azurite.selectiveUndo = __AZURITE__selectiveUndo;
+	azurite.undoEverythingAfterSelection = __AZURITE__undoEverythingAfterSelection;
 	azurite.jump = __AZURITE__jump;
 	azurite.getInfo = __AZURITE__getInfo;
 	azurite.markerMove = __AZURITE__markerMove;
@@ -32,6 +33,10 @@ try {
 	azurite.selectiveUndo = function (arrayOfIds) {
 		alertFn('azurite.selectiveUndo() call');
 		alertFn(arrayOfIds);
+	};
+	
+	azurite.undoEverythingAfterSelection = function (sid, id) {
+		alertFn('azurite.undoEverythingAfterSelection(' + sid + ', ' + id + ') call');
 	};
 	
 	azurite.jump = function (project, path, sid, id) {

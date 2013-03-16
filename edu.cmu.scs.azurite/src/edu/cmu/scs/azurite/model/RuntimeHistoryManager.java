@@ -319,7 +319,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 	}
 	
 	public RuntimeDC filterDocumentChangeById(FileKey key, final OperationId id) {
-		if (id == null) {
+		if (key == null || id == null) {
 			throw new IllegalArgumentException();
 		}
 		
@@ -342,9 +342,30 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 			return intermediateResult.get(0);
 		}
 	}
+
+	public List<RuntimeDC> filterDocumentChangesGreaterThanId(final OperationId id) {
+		return filterDocumentChangesGreaterThanId(getCurrentFileKey(), id);
+	}
+
+	public List<RuntimeDC> filterDocumentChangesGreaterThanId(FileKey key, final OperationId id) {
+		if (key == null || id == null) {
+			throw new IllegalArgumentException();
+		}
+		
+		return filterDocumentChanges(key, new IRuntimeDCFilter() {
+			@Override
+			public boolean filter(RuntimeDC runtimeDC) {
+				OperationId oid = new OperationId(
+						runtimeDC.getOriginal().getSessionId(),
+						runtimeDC.getOriginal().getCommandIndex());
+				
+				return id.compareTo(oid) < 0;
+			}
+		});
+	}
 	
 	public RuntimeDC filterDocumentChangeByIdWithoutCalculating(FileKey key, final OperationId id) {
-		if (id == null) {
+		if (key == null || id == null) {
 			throw new IllegalArgumentException();
 		}
 		
@@ -395,7 +416,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 	}
 	
 	public List<RuntimeDC> filterDocumentChanges(FileKey key, IRuntimeDCFilter filter, boolean calculate) {
-		if (filter == null) {
+		if (key == null || filter == null) {
 			throw new IllegalArgumentException();
 		}
 		

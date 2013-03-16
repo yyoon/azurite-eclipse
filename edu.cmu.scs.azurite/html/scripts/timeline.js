@@ -113,6 +113,14 @@ global.operationCompareFunc = function (lhs, rhs) {
 	return 0;
 };
 
+global.oidCompareFunc = function (lhs, rhs) {
+	if (lhs.sid < rhs.sid) { return -1; }
+	if (lhs.sid > rhs.sid) { return 1; }
+	if (lhs.id < rhs.id) { return -1; }
+	if (lhs.id > rhs.id) { return 1; }
+	return 0;
+};
+
 // variables to remember the last window size
 global.lastWindowWidth = null;
 global.lastWindowHeight = null;
@@ -1554,6 +1562,24 @@ function undo() {
 
 	if (result.length > 0)
 		azurite.selectiveUndo(result);
+}
+
+function undoEverythingAfterSelection() {
+	// close context menu if there is any
+	hideContextMenu();
+	
+	// Do nothing if there is no selection.
+	if (global.selected.length == 0) {
+		return;
+	}
+	
+	// find the last selected item.
+	var selectedCopy = global.selected.slice(0);
+	selectedCopy.sort(global.oidCompareFunc);
+
+	// Call the function in the plug-in side.
+	var lastOid = selectedCopy[selectedCopy.length - 1];
+	azurite.undoEverythingAfterSelection(lastOid.sid, lastOid.id);
 }
 
 function clamp(value, min, max) {
