@@ -1,13 +1,11 @@
 package edu.cmu.scs.azurite.views;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.eclipse.compare.CompareConfiguration;
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.custom.CTabFolder;
-import org.eclipse.swt.custom.CTabFolder2Listener;
-import org.eclipse.swt.custom.CTabFolderEvent;
-import org.eclipse.swt.custom.CTabItem;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.part.ViewPart;
 
@@ -17,66 +15,46 @@ import edu.cmu.scs.azurite.jface.widgets.CodeHistoryDiffViewer;
 
 public class CodeHistoryDiffViewPart extends ViewPart {
 	
-	private CTabFolder folder;
-	private int viewerCount;
+	private static int viewerId = 0;
+	
+	private static List<CodeHistoryDiffViewPart> mes =
+			new ArrayList<CodeHistoryDiffViewPart>();
+	
+	private CodeHistoryDiffViewer viewer;
 	
 	private CompareConfiguration mConfiguration;
 	
-	private static CodeHistoryDiffViewPart me = null;
+	public static List<CodeHistoryDiffViewPart> getInstances() {
+		return Collections.unmodifiableList(mes);
+	}
 	
-	public static CodeHistoryDiffViewPart getInstance() {
-		return me;
+	public static int getViewerId() {
+		return viewerId;
 	}
 
 	@Override
 	public void createPartControl(Composite parent) {
-		me = this;
+		mes.add(this);
 		
-		folder = new CTabFolder(parent, SWT.NONE);
-		folder.setMinimizeVisible(false);
-		folder.setMaximizeVisible(false);
-		folder.setSimple(false);
+		++viewerId;
 		
-		folder.addCTabFolder2Listener(new CTabFolder2Listener() {
-			
-			@Override
-			public void showList(CTabFolderEvent event) {
-			}
-			
-			@Override
-			public void restore(CTabFolderEvent event) {
-			}
-			
-			@Override
-			public void minimize(CTabFolderEvent event) {
-			}
-			
-			@Override
-			public void maximize(CTabFolderEvent event) {
-			}
-			
-			@Override
-			public void close(CTabFolderEvent event) {
-				if (folder.getItemCount() == 1) {
-					hideMarker();
-				}
-			}
-		});
+		viewer = new CodeHistoryDiffViewer(parent, SWT.NONE);
 		
 		mConfiguration = createConfiguration();
-		viewerCount = 0;
 	}
 
 	@Override
 	public void setFocus() {
-		folder.setFocus();
+		viewer.setFocus();
 	}
 
 	@Override
 	public void dispose() {
-		me = null;
-		
-		hideMarker();
+		mes.remove(this);
+
+		if (mes.isEmpty()) {
+			hideMarker();
+		}
 		
 		super.dispose();
 	}
@@ -103,32 +81,18 @@ public class CodeHistoryDiffViewPart extends ViewPart {
 	public void addCodeHistoryDiffViewer(String fileName, String fileContent,
 			int selectionStart, int selectionEnd, List<RuntimeDC> involvedDCs,
 			int startLine, int endLine) {
-		CTabItem tabItem = new CTabItem(folder, SWT.CLOSE);
-		
-		String title = "[" + (++viewerCount) + "] " + fileName;
+		String title = fileName;
 		if (startLine != -1 && endLine != -1) {
 			title += ":" + startLine + "-" + endLine;
 		}
 		
-		tabItem.setText(title);
-		
-		CodeHistoryDiffViewer viewer =
-				new CodeHistoryDiffViewer(folder, SWT.NONE);
-		viewer.setParameters(mConfiguration, fileContent, selectionStart, selectionEnd, involvedDCs);
+		viewer.setParameters(mConfiguration, title, fileContent, selectionStart, selectionEnd, involvedDCs);
 		viewer.create();
-		
-		tabItem.setControl(viewer);
-		folder.setSelection(tabItem);
-		folder.setFocus();
+		viewer.setFocus();
 	}
 	
 	public void selectVersionWithAbsTimestamp(long absTimestamp) {
-		for (CTabItem item : folder.getItems()) {
-			CodeHistoryDiffViewer viewer = 
-					(CodeHistoryDiffViewer)item.getControl();
-			
-			viewer.selectVersionWithAbsTimestamp(absTimestamp);
-		}
+		viewer.selectVersionWithAbsTimestamp(absTimestamp);
 	}
 
 }

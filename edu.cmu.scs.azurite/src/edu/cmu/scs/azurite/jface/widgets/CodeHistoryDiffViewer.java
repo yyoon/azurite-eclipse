@@ -12,7 +12,7 @@ import org.eclipse.compare.CompareConfiguration;
 import org.eclipse.compare.CompareUI;
 import org.eclipse.compare.CompareViewerSwitchingPane;
 import org.eclipse.jface.action.Action;
-import org.eclipse.jface.action.IAction;
+import org.eclipse.jface.action.ActionContributionItem;
 import org.eclipse.jface.action.IContributionItem;
 import org.eclipse.jface.action.Separator;
 import org.eclipse.jface.action.ToolBarManager;
@@ -42,6 +42,7 @@ public class CodeHistoryDiffViewer extends Composite {
 	private SimpleCompareItem mCurrentItem;
 	private Map<Integer, SimpleCompareItem> mHistoryItems;
 	
+	private String mTitle;
 	private String mFileContent;
 	private String mSelectionText;
 	private int mSelectionStart;
@@ -50,8 +51,9 @@ public class CodeHistoryDiffViewer extends Composite {
 	
 	private int mCurrentVersion;
 	
-	private IAction mPrevAction;
-	private IAction mNextAction;
+	private ActionContributionItem mRevertAction;
+	private ActionContributionItem mPrevAction;
+	private ActionContributionItem mNextAction;
 
 	public CodeHistoryDiffViewer(Composite parent, int style) {
 		super(parent, style);
@@ -59,7 +61,7 @@ public class CodeHistoryDiffViewer extends Composite {
 		setLayout(new GridLayout());
 	}
 
-	public void setParameters(CompareConfiguration configuration,
+	public void setParameters(CompareConfiguration configuration, String title,
 			String fileContent, int selectionStart, int selectionEnd,
 			List<RuntimeDC> involvedDCs) {
 		if (involvedDCs == null || involvedDCs.isEmpty()) {
@@ -71,6 +73,8 @@ public class CodeHistoryDiffViewer extends Composite {
 		mInvolvedDCs = new ArrayList<RuntimeDC>();
 		mInvolvedDCs.addAll(involvedDCs);
 		Collections.sort(mInvolvedDCs, RuntimeDC.getCommandIDComparator());
+		
+		mTitle = title;
 		
 		mFileContent = fileContent;
 		mSelectionStart = selectionStart;
@@ -93,19 +97,34 @@ public class CodeHistoryDiffViewer extends Composite {
 	}
 	
 	private void createActions() {
-		mPrevAction = new Action("Previous Version", Activator.getImageDescriptor("icons/old_go_previous.png")) {
-			@Override
-			public void run() {
-				selectVersion(Math.max(getCurrentVersion() - 1, 0));
-			}
-		};
+		mRevertAction = new ActionContributionItem(
+				new Action("Revert", Activator.getImageDescriptor("icons/old_edit_undo.png")) {
+						@Override
+						public void run() {
+						}
+				});
+		mRevertAction.setId("historyDiffRevert");
+		mRevertAction.setMode(ActionContributionItem.MODE_FORCE_TEXT);
 		
-		mNextAction = new Action("Next Version", Activator.getImageDescriptor("icons/old_go_next.png")) {
-			@Override
-			public void run() {
-				selectVersion(Math.min(getCurrentVersion() + 1, mInvolvedDCs.size()));
-			}
-		};
+		mPrevAction = new ActionContributionItem(
+				new Action("Prev", Activator.getImageDescriptor("icons/old_go_previous.png")) {
+						@Override
+						public void run() {
+							selectVersion(Math.max(getCurrentVersion() - 1, 0));
+						}
+				});
+		mPrevAction.setId("historyDiffPrev");
+		mPrevAction.setMode(ActionContributionItem.MODE_FORCE_TEXT);
+		
+		mNextAction = new ActionContributionItem(
+				new Action("Next", Activator.getImageDescriptor("icons/old_go_next.png")) {
+						@Override
+						public void run() {
+							selectVersion(Math.min(getCurrentVersion() + 1, mInvolvedDCs.size()));
+						}
+				});
+		mNextAction.setId("historyDiffNext");
+		mNextAction.setMode(ActionContributionItem.MODE_FORCE_TEXT);
 	}
 
 	private CompareViewerSwitchingPane createCompareView(Composite parent) {
@@ -113,7 +132,7 @@ public class CodeHistoryDiffViewer extends Composite {
 			@Override
 			protected Viewer getViewer(Viewer oldViewer, Object input) {
 				Viewer v = CompareUI.findContentViewer(oldViewer, input, this, mConfiguration);
-				v.getControl().setData(CompareUI.COMPARE_VIEWER_TITLE, "Code History Diff");
+				v.getControl().setData(CompareUI.COMPARE_VIEWER_TITLE, mTitle);
 				
 				ToolBarManager tbm = CompareViewerSwitchingPane.getToolBarManager(this);
 				String navGroupId = "historyDiffNav";
@@ -130,12 +149,10 @@ public class CodeHistoryDiffViewer extends Composite {
 				}
 				
 				if (!added) {
-					if (items.length > 0) {
-						tbm.insertBefore(items[0].getId(), new Separator(navGroupId));
-					}
-					else {
-						tbm.add(new Separator(navGroupId));
-					}
+					tbm.removeAll();
+					
+					tbm.add(mRevertAction);
+					tbm.add(new Separator(navGroupId));
 					
 					tbm.appendToGroup(navGroupId, mPrevAction);
 					tbm.appendToGroup(navGroupId, mNextAction);

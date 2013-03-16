@@ -28,7 +28,7 @@
             class="edu.cmu.scs.azurite.views.CodeHistoryDiffViewPart"
             icon="icons/time_machine.png"
             id="edu.cmu.scs.azurite.views.CodeHistoryDiffViewPart"
-            name="Code History Diff View"
+            name="Code History Diff"
             restorable="true">
       </view>
    </extension>

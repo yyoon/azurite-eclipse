@@ -26,8 +26,6 @@ public class LaunchCodeHistoryDiffHandler extends AbstractHandler {
 
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
-//		final Shell parentShell = Display.getDefault().getActiveShell();
-		
 		List<RuntimeDC> dcs = HandlerUtilities.getOperationsInSelectedRegion();
 		if (dcs == null || dcs.isEmpty()) {
 			return null;
@@ -47,19 +45,16 @@ public class LaunchCodeHistoryDiffHandler extends AbstractHandler {
 		
 		ITextSelection selection = HandlerUtilities.getSelectedRegion();
 		
-/*		PartialCodeHistoryDialog historyDialog = new PartialCodeHistoryDialog(
-				parentShell, dcs, fileContent, selection.getOffset(),
-				selection.getOffset() + selection.getLength());
-		historyDialog.create();
-		historyDialog.open();
-*/		
 		IWorkbenchWindow window = PlatformUI.getWorkbench()
 				.getActiveWorkbenchWindow();
 		if (window != null) {
 			IWorkbenchPage page = window.getActivePage();
 			if (page != null) {
 				try {
-					IViewPart viewPart = page.showView(CODE_HISTORY_DIFF_VIEW_ID);
+					IViewPart viewPart = page.showView(CODE_HISTORY_DIFF_VIEW_ID,
+							Integer.toString(CodeHistoryDiffViewPart.getViewerId()),
+							IWorkbenchPage.VIEW_CREATE);
+					
 					if (viewPart instanceof CodeHistoryDiffViewPart) {
 						CodeHistoryDiffViewPart chdView =
 								(CodeHistoryDiffViewPart) viewPart;

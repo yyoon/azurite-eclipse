@@ -337,9 +337,11 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 			
 			long absTimestamp = ((Number)arguments[0]).longValue();
 			
-			if (CodeHistoryDiffViewPart.getInstance() != null) {
-				CodeHistoryDiffViewPart.getInstance().selectVersionWithAbsTimestamp(absTimestamp);
+			for (CodeHistoryDiffViewPart view : 
+					CodeHistoryDiffViewPart.getInstances()) {
+				view.selectVersionWithAbsTimestamp(absTimestamp);
 			}
+			
 			return "ok";
 		}
 		
