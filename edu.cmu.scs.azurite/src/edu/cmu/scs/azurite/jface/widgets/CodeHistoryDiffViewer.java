@@ -255,7 +255,7 @@ public class CodeHistoryDiffViewer extends Composite {
 		String undoResult = SelectiveUndoEngine.getInstance()
 				.doSelectiveUndoChunkWithoutConflicts(chunk, initialContent);
 		
-		StringBuffer historyContent = new StringBuffer(mSelectionText);
+		StringBuilder historyContent = new StringBuilder(mSelectionText);
 		historyContent.replace(
 				Math.max(startOffset - mSelectionStart, 0),
 				Math.min(endOffset - mSelectionStart, mSelectionLength),
