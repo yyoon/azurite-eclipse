@@ -12,6 +12,7 @@ import org.eclipse.ui.part.ViewPart;
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.compare.CodeHistoryCompareLabelProvider;
 import edu.cmu.scs.azurite.jface.widgets.CodeHistoryDiffViewer;
+import edu.cmu.scs.azurite.model.FileKey;
 
 public class CodeHistoryDiffViewPart extends ViewPart {
 	
@@ -73,20 +74,20 @@ public class CodeHistoryDiffViewPart extends ViewPart {
 	}
 	
 	public void addCodeHistoryDiffViewer(String fileName, String fileContent,
-			int selectionStart, int selectionEnd, List<RuntimeDC> involvedDCs) {
+			int selectionStart, int selectionEnd, List<RuntimeDC> involvedDCs, FileKey key) {
 		addCodeHistoryDiffViewer(fileName, fileContent, selectionStart,
-				selectionEnd, involvedDCs, -1, -1);
+				selectionEnd, involvedDCs, -1, -1, key);
 	}
 
 	public void addCodeHistoryDiffViewer(String fileName, String fileContent,
 			int selectionStart, int selectionEnd, List<RuntimeDC> involvedDCs,
-			int startLine, int endLine) {
+			int startLine, int endLine, FileKey key) {
 		String title = fileName;
 		if (startLine != -1 && endLine != -1) {
 			title += ":" + startLine + "-" + endLine;
 		}
 		
-		viewer.setParameters(mConfiguration, title, fileContent, selectionStart, selectionEnd, involvedDCs);
+		viewer.setParameters(this, mConfiguration, title, fileContent, selectionStart, selectionEnd, involvedDCs, key);
 		viewer.create();
 		viewer.setFocus();
 	}

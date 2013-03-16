@@ -1,5 +1,6 @@
 package edu.cmu.scs.azurite.jface.widgets;
 
+import java.io.File;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -11,26 +12,39 @@ import java.util.Map;
 import org.eclipse.compare.CompareConfiguration;
 import org.eclipse.compare.CompareUI;
 import org.eclipse.compare.CompareViewerSwitchingPane;
+import org.eclipse.core.filesystem.EFS;
+import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.ActionContributionItem;
 import org.eclipse.jface.action.IContributionItem;
 import org.eclipse.jface.action.Separator;
 import org.eclipse.jface.action.ToolBarManager;
+import org.eclipse.jface.text.BadLocationException;
+import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.ui.IEditorPart;
+import org.eclipse.ui.IViewPart;
+import org.eclipse.ui.IWorkbenchPage;
+import org.eclipse.ui.IWorkbenchWindow;
+import org.eclipse.ui.PartInitException;
+import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.ide.IDE;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.commands.runtime.Segment;
 import edu.cmu.scs.azurite.compare.CodeHistoryCompareInput;
 import edu.cmu.scs.azurite.compare.SimpleCompareItem;
+import edu.cmu.scs.azurite.model.FileKey;
 import edu.cmu.scs.azurite.model.undo.Chunk;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
 import edu.cmu.scs.azurite.plugin.Activator;
 import edu.cmu.scs.azurite.views.TimelineViewPart;
 import edu.cmu.scs.fluorite.commands.ICommand;
+import edu.cmu.scs.fluorite.util.Utilities;
 
 public class CodeHistoryDiffViewer extends Composite {
 	
@@ -49,6 +63,10 @@ public class CodeHistoryDiffViewer extends Composite {
 	private int mSelectionEnd;
 	private int mSelectionLength;
 	
+	private FileKey mFileKey;
+	
+	private IViewPart mParentViewPart;
+	
 	private int mCurrentVersion;
 	
 	private ActionContributionItem mRevertAction;
@@ -61,12 +79,15 @@ public class CodeHistoryDiffViewer extends Composite {
 		setLayout(new GridLayout());
 	}
 
-	public void setParameters(CompareConfiguration configuration, String title,
+	public void setParameters(IViewPart parentViewPart,
+			CompareConfiguration configuration, String title,
 			String fileContent, int selectionStart, int selectionEnd,
-			List<RuntimeDC> involvedDCs) {
+			List<RuntimeDC> involvedDCs, FileKey key) {
 		if (involvedDCs == null || involvedDCs.isEmpty()) {
 			throw new IllegalArgumentException("No history!");
 		}
+		
+		mParentViewPart = parentViewPart;
 		
 		mConfiguration = configuration;
 		
@@ -86,6 +107,8 @@ public class CodeHistoryDiffViewer extends Composite {
 		mCurrentItem = new SimpleCompareItem("[" + mInvolvedDCs.size()
 				+ "] Current Version", mSelectionText, false);
 		mHistoryItems = new HashMap<Integer, SimpleCompareItem>();
+		
+		mFileKey = key;
 	}
 	
 	public void create() {
@@ -101,6 +124,7 @@ public class CodeHistoryDiffViewer extends Composite {
 				new Action("Revert", Activator.getImageDescriptor("icons/old_edit_undo.png")) {
 						@Override
 						public void run() {
+							revertToCurrentVersion();
 						}
 				});
 		mRevertAction.setId("historyDiffRevert");
@@ -199,6 +223,48 @@ public class CodeHistoryDiffViewer extends Composite {
 				RuntimeDC dc = mInvolvedDCs.get(version);
 				TimelineViewPart.getInstance().showMarker(
 						dc.getOriginal().getSessionId() + dc.getOriginal().getTimestamp());
+			}
+		}
+	}
+	
+	private void revertToCurrentVersion() {
+		if (getCurrentVersion() == mInvolvedDCs.size()) {
+			// Do nothing?
+		}
+		else {
+			File fileToOpen = new File(mFileKey.getFilePath());
+			
+			IEditorPart editor = null;
+			if (fileToOpen.exists() && fileToOpen.isFile()) {
+			    IFileStore fileStore = EFS.getLocalFileSystem().getStore(fileToOpen.toURI());
+			    IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
+			 
+			    try {
+			        editor = IDE.openEditorOnFileStore( page, fileStore );
+			    } catch ( PartInitException e ) {
+			        //Put your exception handler here if you wish to
+			    }
+			} else {
+			    //Do something if the file does not exist
+			}
+			
+			if (editor != null) {
+				IDocument doc = Utilities.getDocument(editor);
+				try {
+					doc.replace(mSelectionStart, mSelectionLength, getCompareItemOfVersion(getCurrentVersion()).getStringContents());
+				} catch (BadLocationException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		
+		// After this, the view itself will be out of sync.
+		// TODO Keep the view in sync and don't close.
+		IWorkbenchWindow window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
+		if (window != null) {
+			IWorkbenchPage page = window.getActivePage();
+			if (page != null) {
+				page.hideView(mParentViewPart);
 			}
 		}
 	}

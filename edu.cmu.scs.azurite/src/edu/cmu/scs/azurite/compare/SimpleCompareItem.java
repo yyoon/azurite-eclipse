@@ -22,5 +22,9 @@ public class SimpleCompareItem extends BaseCompareItem {
 	public InputStream getContents() throws CoreException {
 		return new ByteArrayInputStream(contents.getBytes());
 	}
+	
+	public String getStringContents() {
+		return contents;
+	}
 
 }

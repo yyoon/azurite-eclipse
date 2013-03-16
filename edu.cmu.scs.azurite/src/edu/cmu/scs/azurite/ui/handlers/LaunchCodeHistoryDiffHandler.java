@@ -15,6 +15,7 @@ import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
+import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.azurite.views.CodeHistoryDiffViewPart;
 import edu.cmu.scs.fluorite.model.EventRecorder;
 import edu.cmu.scs.fluorite.util.Utilities;
@@ -68,7 +69,8 @@ public class LaunchCodeHistoryDiffHandler extends AbstractHandler {
 								selection.getOffset() + selection.getLength(),
 								dcs,
 								selection.getStartLine(),
-								selection.getEndLine());
+								selection.getEndLine(),
+								RuntimeHistoryManager.getInstance().getCurrentFileKey());
 					}
 				} catch (PartInitException e) {
 					e.printStackTrace();
