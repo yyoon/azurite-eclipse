@@ -465,27 +465,27 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 	 * @param ids list of ids to be selected
 	 * @param clearSelection indicates whether the existing selections should be discarded before adding new selections.
 	 */
-	public void addSelection(List<Integer> ids, boolean clearSelection) {
-		long timestamp = EventRecorder.getInstance().getStartTimestamp();
-		
+	public void addSelection(List<OperationId> ids, boolean clearSelection) {
 		StringBuffer buffer = new StringBuffer();
 		buffer.append("addSelectionsByIds([");
 		
-		if (!ids.isEmpty()) {
-			buffer.append(timestamp);
+		Iterator<OperationId> it;
+		
+		it = ids.iterator();
+		if (it.hasNext()) {
+			buffer.append(Long.toString(it.next().sid));
+			while (it.hasNext()) {
+				buffer.append(", " + it.next().sid);
+			}
 		}
-		for (int i = 1; i < ids.size(); ++i) {
-			buffer.append(", " + timestamp);
-		}
+		
 		buffer.append("], [");
 		
-		Iterator<Integer> it = ids.iterator();
+		it = ids.iterator();
 		if (it.hasNext()) {
-			Integer first = it.next();
-			buffer.append(first.toString());
-			
+			buffer.append(Long.toString(it.next().id));
 			while (it.hasNext()) {
-				buffer.append(", " + it.next());
+				buffer.append(", " + it.next().id);
 			}
 		}
 		

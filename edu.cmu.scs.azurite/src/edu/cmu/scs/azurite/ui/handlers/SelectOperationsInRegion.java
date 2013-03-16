@@ -8,7 +8,9 @@ import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
+import edu.cmu.scs.azurite.model.OperationId;
 import edu.cmu.scs.azurite.views.TimelineViewPart;
+import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 
 public class SelectOperationsInRegion extends AbstractHandler {
 
@@ -20,9 +22,10 @@ public class SelectOperationsInRegion extends AbstractHandler {
 		}
 		
 		// Extract the ids.
-		List<Integer> ids = new ArrayList<Integer>();
+		List<OperationId> ids = new ArrayList<OperationId>();
 		for (RuntimeDC dc : dcs) {
-			ids.add(dc.getOriginal().getCommandIndex());
+			BaseDocumentChangeEvent original = dc.getOriginal();
+			ids.add(new OperationId(original.getSessionId(), original.getCommandIndex()));
 		}
 		
 		// Send this to the timeline view, if it's available.
