@@ -24,6 +24,7 @@
             restorable="true">
       </view>
       <view
+            allowMultiple="true"
             category="edu.cmu.scs.azurite"
             class="edu.cmu.scs.azurite.views.CodeHistoryDiffViewPart"
             icon="icons/time_machine.png"
