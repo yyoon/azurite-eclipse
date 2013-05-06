@@ -1914,19 +1914,19 @@ function test(count) {
 			sid = global.lastOperation.getAbsT2() + Math.floor(Math.random() * 5000);
 		}
 		
-		addFile('DummyProject', 'Test.java');
+		addFile('DummyProject', 'Test.cs');
 		addRandomOperations(sid, 100, true);
 
-		addFile('DummyProject', 'Test2.java');
+		addFile('DummyProject', 'Test2.cs');
 		addRandomOperations(sid, 200, false);
 		
-		addFile('OtherProject', 'OtherProject.java');
+		addFile('OtherProject', 'OtherProject.cs');
 		addRandomOperations(sid, 40, false);
 
-		addFile('DummyProject', 'Test3.java');
+		addFile('DummyProject', 'Test3.cs');
 		addRandomOperations(sid, 60, false);
 
-		addFile('DummyProject', 'Test.java');
+		addFile('DummyProject', 'Test.cs');
 		addRandomOperations(sid, 100, false);
 	}
 	
@@ -1976,7 +1976,7 @@ function showAllFiles() {
 	layout();
 }
 
-function showSelectedFile() {
+function showSelectedFileOnly() {
 	var index = Math.floor(cmenu.mousePos[1] / (ROW_HEIGHT * global.scaleY)) - global.translateY;
 	var file = global.getVisibleFiles()[index];
 	
@@ -1984,6 +1984,14 @@ function showSelectedFile() {
 	for (i = 0; i < global.files.length; ++i) {
 		global.files[i].visible = global.files[i] == file;
 	}
+	
+	layoutFiles();
+	layout();
+}
+
+function hideSelectedFile() {
+	var index = Math.floor(cmenu.mousePos[1] / (ROW_HEIGHT * global.scaleY)) - global.translateY;
+	global.getVisibleFiles()[index].visible = false;
 	
 	layoutFiles();
 	layout();

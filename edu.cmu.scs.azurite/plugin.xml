@@ -284,5 +284,18 @@
             class="edu.cmu.scs.azurite.preferences.Initializer">
       </initializer>
    </extension>
+   <extension
+         point="org.eclipse.search.searchPages">
+      <page
+            canSearchEnclosingProjects="true"
+            class="edu.cmu.scs.azurite.search.HistorySearchPage"
+            enabled="true"
+            icon="icons/history_search.png"
+            id="edu.cmu.scs.azurite.HistorySearchPage"
+            label="History Search"
+            showScopeSection="false"
+            sizeHint="460, 160">
+      </page>
+   </extension>
 
 </plugin>
