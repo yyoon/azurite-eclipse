@@ -1095,14 +1095,15 @@ function initKeyEventHandlers() {
 
 function initMouseDownHandler() {
 	document.onmousedown = function(e) {
-		if (cmenu.isContextMenuVisible) {
-			hideContextMenu();
-		}
-
 		if ("which" in e) { // Gecko (Firefox), WebKit (Safari/Chrome) & Opera
 			cmenu.isRightButtonDown = e.which == 3;
 		} else if ("button" in e) { // IE, Opera 
 			cmenu.isRightButtonDown = e.button == 2;
+		}
+
+		if (cmenu.isContextMenuVisible) {
+			hideContextMenu();
+            return;
 		}
 
 		var mouseX = e.clientX - SVG_WRAPPER_PADDING;
@@ -1568,7 +1569,7 @@ function showPageDown() {
 
 function undo() {
 	// close context menu if there is any
-	hideContextMenu();
+	// hideContextMenu();
 	var result = [];
 
 	for ( var i = 0; i < global.selected.length; ++i) {
@@ -1581,7 +1582,7 @@ function undo() {
 
 function undoEverythingAfterSelection() {
 	// close context menu if there is any
-	hideContextMenu();
+	// hideContextMenu();
 	
 	// Do nothing if there is no selection.
 	if (global.selected.length == 0) {
