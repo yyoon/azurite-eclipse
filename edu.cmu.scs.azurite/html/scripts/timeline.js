@@ -194,6 +194,7 @@ global.dragStartScrollPos = null;
 
 global.draggingMarker = false;
 global.dragStartMarkerPos = null;
+global.diffWhileDraggingMarker = 0;
 
 global.markerTimestamp = 0;
 global.markerPos = null;
@@ -1198,6 +1199,7 @@ function initMouseDownHandler() {
 				global.draggingMarker = true;
 				
 				global.dragStartMarkerPos = global.markerPos;
+                global.diffWhileDraggingMarker = 0;
 				return;
 			}
 		}
@@ -1285,7 +1287,7 @@ function initMouseMoveHandler() {
 			translateY(newTy);
 		}
 		else if (global.draggingMarker) {
-			var markerPos = mouseX - global.dragStart[0] + global.dragStartMarkerPos;
+			var markerPos = mouseX - global.dragStart[0] + global.dragStartMarkerPos + global.diffWhileDraggingMarker;
 			global.markerPos = markerPos;
 			global.markerTimestamp = pixelToTimestamp(markerPos);
 			
@@ -1665,6 +1667,8 @@ function translateX(tx) {
 	if (global.profile) {
 		console.log("translateX() start: " + _startTick);
 	}
+    
+    var diff = tx - global.translateX;
 	
 	tx = clamp(tx, getMinTranslateX(), 0);
 	global.translateX = tx;
@@ -1673,6 +1677,8 @@ function translateX(tx) {
 
 	updateTicks();
 	updateHScroll();
+    
+    global.diffWhileDraggingMarker -= diff;
 	
 	// profiling
 	var _endTick = new Date().valueOf();
