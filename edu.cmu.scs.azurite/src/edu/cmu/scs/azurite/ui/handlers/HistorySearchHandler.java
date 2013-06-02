@@ -7,12 +7,14 @@ import java.util.List;
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
+import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.ITextSelection;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.IEditorPart;
 
+import edu.cmu.scs.azurite.commands.HistorySearchCommand;
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.commands.runtime.Segment;
 import edu.cmu.scs.azurite.jface.dialogs.HistorySearchDialog;
@@ -49,6 +51,9 @@ public class HistorySearchHandler extends AbstractHandler {
 		String searchText = dialog.getSearchText();
 		String searchTextLowerCase = searchText.toLowerCase();
 		
+		EventRecorder.getInstance().recordCommand(new HistorySearchCommand(
+				searchText, caseSensitive, scopeSelectedCode, currentSession));
+		
 		IEditorPart editor = EventRecorder.getInstance().getEditor();
 		if (editor == null) { return null; }
 		
@@ -62,7 +67,10 @@ public class HistorySearchHandler extends AbstractHandler {
 						return true;
 					}
 				});
-		if (dcs == null || dcs.isEmpty()) { return null; }
+		if (dcs == null || dcs.isEmpty()) {
+			MessageDialog.openInformation(parentShell, "History Search", "No results found.");
+			return null;
+		}
 		
 		// Only current session?
 		if (currentSession) {
@@ -77,7 +85,10 @@ public class HistorySearchHandler extends AbstractHandler {
 		}
 		
 		// There was no document changes in the selected scope.
-		if (dcs.isEmpty()) { return null; }
+		if (dcs.isEmpty()) {
+			MessageDialog.openInformation(parentShell, "History Search", "No results found.");
+			return null;
+		}
 
 		
 		
@@ -170,7 +181,13 @@ public class HistorySearchHandler extends AbstractHandler {
 			ids.add(new OperationId(original.getSessionId(), original.getCommandIndex()));
 		}
 		
+		if (ids.isEmpty()) {
+			MessageDialog.openInformation(parentShell, "History Search", "No results found.");
+			return null;
+		}
+		
 		// Send this to the timeline view, if it's available.
+		// TODO open up the timeline if it's not.
 		TimelineViewPart timelineViewPart = TimelineViewPart.getInstance();
 		if (timelineViewPart != null) {
 			timelineViewPart.addSelection(ids, true);

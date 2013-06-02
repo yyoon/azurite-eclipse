@@ -80,8 +80,8 @@
 
     <div id='cmenu_main' class='context_menu'>
       <ul>
-        <li class='' onmousedown='undo()'><a href='#'>Selective Undo</a></li>
-        <li class='' onmousedown='undoEverythingAfterSelection()'><a href='#'>Undo Everything After Selection</a></li>
+        <li class='' onmousedown='azurite.eclipseCommand("edu.cmu.scs.azurite.ui.commands.selectiveUndoCommand")'><a href='#'>Selective Undo</a></li>
+        <li class='' onmousedown='azurite.eclipseCommand("edu.cmu.scs.azurite.ui.commands.undoEverythingAfterSelectionCommand")'><a href='#'>Undo Everything After Selection</a></li>
         <!--li class='disabled'><a href='#'>Highlight Affected Code</a></li-->
         <li class='' onmousedown='showAllFilesEditedTogether()'><a href='#'>Show All Files Edited Together</a></li>
       </ul>
@@ -89,10 +89,10 @@
 
     <div id='cmenu_main_single' class='context_menu'>
       <ul>
-        <li class='' onmousedown='undo()'><a href='#'>Selective Undo</a></li>
-        <li class='' onmousedown='undoEverythingAfterSelection()'><a href='#'>Undo Everything After Selection</a></li>
+        <li class='' onmousedown='azurite.eclipseCommand("edu.cmu.scs.azurite.ui.commands.selectiveUndoCommand")'><a href='#'>Selective Undo</a></li>
+        <li class='' onmousedown='azurite.eclipseCommand("edu.cmu.scs.azurite.ui.commands.undoEverythingAfterSelectionCommand")'><a href='#'>Undo Everything After Selection</a></li>
         <!--li class='disabled'><a href='#'>Highlight Affected Code</a></li-->
-        <li class='' onmousedown='jumpToLocation()'><a href='#'>Jump To This Location</a></li>
+        <li class='' onmousedown='azurite.eclipseCommand("edu.cmu.scs.azurite.ui.commands.jumpToTheAffectedCodeCommand")'><a href='#'>Jump to the Affected Code in the Editor</a></li>
       </ul>
     </div>
 

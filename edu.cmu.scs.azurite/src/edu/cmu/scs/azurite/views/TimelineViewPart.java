@@ -24,6 +24,7 @@ import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.handlers.IHandlerService;
 import org.eclipse.ui.ide.IDE;
 import org.eclipse.ui.part.ViewPart;
 
@@ -77,6 +78,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
             public void changed(ProgressEvent event) {
             }
         });
+
 		
 		// Register to the EventRecorder.
 		RuntimeHistoryManager.getInstance().addRuntimeDocumentChangeListener(this);
@@ -101,6 +103,8 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 		new LogFunction(browser, BROWSER_FUNC_PREFIX + "log");
 		new GetInfoFunction(browser, BROWSER_FUNC_PREFIX + "getInfo");
 		new MarkerMoveFunction(browser, BROWSER_FUNC_PREFIX + "markerMove");
+		
+		new EclipseCommandFunction(browser, BROWSER_FUNC_PREFIX + "eclipseCommand");
 	}
 
 	@Override
@@ -380,6 +384,32 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 		
 	}
 	
+	class EclipseCommandFunction extends BrowserFunction {
+
+		public EclipseCommandFunction(Browser browser, String name) {
+			super(browser, name);
+		}
+		
+		@Override
+		public Object function(Object[] arguments) {
+			if (arguments.length != 1 || !(arguments[0] instanceof String)) {
+				return "fail";
+			}
+			
+			String eclipseCmdId = (String)arguments[0];
+			
+			IHandlerService handlerService = (IHandlerService) getSite().getService(IHandlerService.class);
+			try {
+				handlerService.executeCommand(eclipseCmdId, null);
+			}
+			catch (Exception e) {
+				e.printStackTrace();
+			}
+			
+			return "ok";
+		}
+	}
+	
 	@Override
 	public void activeFileChanged(String projectName, String filePath) {
 		if (projectName == null || filePath == null) {
@@ -556,6 +586,10 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 	
 	public void executeJSCode(String codeToExecute) {
 		browser.execute(codeToExecute);
+	}
+	
+	public Object evaluateJSCode(String codeToExecute) {
+		return browser.evaluate(codeToExecute);
 	}
 	
 	public void refresh() {

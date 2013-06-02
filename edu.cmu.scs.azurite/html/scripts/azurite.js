@@ -14,6 +14,8 @@ try {
 	azurite.getInfo = __AZURITE__getInfo;
 	azurite.markerMove = __AZURITE__markerMove;
     
+    azurite.eclipseCommand = __AZURITE__eclipseCommand;
+    
     azurite.log = __AZURITE__log;
 } catch (e) {
     // Being run in a web browser.
@@ -51,6 +53,10 @@ try {
 	azurite.markerMove = function (absTimestamp) {
 		alertFn('azurite.markerMove(' + absTimestamp + ') call');
 	};
+    
+    azurite.eclipseCommand = function(eclipseCmdId) {
+        alertFn('azurite.eclipseCommand(' + eclipseCmdId + ') call');
+    };
     
     azurite.log = function (msg) {
         alertFn(msg);
