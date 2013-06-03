@@ -4,8 +4,11 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
@@ -153,8 +156,20 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 					}
 				}
 				
-				SelectiveUndoEngine.getInstance().doSelectiveUndo(
-						RuntimeHistoryManager.getInstance().filterDocumentChangesByIds(ids));
+				RuntimeHistoryManager history = RuntimeHistoryManager.getInstance();
+				
+				// Filter only the files that contain one or more selected rectangles.
+				Set<FileKey> fileKeys = history.getFileKeys();
+				Map<FileKey, List<RuntimeDC>> params = new HashMap<FileKey, List<RuntimeDC>>();
+				for (FileKey key : fileKeys) {
+					List<RuntimeDC> filteredIds = history.filterDocumentChangesByIds(key, ids);
+					if (filteredIds.size() == 0) { continue; }
+					
+					params.put(key, filteredIds);
+				}
+				
+				SelectiveUndoEngine.getInstance()
+						.doSelectiveUndoOnMultipleFiles(params);
 				
 				return "ok";
 			}

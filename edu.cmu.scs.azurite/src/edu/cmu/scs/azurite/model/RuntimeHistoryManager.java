@@ -301,12 +301,12 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		fireRuntimeDCAddedEvent(runtimeDocChange);
 	}
 	
-	public List<RuntimeDC> filterDocumentChangesByIds(final List<OperationId> ids) {
-		if (ids == null) {
+	public List<RuntimeDC> filterDocumentChangesByIds(FileKey key, final List<OperationId> ids) {
+		if (key == null || ids == null) {
 			throw new IllegalArgumentException();
 		}
 		
-		return filterDocumentChanges(new IRuntimeDCFilter() {
+		return filterDocumentChanges(key, new IRuntimeDCFilter() {
 			@Override
 			public boolean filter(RuntimeDC runtimeDC) {
 				OperationId oid = new OperationId(
@@ -316,6 +316,10 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 				return ids.contains(oid);
 			}
 		});
+	}
+	
+	public List<RuntimeDC> filterDocumentChangesByIds(final List<OperationId> ids) {
+		return filterDocumentChangesByIds(getCurrentFileKey(), ids);
 	}
 	
 	public RuntimeDC filterDocumentChangeById(FileKey key, final OperationId id) {

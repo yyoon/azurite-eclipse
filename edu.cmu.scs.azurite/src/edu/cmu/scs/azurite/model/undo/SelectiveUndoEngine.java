@@ -1,18 +1,29 @@
 package edu.cmu.scs.azurite.model.undo;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Map;
 
+import org.eclipse.core.filesystem.EFS;
+import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
+import org.eclipse.ui.IEditorPart;
+import org.eclipse.ui.IWorkbenchPage;
+import org.eclipse.ui.PartInitException;
+import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.ide.IDE;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.commands.runtime.Segment;
 import edu.cmu.scs.azurite.jface.dialogs.ConflictResolutionDialog;
+import edu.cmu.scs.azurite.model.FileKey;
+import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.fluorite.model.EventRecorder;
 import edu.cmu.scs.fluorite.util.Utilities;
 
@@ -355,4 +366,34 @@ public class SelectiveUndoEngine {
 		
 		return chunks;
 	}
+	
+	public void doSelectiveUndoOnMultipleFiles(
+			Map<FileKey, List<RuntimeDC>> params) {
+		// Process per file.
+		for (FileKey key : params.keySet()) {
+			List<RuntimeDC> runtimeDCs = params.get(key);
+			
+			// 1. Open the file in the editor.
+			File fileToOpen = new File(key.getFilePath());
+			
+			IEditorPart editor = null;
+			if (fileToOpen.exists() && fileToOpen.isFile()) {
+			    IFileStore fileStore = EFS.getLocalFileSystem().getStore(fileToOpen.toURI());
+			    IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
+			 
+			    try {
+			        editor = IDE.openEditorOnFileStore( page, fileStore );
+//			        while ( RuntimeHistoryManager.getInstance().getCurrentFileKey() != key );
+			    	
+					// 2. Perform selective undo.
+			        doSelectiveUndo(runtimeDCs);
+			    } catch ( PartInitException e ) {
+			    	e.printStackTrace();
+				}
+			} else {
+			    //Do something if the file does not exist
+			}
+		}
+	}
+			
 }
