@@ -508,5 +508,23 @@
             icon="icons/refresh_red.png">
       </image>
    </extension>
+   <extension
+         point="org.eclipse.ui.perspectiveExtensions">
+      <perspectiveExtension
+            targetID="*">
+         <view
+               closeable="true"
+               id="edu.cmu.scs.azurite.views.TimelineViewPart"
+               minimized="false"
+               moveable="true"
+               ratio="0.5"
+               relationship="top"
+               relative="edu.cmu.scs.azurite.views.TimelineViewPart"
+               showTitle="true"
+               standalone="false"
+               visible="false">
+         </view>
+      </perspectiveExtension>
+   </extension>
 
 </plugin>
