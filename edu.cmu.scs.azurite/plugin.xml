@@ -125,7 +125,7 @@
                   visible="true">
             </separator>
             <menu
-                  label="Timeline Manipulation">
+                  label="Timeline View">
                <command
                      commandId="edu.cmu.scs.azurite.ui.commands.compactModeCommand"
                      style="toggle">
@@ -397,7 +397,7 @@
       <command
             defaultHandler="edu.cmu.scs.azurite.ui.handlers.UndoInRegionHandler"
             id="edu.cmu.scs.azurite.ui.commands.undoInRegionCommand"
-            name="Undo Everything in the Selection">
+            name="Undo All Operations on the Selection">
       </command>
       <command
             defaultHandler="edu.cmu.scs.azurite.ui.handlers.LaunchCodeHistoryDiffHandler"

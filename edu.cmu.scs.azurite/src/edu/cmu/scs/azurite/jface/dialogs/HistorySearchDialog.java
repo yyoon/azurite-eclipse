@@ -101,7 +101,7 @@ public class HistorySearchDialog extends Dialog {
 		mButtonAllSessions.setText("All sessions");
 		
 		mButtonCurrentSession = new Button(sessionScopeGroup, SWT.RADIO);
-		mButtonCurrentSession.setText("Current session");
+		mButtonCurrentSession.setText("Latest session");
 
 		Group optionsGroup = new Group(dirScopeComp, SWT.NONE);
 		optionsGroup.setText("Options");
