@@ -231,6 +231,8 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
             			public void run() {
                     		RuntimeHistoryManager manager = RuntimeHistoryManager.getInstance(); 
                     		for (FileKey key : manager.getFileKeys()) {
+                    			if (key.getProjectName() == null || key.getFilePath() == null) { continue; }
+                    			
                     			addFile(key.getProjectName(), key.getFilePath());
                     			for (RuntimeDC dc : manager.getRuntimeDocumentChanges(key)) {
                     				addOperation(dc.getOriginal(), false, dc.getOriginal().getSessionId() == currentTimestamp);
@@ -453,7 +455,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 	private String getAddFileString(String projectName, String filePath) {
 		String executeStr = String.format("addFile('%1$s', '%2$s');",
 				projectName,
-				filePath.replace('\\', '/'));	// avoid escaping..
+				filePath == null ? "null" : filePath.replace('\\', '/'));	// avoid escaping..
 		return executeStr;
 	}
 
