@@ -394,17 +394,14 @@
    <extension
          point="org.eclipse.ui.commands">
       <command
-            defaultHandler="edu.cmu.scs.azurite.ui.handlers.SelectOperationsInRegion"
             id="edu.cmu.scs.azurite.ui.commands.selectCorrespondingTimelineRectanglesCommand"
             name="Select Corresponding Timeline Rectangles">
       </command>
       <command
-            defaultHandler="edu.cmu.scs.azurite.ui.handlers.UndoInRegionHandler"
             id="edu.cmu.scs.azurite.ui.commands.undoInRegionCommand"
             name="Undo All Operations on the Selection">
       </command>
       <command
-            defaultHandler="edu.cmu.scs.azurite.ui.handlers.LaunchCodeHistoryDiffHandler"
             id="edu.cmu.scs.azurite.ui.commands.launchCodeHistoryDiff"
             name="Launch Code History Diff">
       </command>
@@ -549,6 +546,64 @@
                visible="false">
          </view>
       </perspectiveExtension>
+   </extension>
+   <extension
+         point="org.eclipse.ui.handlers">
+      <handler
+            class="edu.cmu.scs.azurite.ui.handlers.SelectOperationsInRegion"
+            commandId="edu.cmu.scs.azurite.ui.commands.selectCorrespondingTimelineRectanglesCommand">
+         <enabledWhen>
+            <reference
+                  definitionId="codeSelected">
+            </reference>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="edu.cmu.scs.azurite.ui.handlers.UndoInRegionHandler"
+            commandId="edu.cmu.scs.azurite.ui.commands.undoInRegionCommand">
+         <enabledWhen>
+            <reference
+                  definitionId="codeSelected">
+            </reference>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="edu.cmu.scs.azurite.ui.handlers.LaunchCodeHistoryDiffHandler"
+            commandId="edu.cmu.scs.azurite.ui.commands.launchCodeHistoryDiff">
+         <enabledWhen>
+            <reference
+                  definitionId="codeSelected">
+            </reference>
+         </enabledWhen>
+      </handler>
+   </extension>
+   <extension
+         point="org.eclipse.core.expressions.definitions">
+      <definition
+            id="codeSelected">
+         <and>
+            <with
+                  variable="activeEditor">
+               <instanceof
+                     value="org.eclipse.ui.texteditor.AbstractTextEditor">
+               </instanceof>
+               <test
+                     forcePluginActivation="true"
+                     property="edu.cmu.scs.azurite.selection.codeSelected">
+               </test>
+            </with>
+         </and>
+      </definition>
+   </extension>
+   <extension
+         point="org.eclipse.core.expressions.propertyTesters">
+      <propertyTester
+            class="edu.cmu.scs.azurite.expressions.CodeSelectionPropertyTester"
+            id="edu.cmu.scs.azurite.selectionPropertyTester"
+            namespace="edu.cmu.scs.azurite.selection"
+            properties="codeSelected"
+            type="org.eclipse.ui.IEditorPart">
+      </propertyTester>
    </extension>
 
 </plugin>
