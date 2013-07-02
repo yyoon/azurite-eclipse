@@ -127,6 +127,10 @@
             <menu
                   label="Timeline View">
                <command
+                     commandId="edu.cmu.scs.azurite.ui.commands.openTimelineViewCommand"
+                     style="push">
+               </command>
+               <command
                      commandId="edu.cmu.scs.azurite.ui.commands.compactModeCommand"
                      style="toggle">
                </command>
@@ -470,6 +474,11 @@
                id="org.eclipse.ui.commands.toggleState">
          </state>
       </command>
+      <command
+            defaultHandler="edu.cmu.scs.azurite.ui.handlers.OpenTimelineViewHandler"
+            id="edu.cmu.scs.azurite.ui.commands.openTimelineViewCommand"
+            name="Open Timeline View">
+      </command>
    </extension>
    <extension
          point="org.eclipse.ui.bindings">
@@ -506,6 +515,10 @@
       <image
             commandId="edu.cmu.scs.azurite.ui.commands.refreshTimeline"
             icon="icons/refresh_red.png">
+      </image>
+      <image
+            commandId="edu.cmu.scs.azurite.ui.commands.openTimelineViewCommand"
+            icon="icons/timeline_marker.png">
       </image>
    </extension>
    <extension
