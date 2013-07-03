@@ -16,6 +16,7 @@ import org.eclipse.core.runtime.FileLocator;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.jface.text.ITextViewerExtension5;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.SWTException;
 import org.eclipse.swt.browser.Browser;
 import org.eclipse.swt.browser.BrowserFunction;
 import org.eclipse.swt.browser.ProgressEvent;
@@ -622,11 +623,15 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 	}
 	
 	public int getSelectedRectsCount() {
-		Object result = evaluateJSCode("return global.selected.length;");
-		if (result instanceof Number) {
-			return ((Number) result).intValue();
-		}
-		else {
+		try {
+			Object result = evaluateJSCode("return global.selected.length;");
+			if (result instanceof Number) {
+				return ((Number) result).intValue();
+			}
+			else {
+				return 0;
+			}
+		} catch (SWTException e) {
 			return 0;
 		}
 	}
