@@ -424,7 +424,6 @@
             name="Launch Code History Diff">
       </command>
       <command
-            defaultHandler="edu.cmu.scs.azurite.ui.handlers.SelectiveUndoHandler"
             id="edu.cmu.scs.azurite.ui.commands.selectiveUndoCommand"
             name="Selective Undo">
       </command>
@@ -433,12 +432,10 @@
             name="Highlight Code Affected by the Selected Rectangles">
       </command>
       <command
-            defaultHandler="edu.cmu.scs.azurite.ui.handlers.UndoEverythingAfterSelectionHandler"
             id="edu.cmu.scs.azurite.ui.commands.undoEverythingAfterSelectionCommand"
             name="Undo Everything After the Last Selected Rectangle">
       </command>
       <command
-            defaultHandler="edu.cmu.scs.azurite.ui.handlers.JumpToAffectedCodeHandler"
             id="edu.cmu.scs.azurite.ui.commands.jumpToTheAffectedCodeCommand"
             name="Jump to the Affected Code in the Editor">
       </command>
@@ -603,6 +600,41 @@
             </reference>
          </enabledWhen>
       </handler>
+      <handler
+            class="edu.cmu.scs.azurite.ui.handlers.SelectiveUndoHandler"
+            commandId="edu.cmu.scs.azurite.ui.commands.selectiveUndoCommand">
+         <enabledWhen>
+            <reference
+                  definitionId="rectSelected">
+            </reference>
+         </enabledWhen>
+      </handler>
+      <handler
+            commandId="edu.cmu.scs.azurite.ui.commands.highlightCodeCommand">
+         <enabledWhen>
+            <reference
+                  definitionId="rectSelected">
+            </reference>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="edu.cmu.scs.azurite.ui.handlers.UndoEverythingAfterSelectionHandler"
+            commandId="edu.cmu.scs.azurite.ui.commands.undoEverythingAfterSelectionCommand">
+         <enabledWhen>
+            <reference
+                  definitionId="rectSelected">
+            </reference>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="edu.cmu.scs.azurite.ui.handlers.JumpToAffectedCodeHandler"
+            commandId="edu.cmu.scs.azurite.ui.commands.jumpToTheAffectedCodeCommand">
+         <enabledWhen>
+            <reference
+                  definitionId="rectSelected">
+            </reference>
+         </enabledWhen>
+      </handler>
    </extension>
    <extension
          point="org.eclipse.core.expressions.definitions">
@@ -621,15 +653,43 @@
             </with>
          </and>
       </definition>
+      <definition
+            id="rectSelected">
+         <test
+               forcePluginActivation="true"
+               property="edu.cmu.scs.azurite.selection.rectSelected">
+         </test>
+      </definition>
+      <definition
+            id="singleRectSelected">
+         <test
+               forcePluginActivation="true"
+               property="edu.cmu.scs.azurite.selection.singleRectSelected">
+         </test>
+      </definition>
+      <definition
+            id="multiRectsSelected">
+         <test
+               forcePluginActivation="true"
+               property="edu.cmu.scs.azurite.selection.multiRectsSelected">
+         </test>
+      </definition>
    </extension>
    <extension
          point="org.eclipse.core.expressions.propertyTesters">
       <propertyTester
             class="edu.cmu.scs.azurite.expressions.CodeSelectionPropertyTester"
-            id="edu.cmu.scs.azurite.selectionPropertyTester"
+            id="edu.cmu.scs.azurite.codeSelectionPropertyTester"
             namespace="edu.cmu.scs.azurite.selection"
             properties="codeSelected"
             type="org.eclipse.ui.IEditorPart">
+      </propertyTester>
+      <propertyTester
+            class="edu.cmu.scs.azurite.expressions.TimelineSelectionPropertyTester"
+            id="edu.cmu.scs.azurite.timelineSelectionPropertyTester"
+            namespace="edu.cmu.scs.azurite.selection"
+            properties="rectSelected,singleRectSelected,multiRectsSelected"
+            type="java.lang.Object">
       </propertyTester>
    </extension>
 

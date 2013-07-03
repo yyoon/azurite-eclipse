@@ -621,4 +621,14 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 		browser.execute("hideMarker();");
 	}
 	
+	public int getSelectedRectsCount() {
+		Object result = evaluateJSCode("return global.selected.length;");
+		if (result instanceof Number) {
+			return ((Number) result).intValue();
+		}
+		else {
+			return 0;
+		}
+	}
+	
 }
