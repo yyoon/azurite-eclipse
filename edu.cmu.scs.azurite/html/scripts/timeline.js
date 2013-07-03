@@ -208,6 +208,7 @@ var cmenu = {};
 cmenu.isContextMenuVisible = false;
 cmenu.isRightButtonDown = false;
 cmenu.mousePos = [];
+cmenu.typeName = '';
 global.isCtrlDown = false;
 
 /**
@@ -1317,19 +1318,23 @@ function initMouseUpHandler() {
 				}
 				
 				if (global.selected.length == 1) {
-					showContextMenu(e, '#cmenu_main_single');
+					// showContextMenu(e, '#cmenu_main_single');
+					cmenu.typeName = 'main_single';
 				}
 				else if (global.selected.length > 0) {
-					showContextMenu(e, '#cmenu_main');
+					// showContextMenu(e, '#cmenu_main');
+					cmenu.typeName = 'main_multi';
 				}
 			}
 			else if (cursorInArea(mouseX, mouseY, global.fileArea)) {
 				var numVisibleFiles = global.getVisibleFiles().length + global.translateY;
 				if (mouseY < numVisibleFiles * ROW_HEIGHT * global.scaleY) {
-					showContextMenu(e, '#cmenu_file_in');
+					// showContextMenu(e, '#cmenu_file_in');
+					cmenu.typeName = 'file_in';
 				}
 				else {
-					showContextMenu(e, '#cmenu_file_out');
+					// showContextMenu(e, '#cmenu_file_out');
+					cmenu.typeName = 'file_out';
 				}
 			}
 			

@@ -14,6 +14,11 @@ import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.runtime.FileLocator;
 import org.eclipse.core.runtime.Platform;
+import org.eclipse.jface.action.Action;
+import org.eclipse.jface.action.IMenuListener;
+import org.eclipse.jface.action.IMenuManager;
+import org.eclipse.jface.action.MenuManager;
+import org.eclipse.jface.action.Separator;
 import org.eclipse.jface.text.ITextViewerExtension5;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.SWTException;
@@ -25,6 +30,7 @@ import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IEditorPart;
+import org.eclipse.ui.IWorkbenchActionConstants;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
@@ -33,6 +39,7 @@ import org.eclipse.ui.ide.IDE;
 import org.eclipse.ui.part.ViewPart;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
+import edu.cmu.scs.azurite.jface.action.CommandAction;
 import edu.cmu.scs.azurite.model.FileKey;
 import edu.cmu.scs.azurite.model.OperationId;
 import edu.cmu.scs.azurite.model.RuntimeDCListener;
@@ -82,10 +89,106 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
             public void changed(ProgressEvent event) {
             }
         });
+		
+		setupContextMenu();
 
 		
 		// Register to the EventRecorder.
 		RuntimeHistoryManager.getInstance().addRuntimeDocumentChangeListener(this);
+	}
+
+	private void setupContextMenu() {
+		// Create the actions.
+		Map<String, String> paramMap = new HashMap<String, String>();
+		
+		final Action selectiveUndoAction = new CommandAction(
+				"Selective Undo",
+				"edu.cmu.scs.azurite.ui.commands.selectiveUndoCommand");
+		
+		final Action undoEverythingAfterSelectionAction = new CommandAction(
+				"Undo Everything After Selection",
+				"edu.cmu.scs.azurite.ui.commands.undoEverythingAfterSelectionCommand");
+		
+		final Action jumpToTheAffectedCodeAction = new CommandAction(
+				"Jump to the Affected Code in the Editor",
+				"edu.cmu.scs.azurite.ui.commands.jumpToTheAffectedCodeCommand");
+
+		paramMap.clear();
+		paramMap.put("edu.cmu.scs.azurite.ui.commands.executeJSCode.codeToExecute", "showAllFilesEditedTogether();");
+		final Action showAllFilesEditedTogetherAction = new CommandAction(
+				"Show All Files Edited Together",
+				"edu.cmu.scs.azurite.ui.commands.executeJSCode",
+				paramMap);
+		
+		paramMap.clear();
+		paramMap.put("edu.cmu.scs.azurite.ui.commands.executeJSCode.codeToExecute", "showSelectedFile();");
+		final Action showThisFileOnlyAction = new CommandAction(
+				"Show This File Only",
+				"edu.cmu.scs.azurite.ui.commands.executeJSCode",
+				paramMap);
+		
+		paramMap.clear();
+		paramMap.put("edu.cmu.scs.azurite.ui.commands.executeJSCode.codeToExecute", "showAllFilesInProject();");
+		final Action showAllFilesInTheSameProjectAction = new CommandAction(
+				"Show All Files in the Same Project",
+				"edu.cmu.scs.azurite.ui.commands.executeJSCode",
+				paramMap);
+		
+		paramMap.clear();
+		paramMap.put("edu.cmu.scs.azurite.ui.commands.executeJSCode.codeToExecute", "showAllFiles();");
+		final Action showAllFilesAction = new CommandAction(
+				"Show All Files",
+				"edu.cmu.scs.azurite.ui.commands.executeJSCode",
+				paramMap);
+		
+		// Setup the dynamic context menu
+		MenuManager mgr = new MenuManager();
+		mgr.setRemoveAllWhenShown(true);
+		
+		mgr.addMenuListener(new IMenuListener() {
+			
+			@Override
+			public void menuAboutToShow(IMenuManager manager) {
+				try {
+					String menuType = browser.evaluate("return cmenu.typeName;").toString();
+					
+					switch (menuType) {
+						case "main_single": {
+							manager.add(selectiveUndoAction);
+							manager.add(undoEverythingAfterSelectionAction);
+							manager.add(jumpToTheAffectedCodeAction);
+							break;
+						}
+							
+						case "main_multi": {
+							manager.add(selectiveUndoAction);
+							manager.add(undoEverythingAfterSelectionAction);
+							manager.add(showAllFilesEditedTogetherAction);
+							break;
+						}
+							
+						case "file_in": {
+							manager.add(showThisFileOnlyAction);
+							manager.add(showAllFilesInTheSameProjectAction);
+							manager.add(showAllFilesAction);
+							break;
+						}
+							
+						case "file_out": {
+							manager.add(showAllFilesAction);
+							break;
+						}
+					}
+					
+					manager.add(new Separator(IWorkbenchActionConstants.MB_ADDITIONS));
+				}
+				catch (Exception e) {
+					// Do nothing.
+				}
+			}
+		});
+		
+		browser.setMenu(mgr.createContextMenu(browser));
 	}
 
 	private void moveToIndexPage() {
