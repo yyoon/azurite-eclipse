@@ -20,6 +20,7 @@ var TYPE_REPLACE = 2;
 
 var TIMETICK_INTERVAL = 100;
 
+var RECT_RADIUS = 1;
 var MIN_WIDTH = 6;
 var ROW_HEIGHT = 30;
 var TICKS_HEIGHT = 30;
@@ -561,6 +562,8 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current
 		.attr('y', rectDraw.yFunc)
 		.attr('width', rectDraw.wFunc)
 		.attr('height', rectDraw.hFunc)
+		.attr('rx', RECT_RADIUS)
+		.attr('ry', RECT_RADIUS)
 		.attr('fill', function(d) { return d.color; })
 		.attr('vector-effect', 'non-scaling-stroke');
 	
