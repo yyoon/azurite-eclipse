@@ -76,6 +76,7 @@
                label="Azurite"
                mnemonic="z">
             <menu
+                  icon="icons/selected_code.png"
                   label="Selected Code in the Editor">
                <command
                      commandId="edu.cmu.scs.azurite.ui.commands.selectCorrespondingTimelineRectanglesCommand"
@@ -295,10 +296,6 @@
                commandId="edu.cmu.scs.azurite.ui.commands.readPreviousLog"
                style="push">
          </command>
-         <command
-               commandId="edu.cmu.scs.azurite.ui.commands.launchCodeHistoryDiff"
-               style="push">
-         </command>
          <separator
                name="edu.cmu.scs.azurite.separator1"
                visible="true">
@@ -389,6 +386,27 @@
                commandId="edu.cmu.scs.azurite.ui.commands.refreshTimeline"
                style="push">
          </command>
+         <command
+               commandId="edu.cmu.scs.azurite.ui.commands.selectedCode"
+               id="edu.cmu.scs.azurite.ui.toolbar.selectedCode"
+               style="pulldown">
+         </command>
+      </menuContribution>
+      <menuContribution
+            allPopups="false"
+            locationURI="menu:edu.cmu.scs.azurite.ui.toolbar.selectedCode">
+         <command
+               commandId="edu.cmu.scs.azurite.ui.commands.selectCorrespondingTimelineRectanglesCommand"
+               style="push">
+         </command>
+         <command
+               commandId="edu.cmu.scs.azurite.ui.commands.undoInRegionCommand"
+               style="push">
+         </command>
+         <command
+               commandId="edu.cmu.scs.azurite.ui.commands.launchCodeHistoryDiff"
+               style="push">
+         </command>
       </menuContribution>
    </extension>
    <extension
@@ -476,6 +494,11 @@
             id="edu.cmu.scs.azurite.ui.commands.openTimelineViewCommand"
             name="Open Timeline View">
       </command>
+      <command
+            defaultHandler="edu.cmu.scs.azurite.ui.handlers.SelectedCodeHandler"
+            id="edu.cmu.scs.azurite.ui.commands.selectedCode"
+            name="Selected Code in the Editor">
+      </command>
    </extension>
    <extension
          point="org.eclipse.ui.bindings">
@@ -516,6 +539,10 @@
       <image
             commandId="edu.cmu.scs.azurite.ui.commands.openTimelineViewCommand"
             icon="icons/timeline_marker.png">
+      </image>
+      <image
+            commandId="edu.cmu.scs.azurite.ui.commands.selectedCode"
+            icon="icons/selected_code.png">
       </image>
    </extension>
    <extension
