@@ -14,6 +14,36 @@ import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.fluorite.model.EventRecorder;
 
 public class HandlerUtilities {
+	
+	public static boolean isCodeSelected() {
+		try {
+			// get active editor
+			IEditorPart editorPart = EventRecorder.getInstance().getEditor();
+
+			if (editorPart instanceof AbstractTextEditor) {
+				IEditorSite iEditorSite = editorPart.getEditorSite();
+				if (iEditorSite != null) {
+					ISelectionProvider selectionProvider = iEditorSite
+							.getSelectionProvider();
+					if (selectionProvider != null) {
+						ISelection iSelection = selectionProvider
+								.getSelection();
+						if (iSelection instanceof ITextSelection) {
+							ITextSelection iTextSelection = (ITextSelection) iSelection;
+							if (!iTextSelection.isEmpty() && iTextSelection.getLength() > 0) {
+								return true;
+							}
+						}
+					}
+				}
+			}
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+		return false;
+	}
 
 	public static List<RuntimeDC> getOperationsInSelectedRegion() {
 		try {

@@ -20,6 +20,7 @@ var TYPE_REPLACE = 2;
 
 var TIMETICK_INTERVAL = 100;
 
+var RECT_RADIUS = 1;
 var MIN_WIDTH = 6;
 var ROW_HEIGHT = 30;
 var TICKS_HEIGHT = 30;
@@ -207,6 +208,7 @@ var cmenu = {};
 cmenu.isContextMenuVisible = false;
 cmenu.isRightButtonDown = false;
 cmenu.mousePos = [];
+cmenu.typeName = '';
 global.isCtrlDown = false;
 
 /**
@@ -561,6 +563,8 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current
 		.attr('y', rectDraw.yFunc)
 		.attr('width', rectDraw.wFunc)
 		.attr('height', rectDraw.hFunc)
+		.attr('rx', RECT_RADIUS)
+		.attr('ry', RECT_RADIUS)
 		.attr('fill', function(d) { return d.color; })
 		.attr('vector-effect', 'non-scaling-stroke');
 	
@@ -1314,19 +1318,23 @@ function initMouseUpHandler() {
 				}
 				
 				if (global.selected.length == 1) {
-					showContextMenu(e, '#cmenu_main_single');
+					// showContextMenu(e, '#cmenu_main_single');
+					cmenu.typeName = 'main_single';
 				}
 				else if (global.selected.length > 0) {
-					showContextMenu(e, '#cmenu_main');
+					// showContextMenu(e, '#cmenu_main');
+					cmenu.typeName = 'main_multi';
 				}
 			}
 			else if (cursorInArea(mouseX, mouseY, global.fileArea)) {
 				var numVisibleFiles = global.getVisibleFiles().length + global.translateY;
 				if (mouseY < numVisibleFiles * ROW_HEIGHT * global.scaleY) {
-					showContextMenu(e, '#cmenu_file_in');
+					// showContextMenu(e, '#cmenu_file_in');
+					cmenu.typeName = 'file_in';
 				}
 				else {
-					showContextMenu(e, '#cmenu_file_out');
+					// showContextMenu(e, '#cmenu_file_out');
+					cmenu.typeName = 'file_out';
 				}
 			}
 			

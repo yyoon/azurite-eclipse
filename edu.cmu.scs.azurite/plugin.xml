@@ -76,6 +76,7 @@
                label="Azurite"
                mnemonic="z">
             <menu
+                  icon="icons/selected_code.png"
                   label="Selected Code in the Editor">
                <command
                      commandId="edu.cmu.scs.azurite.ui.commands.selectCorrespondingTimelineRectanglesCommand"
@@ -91,6 +92,7 @@
                </command>
             </menu>
             <menu
+                  icon="icons/selected_rects.png"
                   label="Selected Rectangles in Timeline">
                <command
                      commandId="edu.cmu.scs.azurite.ui.commands.selectiveUndoCommand"
@@ -126,6 +128,10 @@
             </separator>
             <menu
                   label="Timeline View">
+               <command
+                     commandId="edu.cmu.scs.azurite.ui.commands.openTimelineViewCommand"
+                     style="push">
+               </command>
                <command
                      commandId="edu.cmu.scs.azurite.ui.commands.compactModeCommand"
                      style="toggle">
@@ -288,15 +294,25 @@
             allPopups="false"
             locationURI="toolbar:edu.cmu.scs.azurite.views.TimelineViewPart">
          <command
-               commandId="edu.cmu.scs.azurite.ui.commands.readPreviousLog"
-               style="push">
+               commandId="edu.cmu.scs.azurite.ui.commands.selectedCode"
+               id="edu.cmu.scs.azurite.ui.toolbar.selectedCode"
+               style="pulldown">
          </command>
          <command
-               commandId="edu.cmu.scs.azurite.ui.commands.launchCodeHistoryDiff"
-               style="push">
+               commandId="edu.cmu.scs.azurite.ui.commands.selectedRects"
+               id="edu.cmu.scs.azurite.ui.toolbar.selectedRects"
+               style="pulldown">
          </command>
          <separator
                name="edu.cmu.scs.azurite.separator1"
+               visible="true">
+         </separator>
+         <command
+               commandId="edu.cmu.scs.azurite.ui.commands.readPreviousLog"
+               style="push">
+         </command>
+         <separator
+               name="edu.cmu.scs.azurite.separator2"
                visible="true">
          </separator>
          <command
@@ -304,7 +320,7 @@
                style="toggle">
          </command>
          <separator
-               name="edu.cmu.scs.azurite.separator2"
+               name="edu.cmu.scs.azurite.separator3"
                visible="true">
          </separator>
          <command
@@ -352,7 +368,7 @@
             </parameter>
          </command>
          <separator
-               name="edu.cmu.scs.azurite.separator3"
+               name="edu.cmu.scs.azurite.separator4"
                visible="true">
          </separator>
          <command
@@ -378,7 +394,7 @@
             </parameter>
          </command>
          <separator
-               name="edu.cmu.scs.azurite.separator4"
+               name="edu.cmu.scs.azurite.separator5"
                visible="true">
          </separator>
          <command
@@ -386,40 +402,80 @@
                style="push">
          </command>
       </menuContribution>
+      <menuContribution
+            allPopups="false"
+            locationURI="menu:edu.cmu.scs.azurite.ui.toolbar.selectedCode">
+         <command
+               commandId="edu.cmu.scs.azurite.ui.commands.selectCorrespondingTimelineRectanglesCommand"
+               style="push">
+         </command>
+         <command
+               commandId="edu.cmu.scs.azurite.ui.commands.undoInRegionCommand"
+               style="push">
+         </command>
+         <command
+               commandId="edu.cmu.scs.azurite.ui.commands.launchCodeHistoryDiff"
+               style="push">
+         </command>
+      </menuContribution>
+      <menuContribution
+            allPopups="false"
+            locationURI="menu:edu.cmu.scs.azurite.ui.toolbar.selectedRects">
+         <command
+               commandId="edu.cmu.scs.azurite.ui.commands.selectiveUndoCommand"
+               style="push">
+         </command>
+         <command
+               commandId="edu.cmu.scs.azurite.ui.commands.highlightCodeCommand"
+               style="push">
+         </command>
+         <command
+               commandId="edu.cmu.scs.azurite.ui.commands.undoEverythingAfterSelectionCommand"
+               style="push">
+         </command>
+         <command
+               commandId="edu.cmu.scs.azurite.ui.commands.jumpToTheAffectedCodeCommand"
+               style="push">
+         </command>
+      </menuContribution>
    </extension>
    <extension
          point="org.eclipse.ui.commands">
       <command
-            defaultHandler="edu.cmu.scs.azurite.ui.handlers.SelectOperationsInRegion"
+            defaultHandler="edu.cmu.scs.azurite.ui.handlers.SelectedCodeHandler"
+            id="edu.cmu.scs.azurite.ui.commands.selectedCode"
+            name="Selected Code in the Editor">
+      </command>
+      <command
             id="edu.cmu.scs.azurite.ui.commands.selectCorrespondingTimelineRectanglesCommand"
             name="Select Corresponding Timeline Rectangles">
       </command>
       <command
-            defaultHandler="edu.cmu.scs.azurite.ui.handlers.UndoInRegionHandler"
             id="edu.cmu.scs.azurite.ui.commands.undoInRegionCommand"
             name="Undo All Operations on the Selection">
       </command>
       <command
-            defaultHandler="edu.cmu.scs.azurite.ui.handlers.LaunchCodeHistoryDiffHandler"
             id="edu.cmu.scs.azurite.ui.commands.launchCodeHistoryDiff"
             name="Launch Code History Diff">
       </command>
       <command
-            defaultHandler="edu.cmu.scs.azurite.ui.handlers.SelectiveUndoHandler"
+            defaultHandler="edu.cmu.scs.azurite.ui.handlers.SelectedRectsHandler"
+            id="edu.cmu.scs.azurite.ui.commands.selectedRects"
+            name="Selected Rectangles in Timeline">
+      </command>
+      <command
             id="edu.cmu.scs.azurite.ui.commands.selectiveUndoCommand"
             name="Selective Undo">
       </command>
       <command
             id="edu.cmu.scs.azurite.ui.commands.highlightCodeCommand"
-            name="Highlight Code Affected by the Selected Rectangles">
+            name="Highlight Code Affected by the Selected Rectangles (not implemented yet)">
       </command>
       <command
-            defaultHandler="edu.cmu.scs.azurite.ui.handlers.UndoEverythingAfterSelectionHandler"
             id="edu.cmu.scs.azurite.ui.commands.undoEverythingAfterSelectionCommand"
             name="Undo Everything After the Last Selected Rectangle">
       </command>
       <command
-            defaultHandler="edu.cmu.scs.azurite.ui.handlers.JumpToAffectedCodeHandler"
             id="edu.cmu.scs.azurite.ui.commands.jumpToTheAffectedCodeCommand"
             name="Jump to the Affected Code in the Editor">
       </command>
@@ -470,6 +526,11 @@
                id="org.eclipse.ui.commands.toggleState">
          </state>
       </command>
+      <command
+            defaultHandler="edu.cmu.scs.azurite.ui.handlers.OpenTimelineViewHandler"
+            id="edu.cmu.scs.azurite.ui.commands.openTimelineViewCommand"
+            name="Open Timeline View">
+      </command>
    </extension>
    <extension
          point="org.eclipse.ui.bindings">
@@ -507,6 +568,18 @@
             commandId="edu.cmu.scs.azurite.ui.commands.refreshTimeline"
             icon="icons/refresh_red.png">
       </image>
+      <image
+            commandId="edu.cmu.scs.azurite.ui.commands.openTimelineViewCommand"
+            icon="icons/timeline_marker.png">
+      </image>
+      <image
+            commandId="edu.cmu.scs.azurite.ui.commands.selectedCode"
+            icon="icons/selected_code.png">
+      </image>
+      <image
+            commandId="edu.cmu.scs.azurite.ui.commands.selectedRects"
+            icon="icons/selected_rects.png">
+      </image>
    </extension>
    <extension
          point="org.eclipse.ui.perspectiveExtensions">
@@ -536,6 +609,127 @@
                visible="false">
          </view>
       </perspectiveExtension>
+   </extension>
+   <extension
+         point="org.eclipse.ui.handlers">
+      <handler
+            class="edu.cmu.scs.azurite.ui.handlers.SelectOperationsInRegion"
+            commandId="edu.cmu.scs.azurite.ui.commands.selectCorrespondingTimelineRectanglesCommand">
+         <enabledWhen>
+            <reference
+                  definitionId="codeSelected">
+            </reference>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="edu.cmu.scs.azurite.ui.handlers.UndoInRegionHandler"
+            commandId="edu.cmu.scs.azurite.ui.commands.undoInRegionCommand">
+         <enabledWhen>
+            <reference
+                  definitionId="codeSelected">
+            </reference>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="edu.cmu.scs.azurite.ui.handlers.LaunchCodeHistoryDiffHandler"
+            commandId="edu.cmu.scs.azurite.ui.commands.launchCodeHistoryDiff">
+         <enabledWhen>
+            <reference
+                  definitionId="codeSelected">
+            </reference>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="edu.cmu.scs.azurite.ui.handlers.SelectiveUndoHandler"
+            commandId="edu.cmu.scs.azurite.ui.commands.selectiveUndoCommand">
+         <enabledWhen>
+            <reference
+                  definitionId="rectSelected">
+            </reference>
+         </enabledWhen>
+      </handler>
+      <handler
+            commandId="edu.cmu.scs.azurite.ui.commands.highlightCodeCommand">
+         <enabledWhen>
+            <reference
+                  definitionId="rectSelected">
+            </reference>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="edu.cmu.scs.azurite.ui.handlers.UndoEverythingAfterSelectionHandler"
+            commandId="edu.cmu.scs.azurite.ui.commands.undoEverythingAfterSelectionCommand">
+         <enabledWhen>
+            <reference
+                  definitionId="rectSelected">
+            </reference>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="edu.cmu.scs.azurite.ui.handlers.JumpToAffectedCodeHandler"
+            commandId="edu.cmu.scs.azurite.ui.commands.jumpToTheAffectedCodeCommand">
+         <enabledWhen>
+            <reference
+                  definitionId="singleRectSelected">
+            </reference>
+         </enabledWhen>
+      </handler>
+   </extension>
+   <extension
+         point="org.eclipse.core.expressions.definitions">
+      <definition
+            id="codeSelected">
+         <and>
+            <with
+                  variable="activeEditor">
+               <instanceof
+                     value="org.eclipse.ui.texteditor.AbstractTextEditor">
+               </instanceof>
+               <test
+                     forcePluginActivation="true"
+                     property="edu.cmu.scs.azurite.selection.codeSelected">
+               </test>
+            </with>
+         </and>
+      </definition>
+      <definition
+            id="rectSelected">
+         <test
+               forcePluginActivation="true"
+               property="edu.cmu.scs.azurite.selection.rectSelected">
+         </test>
+      </definition>
+      <definition
+            id="singleRectSelected">
+         <test
+               forcePluginActivation="true"
+               property="edu.cmu.scs.azurite.selection.singleRectSelected">
+         </test>
+      </definition>
+      <definition
+            id="multiRectsSelected">
+         <test
+               forcePluginActivation="true"
+               property="edu.cmu.scs.azurite.selection.multiRectsSelected">
+         </test>
+      </definition>
+   </extension>
+   <extension
+         point="org.eclipse.core.expressions.propertyTesters">
+      <propertyTester
+            class="edu.cmu.scs.azurite.expressions.CodeSelectionPropertyTester"
+            id="edu.cmu.scs.azurite.codeSelectionPropertyTester"
+            namespace="edu.cmu.scs.azurite.selection"
+            properties="codeSelected"
+            type="org.eclipse.ui.IEditorPart">
+      </propertyTester>
+      <propertyTester
+            class="edu.cmu.scs.azurite.expressions.TimelineSelectionPropertyTester"
+            id="edu.cmu.scs.azurite.timelineSelectionPropertyTester"
+            namespace="edu.cmu.scs.azurite.selection"
+            properties="rectSelected,singleRectSelected,multiRectsSelected"
+            type="java.lang.Object">
+      </propertyTester>
    </extension>
 
 </plugin>
