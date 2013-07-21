@@ -722,13 +722,28 @@ function layout(newLayout) {
 		
 		// Apply different layout function, depending on the mode.
 		global.tempX = 0;
+		global.prevTempX = 0;
+		global.prevAbsX = 0;
 		
 		if (global.layout == LayoutEnum.COMPACT) {
 			d3.selectAll(rects).attr('x', function (d) {
 				if (!d.isVisible()) { return 0; }
-				var temp = global.tempX;
-				global.tempX += this.getBBox().width;
-				return temp;
+				
+				var prevTempX = global.tempX;
+				var width = this.getBBox().width;
+				
+				var prevAbsX = global.prevAbsX;
+				global.prevAbsX = rectDraw.xFunc(d);
+				
+				if (global.prevAbsX - prevAbsX < width) {
+					global.prevTempX = global.prevTempX + global.prevAbsX - prevAbsX;
+				}
+				else {
+					global.prevTempX = prevTempX;
+				}
+				global.tempX = global.prevTempX + width;
+				
+				return global.prevTempX;
 			});
 		}
 		else if (global.layout == LayoutEnum.REALTIME) {
