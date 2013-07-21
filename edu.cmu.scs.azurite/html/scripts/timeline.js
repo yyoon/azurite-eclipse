@@ -578,8 +578,18 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current
 			
 			var x = 0;
 			if (rectsInSession.length > 0) {
-				var bounds = rectsInSession[rectsInSession.length - 1].getBBox();
-				x = bounds.x + bounds.width;
+				var lastRect = rectsInSession[rectsInSession.length - 1];
+				var bounds = lastRect.getBBox();
+				
+				// see if these rectangles are supposed to be overlapping.
+				var lastRectAbsX = rectDraw.xFunc(lastRect.__data__);
+				var curRectAbsX = rectDraw.xFunc(newOp);
+				if (curRectAbsX - lastRectAbsX < bounds.width) {
+					x = x.bounds.x + curRectAbsX - lastRectAbsX;
+				}
+				else {
+					x = bounds.x + bounds.width;
+				}
 			}
 			
 			rectToAppend.attr('x', x);
