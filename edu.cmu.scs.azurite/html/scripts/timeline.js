@@ -1,12 +1,21 @@
+/*jshint unused:vars, devel:true, jquery:true, globalstrict:true */
+/*global d3, azurite */
+
+/* Things to be called from Azurite */
+/*exported setStartTimestamp, updateOperation, getRightmostTimestamp, showContextMenu, addSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarker, hideMarker, hideFirebugUI */
+
+/* Things to be called manually when debugging */
+/*exported test */
+
 /**
  * Things should be executed at the beginning.
  */
 
+"use strict";
+
 // Disable selection.
 document.unselectable = "on";
-document.onselectstart = function() {
-	return false;
-};
+document.onselectstart = function() { return false; };
 
 /**
  * Constants. (Always use UPPER_CASE.)
@@ -57,21 +66,18 @@ rectDraw.xFunc = function(d) {
 	return (d.t1 - d.session.startAbsTimestamp + d.sid) / DEFAULT_RATIO;
 };
 rectDraw.yFunc = function(d) {
-	return Math.min(ROW_HEIGHT * d.y1 / 100, ROW_HEIGHT - MIN_WIDTH
-			/ global.scaleY);
+	return Math.min(ROW_HEIGHT * d.y1 / 100, ROW_HEIGHT - MIN_WIDTH / global.scaleY);
 };
 rectDraw.wFunc = function(d) {
 	return Math.max(MIN_WIDTH / global.scaleX, (d.t2 - d.t1) / DEFAULT_RATIO);
 };
 rectDraw.hFunc = function(d) {
-	return Math
-			.max(MIN_WIDTH / global.scaleY, ROW_HEIGHT * (d.y2 - d.y1) / 100);
+	return Math.max(MIN_WIDTH / global.scaleY, ROW_HEIGHT * (d.y2 - d.y1) / 100);
 };
 
 var fileDraw = {};
 fileDraw.yFunc = function(d, i) {
-	return ROW_HEIGHT * (i + global.translateY) * global.scaleY
-			+ FILE_NAME_OFFSET_Y;
+	return ROW_HEIGHT * (i + global.translateY) * global.scaleY + FILE_NAME_OFFSET_Y;
 };
 
 var fileRectDraw = {};
@@ -251,16 +257,12 @@ function setupSVG() {
 	svg.subMarker.append('path')
 		.attr('id', 'marker_upper_triangle')
 		.attr('class', 'marker')
-		.attr('d', 'M 0 0 L '
-				+ (-MARKER_SIZE) + ' ' + (-MARKER_SIZE) + ' '
-				+ MARKER_SIZE + ' ' + (-MARKER_SIZE))
+		.attr('d', 'M 0 0 L ' + (-MARKER_SIZE) + ' ' + (-MARKER_SIZE) + ' ' + MARKER_SIZE + ' ' + (-MARKER_SIZE))
 		.attr('fill', MARKER_COLOR);
 	svg.subMarker.append('path')
 		.attr('id', 'marker_lower_triangle')
 		.attr('class', 'marker')
-		.attr('d', 'M 0 0 L '
-				+ (-MARKER_SIZE) + ' ' + MARKER_SIZE + ' '
-				+ MARKER_SIZE + ' ' + MARKER_SIZE)
+		.attr('d', 'M 0 0 L ' + (-MARKER_SIZE) + ' ' + MARKER_SIZE + ' ' + MARKER_SIZE + ' ' + MARKER_SIZE)
 		.attr('fill', MARKER_COLOR);
 
 	svg.subTicks = svg.main.append('g')
@@ -295,21 +297,18 @@ function recalculateClipPaths() {
 		.attr('height', (svgHeight - 20 + 2) + 'px');
 
 	svg.subFiles
-		.attr('transform',
-			'translate(' + CHART_MARGINS.left + ' ' + CHART_MARGINS.top + ')');
+		.attr('transform', 'translate(' + CHART_MARGINS.left + ' ' + CHART_MARGINS.top + ')');
 
-	svg.subRectsWrap.attr('transform', 'translate('
-			+ (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' '
-			+ CHART_MARGINS.top + ')');
+	svg.subRectsWrap
+		.attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' ' + CHART_MARGINS.top + ')');
 
 	svg.clipRectsWrap
 		.attr('y', '-1')
 		.attr('width', (svgWidth * (1.0 - FILES_PORTION)) + 'px')
 		.attr('height', (svgHeight - TICKS_HEIGHT + 2) + 'px');
 	
-	svg.subMarkerWrap.attr('transform', 'translate('
-			+ (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' '
-			+ CHART_MARGINS.top + ')');
+	svg.subMarkerWrap
+		.attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' ' + CHART_MARGINS.top + ')');
 	svg.subMarker.select('#marker_line').attr('y2', svgHeight - TICKS_HEIGHT + MARKER_SIZE / 2);
 	svg.subMarker.select('#marker_lower_triangle').attr('transform', 'translate(0, ' + (svgHeight - TICKS_HEIGHT) + ')');
 	
@@ -318,9 +317,8 @@ function recalculateClipPaths() {
 		.attr('width', (svgWidth * (1.0 - FILES_PORTION)))
 		.attr('height', (svgHeight - TICKS_HEIGHT + 2 * MARKER_SIZE));
 
-	svg.subTicks.attr('transform', 'translate('
-			+ (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' '
-			+ (CHART_MARGINS.top + svgHeight - TICKS_HEIGHT) + ')');
+	svg.subTicks
+		.attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' ' + (CHART_MARGINS.top + svgHeight - TICKS_HEIGHT) + ')');
 }
 
 /**
@@ -368,7 +366,7 @@ function Session(sid, current) {
 	this.findFileGroup = function (file) {
 		var i;
 		for (i = 0; i < this.fileGroups.length; ++i) {
-			if (this.fileGroups[i].file == file) {
+			if (this.fileGroups[i].file === file) {
 				return this.fileGroups[i];
 			}
 		}
@@ -406,17 +404,17 @@ function EditOperation(sid, id, t1, t2, y1, y2, type, fileGroup) {
 	this.sid = sid;
 	this.id = id;
 	this.t1 = t1;
-	this.t2 = (t2 == null ? t1 : t2);
+	this.t2 = (t2 === null ? t1 : t2);
 	this.y1 = y1;
 	this.y2 = y2;
 	this.type = type;
-	this.color;
+	this.color = null;
 
-	if (type == TYPE_INSERT) {
+	if (type === TYPE_INSERT) {
 		this.color = "green";
-	} else if (type == TYPE_DELETE) {
+	} else if (type === TYPE_DELETE) {
 		this.color = "red";
-	} else if (type == TYPE_REPLACE) {
+	} else if (type === TYPE_REPLACE) {
 		this.color = "blue";
 	}
 	
@@ -438,12 +436,12 @@ function EditOperation(sid, id, t1, t2, y1, y2, type, fileGroup) {
 	};
 	
 	this.getInfo = function() {
-        var date = new Date(this.sid + this.t1);
-        var info = azurite.getInfo(
-        		this.fileGroup.file.project, this.fileGroup.file.path,
-        		this.sid, this.id);
-        
-        return date.toLocaleString() + '<br>' + info;
+		var date = new Date(this.sid + this.t1);
+		var info = azurite.getInfo(
+				this.fileGroup.file.project, this.fileGroup.file.path,
+				this.sid, this.id);
+		
+		return date.toLocaleString() + '<br>' + info;
 	};
 }
 
@@ -463,7 +461,7 @@ function addFile(project, path) {
 	var fileName = path.match(/[^\\\/]+$/)[0];
 
 	for ( var index in global.files) {
-		if (global.files[index].path == path) {
+		if (global.files[index].path === path) {
 			global.currentFile = global.files[index];
 			global.currentFileIndex = index;
 			
@@ -501,7 +499,7 @@ function setStartTimestamp(timestamp, adjustMaxTimestamp, preservePosition) {
  * Note that this is called immediately after an edit operation is performed.
  */
 function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current) {
-	if (global.currentFile == null) {
+	if (global.currentFile === null) {
 		return;
 	}
 	
@@ -511,37 +509,37 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current
 		console.log("addOperation() start: " + _startTick);
 	}
 	
-	sid = parseInt(sid);
-	id = parseInt(id);
-	t1 = parseInt(t1);
-	t2 = parseInt(t2);
+	sid = parseInt(sid, 10);
+	id = parseInt(id, 10);
+	t1 = parseInt(t1, 10);
+	t2 = parseInt(t2, 10);
 	y1 = parseFloat(y1);
 	y2 = parseFloat(y2);
-	type = parseInt(type);
+	type = parseInt(type, 10);
 	
 	var layoutDirty = false;
 	var filesLayoutDirty = false;
 	
 	var session = findSession(sid);
-	if (session == null) {
+	if (session === null) {
 		session = new Session(sid, current);
 		session.startAbsTimestamp = sid + t1;
 		session.endAbsTimestamp = sid + t2;
 		
-		if (autolayout == true) {
+		if (autolayout === true) {
 			layoutDirty = true;
 		}
 	}
 	
 	var fileGroup = session.findFileGroup(global.currentFile);
-	if (fileGroup == null) {
+	if (fileGroup === null) {
 		fileGroup = new FileGroup(session, global.currentFile);
 		filesLayoutDirty = true;
 	}
 
 	var newOp = new EditOperation(sid, id, t1, t2, y1, y2, type, fileGroup);
 
-	if (global.currenFile != global.files[0]) {
+	if (global.currenFile !== global.files[0]) {
 		global.files.splice(global.currentFileIndex, 1);
 		global.files.splice(0, 0, global.currentFile);
 		global.currentFileIndex = 0;
@@ -568,11 +566,11 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current
 		.attr('fill', function(d) { return d.color; })
 		.attr('vector-effect', 'non-scaling-stroke');
 	
-	if (autolayout == true) {
-		if (global.layout == LayoutEnum.COMPACT) {
+	if (autolayout === true) {
+		if (global.layout === LayoutEnum.COMPACT) {
 			// Find the last visible rect in this session.
 			var rectsInSession = session.g.selectAll('rect.op_rect').filter(function (d) {
-				return d.isVisible() && d != newOp;
+				return d.isVisible() && d !== newOp;
 			})[0].slice();
 			rectsInSession.sort(global.operationCompareFunc);
 			
@@ -594,47 +592,48 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current
 			
 			rectToAppend.attr('x', x);
 		}
-		else if (global.layout == LayoutEnum.REALTIME) {
+		else if (global.layout === LayoutEnum.REALTIME) {
 			rectToAppend.attr('x', rectDraw.xFunc);
 		}
 	}
 	
 	// Add tipsy.
 	$(rectToAppend.node()).tipsy({
-        gravity: $.fn.tipsy.autoNS,
-        html: true,
-        checkFn: function() { return !global.dragging; },
-        title: function() {
-              var d = this.__data__;
-              return d.getInfo();
-        }
-    });
+		gravity: $.fn.tipsy.autoNS,
+		html: true,
+		checkFn: function() { return !global.dragging; },
+		title: function() {
+			var d = this.__data__;
+			return d.getInfo();
+		}
+	});
 	
 	global.lastRect = rectToAppend;
 	
 	// Move the indicator.
-	if (global.layout == LayoutEnum.COMPACT) {
+	var indicatorX;
+	if (global.layout === LayoutEnum.COMPACT) {
 		var rectBounds = rectToAppend.node().getBBox();
-		var indicatorX = rectBounds.x + rectBounds.width;
+		indicatorX = rectBounds.x + rectBounds.width;
 		session.indicator.attr('x1', indicatorX).attr('x2', indicatorX);
 	}
 	else {
-		var indicatorX = (session.endAbsTimestamp - session.startAbsTimestamp) / DEFAULT_RATIO;
+		indicatorX = (session.endAbsTimestamp - session.startAbsTimestamp) / DEFAULT_RATIO;
 		session.indicator.attr('x1', indicatorX).attr('x2', indicatorX);
 	}
 	
-	if (filesLayoutDirty == true) {
+	if (filesLayoutDirty === true) {
 		layoutFiles();
 	}
-	if (layoutDirty == true) {
+	if (layoutDirty === true) {
 		layout();
 	}
 	
-	if (autolayout == true) {
+	if (autolayout === true) {
 		updateHScroll();
 	}
 	
-	if (scroll == true) {
+	if (scroll === true) {
 		showUntil(global.lastOperation.getAbsT2());
 	}
 	
@@ -654,9 +653,9 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current
 function updateOperation(sid, id, t2, y1, y2, scroll) {
 	var lastOp = global.lastOperation;
 	
-	if (lastOp == null ||
-		lastOp.sid != parseInt(sid) ||
-		lastOp.id != parseInt(id)) {
+	if (lastOp === null ||
+		lastOp.sid !== parseInt(sid, 10) ||
+		lastOp.id !== parseInt(id, 10)) {
 		return;
 	}
 
@@ -666,7 +665,7 @@ function updateOperation(sid, id, t2, y1, y2, scroll) {
 	lastOp.y1 = y1;
 	lastOp.y2 = y2;
 
-	if (global.lastRect != null) {
+	if (global.lastRect !== null) {
 		global.lastRect
 			.attr('width', rectDraw.wFunc)
 			.attr('y', rectDraw.yFunc)
@@ -676,18 +675,18 @@ function updateOperation(sid, id, t2, y1, y2, scroll) {
 	var session = lastOp.session;
 	
 	// Move the indicator.
-	if (global.layout == LayoutEnum.COMPACT) {
+	var indicatorX;
+	if (global.layout === LayoutEnum.COMPACT) {
 		var rectBounds = global.lastRect.node().getBBox();
-		var indicatorX = rectBounds.x + rectBounds.width;
+		indicatorX = rectBounds.x + rectBounds.width;
 		session.indicator.attr('x1', indicatorX).attr('x2', indicatorX);
 	}
 	else {
-		var session = lastOp.session;
-		var indicatorX = (session.endAbsTimestamp - session.startAbsTimestamp) / DEFAULT_RATIO;
+		indicatorX = (session.endAbsTimestamp - session.startAbsTimestamp) / DEFAULT_RATIO;
 		session.indicator.attr('x1', indicatorX).attr('x2', indicatorX);
 	}
 	
-	if (scroll == true) {
+	if (scroll === true) {
 		showUntil(lastOp.getAbsT2());
 	}
 }
@@ -695,7 +694,7 @@ function updateOperation(sid, id, t2, y1, y2, scroll) {
 function findSession(sid) {
 	var i;
 	for (i = 0; i < global.sessions.length; ++i) {
-		if (global.sessions[i].sid == sid) {
+		if (global.sessions[i].sid === sid) {
 			return global.sessions[i];
 		}
 	}
@@ -721,6 +720,26 @@ function layout(newLayout) {
 	global.tempSessionTx = 0;
 	
 	var i, session;
+	var compactXFunc = function (d) {
+		if (!d.isVisible()) { return 0; }
+		
+		var prevTempX = global.tempX;
+		var width = this.getBBox().width;
+		
+		var prevAbsX = global.prevAbsX;
+		global.prevAbsX = rectDraw.xFunc(d);
+		
+		if (global.prevAbsX - prevAbsX < width) {
+			global.prevTempX = global.prevTempX + global.prevAbsX - prevAbsX;
+		}
+		else {
+			global.prevTempX = prevTempX;
+		}
+		global.tempX = global.prevTempX + width;
+		
+		return global.prevTempX;
+	};
+	
 	for (i = 0; i < global.sessions.length; ++i) {
 		session = global.sessions[i];
 		
@@ -735,39 +754,21 @@ function layout(newLayout) {
 		global.prevTempX = 0;
 		global.prevAbsX = 0;
 		
-		if (global.layout == LayoutEnum.COMPACT) {
-			d3.selectAll(rects).attr('x', function (d) {
-				if (!d.isVisible()) { return 0; }
-				
-				var prevTempX = global.tempX;
-				var width = this.getBBox().width;
-				
-				var prevAbsX = global.prevAbsX;
-				global.prevAbsX = rectDraw.xFunc(d);
-				
-				if (global.prevAbsX - prevAbsX < width) {
-					global.prevTempX = global.prevTempX + global.prevAbsX - prevAbsX;
-				}
-				else {
-					global.prevTempX = prevTempX;
-				}
-				global.tempX = global.prevTempX + width;
-				
-				return global.prevTempX;
-			});
+		if (global.layout === LayoutEnum.COMPACT) {
+			d3.selectAll(rects).attr('x', compactXFunc);
 		}
-		else if (global.layout == LayoutEnum.REALTIME) {
+		else if (global.layout === LayoutEnum.REALTIME) {
 			d3.selectAll(rects).attr('x', rectDraw.xFunc);
 		}
 		
 		// TODO if there is no rectangle at all, don't draw the entire session.
 		
 		// Move the indicator.
-		if (global.layout == LayoutEnum.COMPACT) {
+		if (global.layout === LayoutEnum.COMPACT) {
 			session.indicator.attr('x1', global.tempX);
 			session.indicator.attr('x2', global.tempX);
 		}
-		else if (global.layout == LayoutEnum.REALTIME) {
+		else if (global.layout === LayoutEnum.REALTIME) {
 			session.indicator.attr('x1', (session.endAbsTimestamp - session.startAbsTimestamp) / DEFAULT_RATIO);
 			session.indicator.attr('x2', (session.endAbsTimestamp - session.startAbsTimestamp) / DEFAULT_RATIO);
 		}
@@ -790,6 +791,12 @@ function layout(newLayout) {
 	}
 }
 
+function make_filter(file) {
+	return function (d) {
+		return d.file === file;
+	};
+}
+
 function layoutFiles() {
 	var i;
 	var visibleFiles = [];
@@ -797,9 +804,8 @@ function layoutFiles() {
 	for (i = 0; i < global.files.length; ++i) {
 		var file = global.files[i];
 		
-		var fileGroups = svg.subRects.selectAll('g.file_group').filter(function (d) {
-			return d.file == file;
-		});
+		// Use a function maker.. http://stackoverflow.com/questions/3037598/how-to-get-around-the-jslint-error-dont-make-functions-within-a-loop
+		var fileGroups = svg.subRects.selectAll('g.file_group').filter(make_filter(file));
 		
 		if (file.visible) {
 			fileGroups.style('display', '');
@@ -877,20 +883,21 @@ function screenPixelToTimestamp(screenPixel) {
 }
 
 function pixelToTimestamp(pixel) {
-	if (global.sessions.length == 0) {
+	if (global.sessions.length === 0) {
 		return 0;
 	}
 	
-	if (global.layout == LayoutEnum.COMPACT) {
-		var tx = pixel / global.scaleX;
-		
-		var session = null, dist = 0;
-		
+	// define the variables to be used in both blocks below.
+	var tx = pixel / global.scaleX;
+	var session = null, dist = 0;
+	var i, curWidth = 0, width;
+	var bounds, result;
+	
+	if (global.layout === LayoutEnum.COMPACT) {
 		// Get the session including the point,
 		// and the dist from the starting of the session group.
-		var i, curWidth = 0;
 		for (i = 0; i < global.sessions.length; ++i) {
-			var width = global.sessions[i].g.node().getBBox().width;
+			width = global.sessions[i].g.node().getBBox().width;
 			
 			if (curWidth <= tx && tx < curWidth + width) {
 				session = global.sessions[i];
@@ -901,7 +908,7 @@ function pixelToTimestamp(pixel) {
 			curWidth += width;
 		}
 		
-		if (session == null) {
+		if (session === null) {
 			session = global.sessions[i - 1];
 			dist = session.g.node().getBBox().width;
 		}
@@ -916,12 +923,12 @@ function pixelToTimestamp(pixel) {
 		var midIndex = Math.floor((startIndex + endIndex) / 2);
 		while (startIndex <= endIndex) {
 			var rect = rects[midIndex];
-			var bounds = rect.getBBox();
+			bounds = rect.getBBox();
 			
 			// The middle rect contains the dist!
 			if (bounds.x <= dist && dist <= bounds.x + bounds.width) {
 				var data = rect.__data__;
-				var result = Math.floor(session.sid + data.t1 + (data.t2 - data.t1) * (dist - bounds.x) / bounds.width);
+				result = Math.floor(session.sid + data.t1 + (data.t2 - data.t1) * (dist - bounds.x) / bounds.width);
 				
 				return result;
 			}
@@ -937,28 +944,22 @@ function pixelToTimestamp(pixel) {
 		}
 		
 		// Couldn't find..
-		if (startIndex == 0) {
+		if (startIndex === 0) {
 			return session.startAbsTimestamp;
 		}
-		else if (startIndex == rects.length) {
+		else if (startIndex === rects.length) {
 			return session.endAbsTimestamp;
 		}
 		else {
 			return Math
-					.floor((rects[startIndex - 1].__data__.t2 + rects[startIndex].__data__.t1) / 2)
-					+ session.sid;
+					.floor((rects[startIndex - 1].__data__.t2 + rects[startIndex].__data__.t1) / 2) + session.sid;
 		}
 	}
-	else if (global.layout == LayoutEnum.REALTIME) {
-		var tx = pixel / global.scaleX;
-		
-		var session = null, dist = 0;
-		
+	else if (global.layout === LayoutEnum.REALTIME) {
 		// Get the session including the point,
 		// and the dist from the starting of the session group.
-		var i, curWidth = 0;
 		for (i = 0; i < global.sessions.length; ++i) {
-			var width = global.sessions[i].g.node().getBBox().width;
+			width = global.sessions[i].g.node().getBBox().width;
 			
 			if (curWidth <= tx < curWidth + width) {
 				session = global.sessions[i];
@@ -969,17 +970,15 @@ function pixelToTimestamp(pixel) {
 			curWidth += width;
 		}
 		
-		if (session == null) {
+		if (session === null) {
 			session = global.sessions[i];
 			dist = session.g.node().getBBox().width;
 		}
 		
-		var bounds = session.g.node().getBBox();
+		bounds = session.g.node().getBBox();
 		
 		// Then just linearly interpolate.
-		var result = session.startAbsTimestamp
-				+ (session.endAbsTimestamp - session.startAbsTimestamp)
-				* (dist - bounds.x) / bounds.width;
+		result = session.startAbsTimestamp + (session.endAbsTimestamp - session.startAbsTimestamp) * (dist - bounds.x) / bounds.width;
 		return result;
 	}
 	
@@ -1002,8 +1001,7 @@ window.onload = function() {
 
 window.onresize = function(e) {
 	// if window size are different, redraw everything
-	if (global.lastWindowWidth != window.innerWidth
-			|| global.lastWindowHeight != window.innerHeight) {
+	if (global.lastWindowWidth !== window.innerWidth || global.lastWindowHeight !== window.innerHeight) {
 		global.lastWindowWidth = window.innerWidth;
 		global.lastWindowHeight = window.innerHeight;
 
@@ -1032,27 +1030,20 @@ function updateAreas() {
 	global.fileArea.right = CHART_MARGINS.left + svgWidth * FILES_PORTION;
 	global.fileArea.bottom = CHART_MARGINS.top + svgHeight;
 
-	global.hscrollArea.left = (CHART_MARGINS.left + CHART_MARGINS.right + svgWidth)
-			* FILES_PORTION + SCROLLBAR_WIDTH;
-	global.hscrollArea.top = CHART_MARGINS.top + CHART_MARGINS.bottom
-			+ svgHeight;
-	global.hscrollArea.right = CHART_MARGINS.left + CHART_MARGINS.right
-			+ svgWidth - SCROLLBAR_WIDTH;
-	global.hscrollArea.bottom = CHART_MARGINS.top + CHART_MARGINS.bottom
-			+ svgHeight + SCROLLBAR_WIDTH;
+	global.hscrollArea.left = (CHART_MARGINS.left + CHART_MARGINS.right + svgWidth) * FILES_PORTION + SCROLLBAR_WIDTH;
+	global.hscrollArea.top = CHART_MARGINS.top + CHART_MARGINS.bottom + svgHeight;
+	global.hscrollArea.right = CHART_MARGINS.left + CHART_MARGINS.right + svgWidth - SCROLLBAR_WIDTH;
+	global.hscrollArea.bottom = CHART_MARGINS.top + CHART_MARGINS.bottom + svgHeight + SCROLLBAR_WIDTH;
 
-	global.vscrollArea.left = CHART_MARGINS.left + CHART_MARGINS.right
-			+ svgWidth;
+	global.vscrollArea.left = CHART_MARGINS.left + CHART_MARGINS.right + svgWidth;
 	global.vscrollArea.top = SCROLLBAR_WIDTH;
-	global.vscrollArea.right = CHART_MARGINS.left + CHART_MARGINS.right
-			+ svgWidth + SCROLLBAR_WIDTH;
-	global.vscrollArea.bottom = CHART_MARGINS.top + CHART_MARGINS.bottom
-			+ svgHeight - SCROLLBAR_WIDTH;
+	global.vscrollArea.right = CHART_MARGINS.left + CHART_MARGINS.right + svgWidth + SCROLLBAR_WIDTH;
+	global.vscrollArea.bottom = CHART_MARGINS.top + CHART_MARGINS.bottom + svgHeight - SCROLLBAR_WIDTH;
 }
 
 /******************************************************************
- MOUSE EVENT FUNCTIONS
- ******************************************************************/
+MOUSE EVENT FUNCTIONS
+******************************************************************/
 
 function initEventHandlers() {
 	initMouseWheelHandler();
@@ -1094,10 +1085,10 @@ function initMouseWheelHandler() {
 
 function initKeyEventHandlers() {
 	document.addEventListener("keydown", function(e) {
-		if (e.keyCode == 17) {
+		if (e.keyCode === 17) {
 			global.isCtrlDown = true;
 		}
-		else if (e.keyCode == 107) {
+		else if (e.keyCode === 107) {
 			if (e.shiftKey) {
 				fileZoomIn();
 			}
@@ -1105,7 +1096,7 @@ function initKeyEventHandlers() {
 				barZoomIn();
 			}
 		}
-		else if (e.keyCode == 109) {
+		else if (e.keyCode === 109) {
 			if (e.shiftKey) {
 				fileZoomOut();
 			}
@@ -1117,7 +1108,7 @@ function initKeyEventHandlers() {
 	}, false);
 
 	document.addEventListener("keyup", function(e) {
-		if (e.keyCode == 17) {
+		if (e.keyCode === 17) {
 			global.isCtrlDown = false;
 		}
 	}, false);
@@ -1126,14 +1117,14 @@ function initKeyEventHandlers() {
 function initMouseDownHandler() {
 	document.onmousedown = function(e) {
 		if ("which" in e) { // Gecko (Firefox), WebKit (Safari/Chrome) & Opera
-			cmenu.isRightButtonDown = e.which == 3;
+			cmenu.isRightButtonDown = e.which === 3;
 		} else if ("button" in e) { // IE, Opera 
-			cmenu.isRightButtonDown = e.button == 2;
+			cmenu.isRightButtonDown = e.button === 2;
 		}
 
 		if (cmenu.isContextMenuVisible) {
 			hideContextMenu();
-            return;
+			return;
 		}
 
 		var mouseX = e.clientX - SVG_WRAPPER_PADDING;
@@ -1164,51 +1155,55 @@ function initMouseDownHandler() {
 		}
 		// HScroll
 		else if (cursorInArea(mouseX, mouseY, global.hscrollArea)) {
-			var thumbSize = $('#hscroll_thumb').width();
-			var thumbStart = parseInt($('#hscroll_thumb').css('left'));
-			var thumbEnd = thumbStart + thumbSize;
+			(function () {	// anonymous function for the sake of local variables.
+				var thumbSize = $('#hscroll_thumb').width();
+				var thumbStart = parseInt($('#hscroll_thumb').css('left'), 10);
+				var thumbEnd = thumbStart + thumbSize;
 
-			var mousePos = mouseX - global.hscrollArea.left;
+				var mousePos = mouseX - global.hscrollArea.left;
 
-			if (mousePos < thumbStart) {
-				showPageBefore();
-				return;
-			} else if (mousePos >= thumbEnd) {
-				showPageAfter();
-				return;
-			} else {
-				global.dragging = false;
-				global.draggingHScroll = true;
-				global.draggingVScroll = false;
-				global.draggingMarker = false;
+				if (mousePos < thumbStart) {
+					showPageBefore();
+					return;
+				} else if (mousePos >= thumbEnd) {
+					showPageAfter();
+					return;
+				} else {
+					global.dragging = false;
+					global.draggingHScroll = true;
+					global.draggingVScroll = false;
+					global.draggingMarker = false;
 
-				global.dragStartScrollPos = thumbStart;
-				return;
-			}
+					global.dragStartScrollPos = thumbStart;
+					return;
+				}
+			}());
 		}
 		// VScroll
 		else if (cursorInArea(mouseX, mouseY, global.vscrollArea)) {
-			var thumbSize = $('#vscroll_thumb').height();
-			var thumbStart = parseInt($('#vscroll_thumb').css('top'));
-			var thumbEnd = thumbStart + thumbSize;
+			(function () {
+				var thumbSize = $('#vscroll_thumb').height();
+				var thumbStart = parseInt($('#vscroll_thumb').css('top'), 10);
+				var thumbEnd = thumbStart + thumbSize;
 
-			var mousePos = mouseY - global.vscrollArea.top;
+				var mousePos = mouseY - global.vscrollArea.top;
 
-			if (mousePos < thumbStart) {
-				showPageUp();
-				return;
-			} else if (mousePos >= thumbEnd) {
-				showPageDown();
-				return;
-			} else {
-				global.dragging = false;
-				global.draggingHScroll = false;
-				global.draggingVScroll = true;
-				global.draggingMarker = false;
+				if (mousePos < thumbStart) {
+					showPageUp();
+					return;
+				} else if (mousePos >= thumbEnd) {
+					showPageDown();
+					return;
+				} else {
+					global.dragging = false;
+					global.draggingHScroll = false;
+					global.draggingVScroll = true;
+					global.draggingMarker = false;
 
-				global.dragStartScrollPos = thumbStart;
-				return;
-			}
+					global.dragStartScrollPos = thumbStart;
+					return;
+				}
+			}());
 		}
 		// Check if the marker is clicked
 		else {
@@ -1228,7 +1223,7 @@ function initMouseDownHandler() {
 				global.draggingMarker = true;
 				
 				global.dragStartMarkerPos = global.markerPos;
-                global.diffWhileDraggingMarker = 0;
+				global.diffWhileDraggingMarker = 0;
 				return;
 			}
 		}
@@ -1270,50 +1265,46 @@ function initMouseMoveHandler() {
 		}
 		// HScroll
 		else if (global.draggingHScroll) {
-			var mousePos = mouseX - global.dragStart[0]
-					+ global.dragStartScrollPos;
+			(function () {
+				var mousePos = mouseX - global.dragStart[0] + global.dragStartScrollPos;
 
-			// If the mouse position is too far from the scrollbar,
-			// then return to the original position.
-			if (mouseY < global.hscrollArea.top - SCROLLBAR_DIST_THRESHOLD
-					|| mouseY >= global.hscrollArea.bottom
-							+ SCROLLBAR_DIST_THRESHOLD) {
+				// If the mouse position is too far from the scrollbar,
+				// then return to the original position.
+				if (mouseY < global.hscrollArea.top - SCROLLBAR_DIST_THRESHOLD || mouseY >= global.hscrollArea.bottom + SCROLLBAR_DIST_THRESHOLD) {
+					mousePos = global.dragStartScrollPos;
+				}
 
-				mousePos = global.dragStartScrollPos;
-			}
+				var trackSize = $('#hscroll_thumbtrack').width();
+				var thumbSize = $('#hscroll_thumb').width();
 
-			var trackSize = $('#hscroll_thumbtrack').width();
-			var thumbSize = $('#hscroll_thumb').width();
+				var ratio = mousePos / (trackSize - thumbSize);
+				ratio = clamp(ratio, 0.0, 1.0);
 
-			var ratio = mousePos / (trackSize - thumbSize);
-			ratio = clamp(ratio, 0.0, 1.0);
-
-			var newTx = getMinTranslateX() * ratio;
-			translateX(newTx);
+				var newTx = getMinTranslateX() * ratio;
+				translateX(newTx);
+			}());
 		}
 		// VScroll
 		else if (global.draggingVScroll) {
-			var mousePos = mouseY - global.dragStart[1]
-					+ global.dragStartScrollPos;
+			(function () {
+				var mousePos = mouseY - global.dragStart[1] + global.dragStartScrollPos;
 
-			// If the mouse position is too far from the scrollbar,
-			// then return to the original position.
-			if (mouseX < global.vscrollArea.left - SCROLLBAR_DIST_THRESHOLD
-					|| mouseX >= global.vscrollArea.right
-							+ SCROLLBAR_DIST_THRESHOLD) {
+				// If the mouse position is too far from the scrollbar,
+				// then return to the original position.
+				if (mouseX < global.vscrollArea.left - SCROLLBAR_DIST_THRESHOLD || mouseX >= global.vscrollArea.right + SCROLLBAR_DIST_THRESHOLD) {
+					mousePos = global.dragStartScrollPos;
+				}
 
-				mousePos = global.dragStartScrollPos;
-			}
+				var trackSize = $('#vscroll_thumbtrack').height();
+				var thumbSize = $('#vscroll_thumb').height();
 
-			var trackSize = $('#vscroll_thumbtrack').height();
-			var thumbSize = $('#vscroll_thumb').height();
+				var ratio = mousePos / (trackSize - thumbSize);
+				ratio = clamp(ratio, 0.0, 1.0);
 
-			var ratio = mousePos / (trackSize - thumbSize);
-			ratio = clamp(ratio, 0.0, 1.0);
-
-			var newTy = getMinTranslateY() * ratio;
-			newTy = Math.round(newTy);
-			translateY(newTy);
+				var newTy = getMinTranslateY() * ratio;
+				newTy = Math.round(newTy);
+				translateY(newTy);
+			}());
 		}
 		else if (global.draggingMarker) {
 			var markerPos = mouseX - global.dragStart[0] + global.dragStartMarkerPos + global.diffWhileDraggingMarker;
@@ -1330,19 +1321,20 @@ function initMouseMoveHandler() {
 
 function initMouseUpHandler() {
 	document.onmouseup = function(e) {
+		var mouseX, mouseY;
+		
 		if (cmenu.isRightButtonDown) {
-			
-			var mouseX = e.clientX - SVG_WRAPPER_PADDING;
-			var mouseY = e.clientY - MENU_PANEL_HEIGHT - SVG_WRAPPER_PADDING;
+			mouseX = e.clientX - SVG_WRAPPER_PADDING;
+			mouseY = e.clientY - MENU_PANEL_HEIGHT - SVG_WRAPPER_PADDING;
 			
 			cmenu.mousePos = [mouseX, mouseY];
 			
 			if (cursorInArea(mouseX, mouseY, global.draggableArea)) {
-				if (global.selected.length == 0) {
+				if (global.selected.length === 0) {
 					addSelections(mouseX, mouseY, mouseX + 1, mouseY + 1);
 				}
 				
-				if (global.selected.length == 1) {
+				if (global.selected.length === 1) {
 					// showContextMenu(e, '#cmenu_main_single');
 					cmenu.typeName = 'main_single';
 				}
@@ -1371,8 +1363,8 @@ function initMouseUpHandler() {
 
 			var x1, y1, x2, y2;
 
-			var mouseX = e.clientX - SVG_WRAPPER_PADDING;
-			var mouseY = e.clientY - MENU_PANEL_HEIGHT - SVG_WRAPPER_PADDING;
+			mouseX = e.clientX - SVG_WRAPPER_PADDING;
+			mouseY = e.clientY - MENU_PANEL_HEIGHT - SVG_WRAPPER_PADDING;
 
 			if (global.dragStart[0] <= mouseX) {
 				x1 = global.dragStart[0];
@@ -1417,7 +1409,7 @@ function initDblClickHandler() {
 		var oprect = d3.selectAll(list).filter('.op_rect');
 		if (oprect.length > 0 && oprect[0].length > 0) {
 			var datum = oprect[0][0].__data__;
-			if (datum != undefined && datum != null) {
+			if (datum !== undefined && datum !== null) {
 				var file = datum.fileGroup.file;
 				azurite.jump(file.project, file.path, datum.sid, datum.id);
 			}
@@ -1484,8 +1476,8 @@ function addSelections(x1, y1, x2, y2, toggle) {
 		
 		var index = indexOfSelected(sid, id);
 
-		if (toggle == true) {
-			if (index != -1) {
+		if (toggle === true) {
+			if (index !== -1) {
 				global.selected.splice(index, 1);
 			}
 			else {
@@ -1501,13 +1493,13 @@ function addSelections(x1, y1, x2, y2, toggle) {
 }
 
 function isSelected(sid, id) {
-	return (indexOfSelected(sid, id) != -1);
+	return (indexOfSelected(sid, id) !== -1);
 }
 
 function indexOfSelected(sid, id) {
 	var i;
 	for (i = 0; i < global.selected.length; ++i) {
-		if (global.selected[i].sid == sid && global.selected[i].id == id) {
+		if (global.selected[i].sid === sid && global.selected[i].id === id) {
 			return i;
 		}
 	}
@@ -1519,29 +1511,28 @@ function updateHighlight() {
 	svg.subRects.selectAll('rect.highlight_rect').remove();
 
 	for ( var i = 0; i < global.selected.length; ++i) {
-		var idString = '#' + global.selected[i].sid + '_'
-				+ global.selected[i].id;
+		var idString = '#' + global.selected[i].sid + '_' + global.selected[i].id;
 
 		var $ref = $(idString);
-		if ($ref.length == 0) {
+		if ($ref.length === 0) {
 			continue;
 		}
 		var refBBox = $ref.get(0).getBBox();
 
-		d3.select($(idString)[0].parentNode).insert('rect', ':first-child')
-				.attr('class', 'highlight_rect').attr('fill', 'yellow').attr(
-						'x', refBBox.x - (HIGHLIGHT_WIDTH / global.scaleX))
-				.attr('y', refBBox.y - (HIGHLIGHT_WIDTH / global.scaleY)).attr(
-						'width',
-						refBBox.width + HIGHLIGHT_WIDTH * 2 / global.scaleX)
-				.attr('height',
-						refBBox.height + HIGHLIGHT_WIDTH * 2 / global.scaleY);
+		d3.select($(idString)[0].parentNode)
+			.insert('rect', ':first-child')
+			.attr('class', 'highlight_rect')
+			.attr('fill', 'yellow')
+			.attr('x', refBBox.x - (HIGHLIGHT_WIDTH / global.scaleX))
+			.attr('y', refBBox.y - (HIGHLIGHT_WIDTH / global.scaleY))
+			.attr('width', refBBox.width + HIGHLIGHT_WIDTH * 2 / global.scaleX)
+			.attr('height', refBBox.height + HIGHLIGHT_WIDTH * 2 / global.scaleY);
 	}
 }
 
 /******************************************************************
- LISTENER FUNCTIONS
- ******************************************************************/
+LISTENER FUNCTIONS
+******************************************************************/
 function barZoomIn() {
 	scaleX(global.scaleX + 0.5);
 }
@@ -1611,8 +1602,9 @@ function undo() {
 		result.push([ global.selected[i].sid, global.selected[i].id ]);
 	}
 
-	if (result.length > 0)
+	if (result.length > 0) {
 		azurite.selectiveUndo(result);
+	}
 }
 
 function undoEverythingAfterSelection() {
@@ -1620,7 +1612,7 @@ function undoEverythingAfterSelection() {
 	// hideContextMenu();
 	
 	// Do nothing if there is no selection.
-	if (global.selected.length == 0) {
+	if (global.selected.length === 0) {
 		return;
 	}
 	
@@ -1645,7 +1637,7 @@ function clamp(value, min, max) {
 }
 
 function range(begin, end) {
-	var result = new Array();
+	var result = [];
 	for ( var i = begin; i < end; ++i) {
 		result[i - begin] = i;
 	}
@@ -1669,7 +1661,7 @@ function scaleX(sx) {
 	updateTicks();
 	updateHScroll();
 	
-	if (global.layout == LayoutEnum.COMPACT) {
+	if (global.layout === LayoutEnum.COMPACT) {
 		layout();
 	}
 	
@@ -1700,8 +1692,8 @@ function translateX(tx) {
 	if (global.profile) {
 		console.log("translateX() start: " + _startTick);
 	}
-    
-    var diff = tx - global.translateX;
+	
+	var diff = tx - global.translateX;
 	
 	tx = clamp(tx, getMinTranslateX(), 0);
 	global.translateX = tx;
@@ -1710,8 +1702,8 @@ function translateX(tx) {
 
 	updateTicks();
 	updateHScroll();
-    
-    global.diffWhileDraggingMarker -= diff;
+	
+	global.diffWhileDraggingMarker -= diff;
 	
 	// profiling
 	var _endTick = new Date().valueOf();
@@ -1762,9 +1754,7 @@ function getMinTranslateY() {
 }
 
 function updateSubRectsTransform() {
-	svg.subRects.attr('transform', 'translate(' + global.translateX + ' '
-			+ (global.translateY * ROW_HEIGHT * global.scaleY) + ') '
-			+ 'scale(' + global.scaleX + ' ' + global.scaleY + ')');
+	svg.subRects.attr('transform', 'translate(' + global.translateX + ' ' + (global.translateY * ROW_HEIGHT * global.scaleY) + ') ' + 'scale(' + global.scaleX + ' ' + global.scaleY + ')');
 	svg.subMarkers.attr('transform', 'translate(' + global.translateX + ' 0)');
 }
 
@@ -1781,13 +1771,17 @@ function showTimestamp(absTimestamp, offsetInPixels) {
 }
 
 function timestampToPixel(absTimestamp) {
-	if (global.sessions.length == 0) {
+	if (global.sessions.length === 0) {
 		return 0;
 	}
 	
 	// binary search through the sessions.
-	var startIndex = 0; var endIndex = global.sessions.length - 1;
+	var startIndex = 0, endIndex = global.sessions.length - 1;
 	var midIndex = Math.floor((startIndex + endIndex) / 2);
+	
+	var filterVisibleFunc = function (d) {
+		return d.isVisible();
+	};
 	
 	while (startIndex <= endIndex) {
 		var midSession = global.sessions[midIndex];
@@ -1797,17 +1791,15 @@ function timestampToPixel(absTimestamp) {
 				absTimestamp <= midSession.endAbsTimestamp) {
 			
 			// Get the tx offset.
-			var txOffset = 0;
+			var txOffset = 0, tx;
 			var i;
 			for (i = 0; i < midIndex; ++i) {
 				txOffset += global.sessions[i].g.node().getBBox().width;
 			}
 			
-			if (global.layout == LayoutEnum.COMPACT) {
+			if (global.layout === LayoutEnum.COMPACT) {
 				// again, binary search through the rects.
-				var rects = midSession.g.selectAll('rect.op_rect').filter(function (d) {
-					return d.isVisible();
-				})[0].slice();
+				var rects = midSession.g.selectAll('rect.op_rect').filter(filterVisibleFunc)[0].slice();
 				rects.sort(global.operationCompareFunc);
 				
 				var startRectIndex = 0, endRectIndex = rects.length - 1;
@@ -1822,12 +1814,12 @@ function timestampToPixel(absTimestamp) {
 					
 					// found it.
 					if (absT1 <= absTimestamp && absTimestamp <= absT2) {
-					    if (absT2 == absT1) {
-					        var tx = txOffset + rectBounds.x + rectBounds.width / 2;
-					        return tx * global.scaleX;
-					    }
+						if (absT2 === absT1) {
+							tx = txOffset + rectBounds.x + rectBounds.width / 2;
+							return tx * global.scaleX;
+						}
 						else {
-							var tx = txOffset + rectBounds.x + rectBounds.width * (absTimestamp - absT1) / (absT2 - absT1);
+							tx = txOffset + rectBounds.x + rectBounds.width * (absTimestamp - absT1) / (absT2 - absT1);
 							return tx * global.scaleX;
 						}
 					}
@@ -1843,19 +1835,19 @@ function timestampToPixel(absTimestamp) {
 				}
 				
 				// Not in the middle of a rect.
-				if (startRectIndex == 0) {
+				if (startRectIndex === 0) {
 					return txOffset * global.scaleX;
 				}
-				else if (startRectIndex == rects.length) {
+				else if (startRectIndex === rects.length) {
 					return (txOffset + midSession.g.node().getBBox().width) * global.scaleX;
 				}
 				else {
 					return (txOffset + rects[startIndex].getBBox().x) * global.scaleX;
 				}
 			}
-			else if (global.layout == LayoutEnum.REALTIME) {
+			else if (global.layout === LayoutEnum.REALTIME) {
 				var sessionBounds = midSession.g.node().getBBox();
-				var tx = txOffset + sessionBounds.width * (absTimestamp - midSession.startAbsTimestamp) / (midSession.endAbsTimestamp - midSession.startAbsTimestamp);
+				tx = txOffset + sessionBounds.width * (absTimestamp - midSession.startAbsTimestamp) / (midSession.endAbsTimestamp - midSession.startAbsTimestamp);
 				return tx * global.scaleX;
 			}
 		}
@@ -1871,10 +1863,10 @@ function timestampToPixel(absTimestamp) {
 	}
 	
 	// Couldn't found. Somewhere in the middle of sessions.
-	if (startIndex == 0) {
+	if (startIndex === 0) {
 		return 0;
 	}
-	else if (startIndex == global.sessions.length) {
+	else if (startIndex === global.sessions.length) {
 		return -getMinTranslateX();
 	}
 	else {
@@ -1886,28 +1878,26 @@ function updateHScroll() {
 	var trackSize = $('#hscroll_thumbtrack').width();
 
 	var extent = getSvgWidth() * (1.0 - FILES_PORTION);
-	var thumbSize = Math.max(Math.floor(extent * trackSize
-			/ (extent - getMinTranslateX())), MIN_SCROLL_THUMB_SIZE);
+	var thumbSize = Math.max(Math.floor(extent * trackSize / (extent - getMinTranslateX())), MIN_SCROLL_THUMB_SIZE);
 
 	var thumbRelativePos = global.translateX / getMinTranslateX();
-	if (global.translateX == 0 || getMinTranslateX() == 0) {
+	if (global.translateX === 0 || getMinTranslateX() === 0) {
 		thumbRelativePos = 0;
 	}
 
-	d3.select('#hscroll_thumb').style('width', thumbSize + 'px').style('left',
-			Math.floor((trackSize - thumbSize) * thumbRelativePos) + 'px');
+	d3.select('#hscroll_thumb')
+		.style('width', thumbSize + 'px')
+		.style('left', Math.floor((trackSize - thumbSize) * thumbRelativePos) + 'px');
 }
 
 function updateVScroll() {
 	var trackSize = $('#vscroll_thumbtrack').height();
 
 	var extent = Math.floor(getSvgHeight() / (ROW_HEIGHT * global.scaleY));
-	var thumbSize = clamp(Math.floor(trackSize * extent
-			/ (global.files.length + extent - 1)), MIN_SCROLL_THUMB_SIZE,
-			trackSize);
+	var thumbSize = clamp(Math.floor(trackSize * extent / (global.files.length + extent - 1)), MIN_SCROLL_THUMB_SIZE, trackSize);
 
 	var thumbRelativePos = global.translateY / getMinTranslateY();
-	if (global.translateY == 0 || getMinTranslateY() == 0) {
+	if (global.translateY === 0 || getMinTranslateY() === 0) {
 		thumbRelativePos = 0;
 	}
 
@@ -1945,12 +1935,12 @@ function updateTicks() {
 }
 
 function test(count) {
-	if (count == undefined) { count = 1; }
+	if (count === undefined) { count = 1; }
 	
 	for (var i =0; i < count; ++i) {
 		var sid = new Date().valueOf();
 		// This must be bigger than the last known operation timestamp.
-		if (global.lastOperation != null && sid < global.lastOperation.getAbsT2()) {
+		if (global.lastOperation !== null && sid < global.lastOperation.getAbsT2()) {
 			sid = global.lastOperation.getAbsT2() + Math.floor(Math.random() * 5000);
 		}
 		
@@ -1980,7 +1970,7 @@ function addRandomOperations(sid, count, startover) {
 	var id = -1;
 	var t = 0;
 
-	if (global.lastOperation != null && !startover) {
+	if (global.lastOperation !== null && !startover) {
 		id = global.lastOperation.id;
 		t = global.lastOperation.t2;
 	}
@@ -1998,17 +1988,15 @@ function addRandomOperations(sid, count, startover) {
 }
 
 function getSvgWidth() {
-	return parseInt(svg.main.style('width')) - CHART_MARGINS.left
-			- CHART_MARGINS.right;
+	return parseInt(svg.main.style('width'), 10) - CHART_MARGINS.left - CHART_MARGINS.right;
 }
 
 function getSvgHeight() {
-	return parseInt(svg.main.style('height')) - CHART_MARGINS.top
-			- CHART_MARGINS.bottom;
+	return parseInt(svg.main.style('height'), 10) - CHART_MARGINS.top - CHART_MARGINS.bottom;
 }
 
 function showAllFiles() {
-	for (var i in global.files) {
+	for (var i = 0; i < global.files.length; ++i) {
 		global.files[i].visible = true;
 	}
 	
@@ -2022,7 +2010,7 @@ function showSelectedFile() {
 	
 	var i;
 	for (i = 0; i < global.files.length; ++i) {
-		global.files[i].visible = global.files[i] == file;
+		global.files[i].visible = global.files[i] === file;
 	}
 	
 	layoutFiles();
@@ -2035,7 +2023,7 @@ function showAllFilesInProject() {
 	
 	var i;
 	for (i = 0; i < global.files.length; ++i) {
-		global.files[i].visible = global.files[i].project == file.project;
+		global.files[i].visible = global.files[i].project === file.project;
 	}
 	
 	layoutFiles();
@@ -2043,14 +2031,14 @@ function showAllFilesInProject() {
 }
 
 function jumpToLocation() {
-	if (global.selected.length == 0) { return; }
+	if (global.selected.length === 0) { return; }
 	
 	var selection = global.selected[0];
 	var rect = $('rect#' + selection.sid + '_' + selection.id).get(0);
 	
-	if (rect != null) {
+	if (rect !== null) {
 		var datum = rect.__data__;
-		if (datum != undefined && datum != null) {
+		if (datum !== undefined && datum !== null) {
 			var file = datum.fileGroup.file;
 			azurite.jump(file.project, file.path, datum.sid, datum.id);
 		}
@@ -2081,7 +2069,7 @@ function showAllFilesEditedTogether() {
 	var startIndex = sortedRects.indexOf(startRect);
 	var endIndex = sortedRects.indexOf(endRect);
 	
-	if (startIndex == -1 || endIndex == -1) {
+	if (startIndex === -1 || endIndex === -1) {
 		return;
 	}
 	
@@ -2100,7 +2088,7 @@ function showAllFilesEditedTogether() {
 }
 
 function showMarker(absTimestamp) {
-	if (absTimestamp != undefined) {
+	if (absTimestamp !== undefined) {
 		global.markerTimestamp = absTimestamp;
 	}
 	
