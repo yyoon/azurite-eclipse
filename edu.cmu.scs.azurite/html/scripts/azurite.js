@@ -1,6 +1,9 @@
+/*jshint forin:true, noarg:true, noempty:true, eqeqeq:true, bitwise:true, strict:true, undef:true, unused:true, curly:true, browser:true, devel:true, indent:4, maxerr:50 */
+/*global __AZURITE__initialize, __AZURITE__selectiveUndo, __AZURITE__undoEverythingAfterSelection, __AZURITE__jump, __AZURITE__getInfo, __AZURITE__markerMove, __AZURITE__eclipseCommand, __AZURITE__log */
+
 // Workaround for console.log problem.
-if (!window.console) window.console = {};
-if (!window.console.log) window.console.log = function () { };
+if (!window.console) { window.console = {}; }
+if (!window.console.log) { window.console.log = function () { }; }
 
 // Azurite Library
 var azurite = { };
@@ -20,6 +23,9 @@ try {
 } catch (e) {
     // Being run in a web browser.
     var alertFn;
+	
+	azurite.suppressGetInfoLogs = true;
+	
     if (console.log) {
         console.log("AZURITE: Running Azurite in a non-editor environment.");
         alertFn = function (arg) { console.log(arg); };
@@ -46,7 +52,10 @@ try {
 	};
 	
 	azurite.getInfo = function (project, path, sid, id) {
-//		alertFn('azurite.getInfo(' + project + ', ' + path + ', ' + sid + ', ' + id + ') call');
+		if (!azurite.suppressGetInfoLogs) {
+			alertFn('azurite.getInfo(' + project + ', ' + path + ', ' + sid + ', ' + id + ') call');
+		}
+		
 		return "unknown";
 	};
 	
