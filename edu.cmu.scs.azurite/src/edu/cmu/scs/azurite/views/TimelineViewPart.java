@@ -569,6 +569,9 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 	}
 
 	private void addOperations(Events events) {
+		// Store the current file.
+		browser.execute("pushCurrentFile();");
+		
 		// Add the operations
 		StringBuilder builder = new StringBuilder();
 		
@@ -599,6 +602,9 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 		browser.execute(builder.toString());
 		end = System.currentTimeMillis();
 		System.out.println("Executing String: " + (end - start) + "ms");
+		
+		// Restore the last file
+		browser.execute("popCurrentFile();");
 	}
 
 	private String getAddOperationString(BaseDocumentChangeEvent docChange,

@@ -2,7 +2,7 @@
 /*global d3, azurite */
 
 /* Things to be called from Azurite */
-/*exported setStartTimestamp, updateOperation, getRightmostTimestamp, showContextMenu, addSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarker, hideMarker, hideFirebugUI */
+/*exported setStartTimestamp, updateOperation, getRightmostTimestamp, showContextMenu, addSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarker, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile */
 
 /* Things to be called manually when debugging */
 /*exported test */
@@ -134,6 +134,7 @@ global.lastWindowHeight = null;
 
 // arrays to keep
 global.files = [];
+global.fileStack = [];
 global.sessions = [];
 global.selected = [];
 
@@ -460,7 +461,7 @@ function OperationId(sid, id) {
 function addFile(project, path) {
 	var fileName = path.match(/[^\\\/]+$/)[0];
 
-	for ( var index in global.files) {
+	for (var index = 0; index < global.files.length; ++index) {
 		if (global.files[index].path === path) {
 			global.currentFile = global.files[index];
 			global.currentFileIndex = index;
@@ -2109,4 +2110,38 @@ function hideMarker() {
 
 function hideFirebugUI() {
 	$('#FirebugUI').css('display', 'none');
+}
+
+function pushCurrentFile() {
+	if (global.currentFile !== null) {
+		// push the current file to the file stack.
+		global.fileStack.push(global.currentFile);
+	}
+	else {
+		// if the current file is null.. then maybe just add null?
+		global.fileStack.push(null);
+	}
+}
+
+function popCurrentFile() {
+	if (global.fileStack.length === 0) {
+		azurite.log("pushCurrentFile / popCurrentFile pair mismatch!");
+		// do nothing.
+	}
+	else {
+		var popped = global.fileStack.pop();
+		if (popped !== null) {
+			global.currentFile = popped;
+			for (var index = 0; index < global.files.length; ++index) {
+				if (global.currentFile[index].path === popped.path) {
+					global.currentFileIndex = index;
+					break;
+				}
+			}
+		}
+		else {
+			global.currentFile = null;
+			global.currentFileIndex = -1;
+		}
+	}
 }
