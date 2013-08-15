@@ -1,4 +1,4 @@
-/*jshint unused:vars, devel:true, jquery:true, globalstrict:true */
+/*jshint unused:vars, devel:true, jquery:true, globalstrict:true, browser:true */
 /*global d3, azurite */
 
 /* Things to be called from Azurite */

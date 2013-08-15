@@ -1,4 +1,3 @@
-/*jshint forin:true, noarg:true, noempty:true, eqeqeq:true, bitwise:true, strict:true, undef:true, unused:true, curly:true, browser:true, devel:true, indent:4, maxerr:50 */
 /*global __AZURITE__initialize, __AZURITE__selectiveUndo, __AZURITE__undoEverythingAfterSelection, __AZURITE__jump, __AZURITE__getInfo, __AZURITE__markerMove, __AZURITE__eclipseCommand, __AZURITE__log */
 
 // Workaround for console.log problem.
