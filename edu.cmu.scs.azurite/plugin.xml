@@ -531,6 +531,10 @@
             id="edu.cmu.scs.azurite.ui.commands.openTimelineViewCommand"
             name="Open Timeline View">
       </command>
+      <command
+            id="edu.cmu.scs.azurite.ui.commands.interactiveSelectiveUndoCommand"
+            name="Interactive Selective Undo">
+      </command>
    </extension>
    <extension
          point="org.eclipse.ui.bindings">
@@ -673,6 +677,10 @@
                   definitionId="singleRectSelected">
             </reference>
          </enabledWhen>
+      </handler>
+      <handler
+            class="edu.cmu.scs.azurite.ui.handlers.InteractiveSelectiveUndoHandler"
+            commandId="edu.cmu.scs.azurite.ui.commands.interactiveSelectiveUndoCommand">
       </handler>
    </extension>
    <extension
