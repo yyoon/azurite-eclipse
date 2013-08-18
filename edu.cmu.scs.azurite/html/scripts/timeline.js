@@ -1343,6 +1343,9 @@ function initMouseUpHandler() {
 					// showContextMenu(e, '#cmenu_main');
 					cmenu.typeName = 'main_multi';
 				}
+                else {
+                    cmenu.typeName = 'main_nothing';
+                }
 			}
 			else if (cursorInArea(mouseX, mouseY, global.fileArea)) {
 				var numVisibleFiles = global.getVisibleFiles().length + global.translateY;

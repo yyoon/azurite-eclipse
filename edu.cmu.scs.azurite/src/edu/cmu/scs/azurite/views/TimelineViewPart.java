@@ -105,6 +105,10 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 				"Selective Undo",
 				"edu.cmu.scs.azurite.ui.commands.selectiveUndoCommand");
 		
+		final Action interactiveSelectiveUndoAction = new CommandAction(
+				"Interactive Selective Undo",
+				"edu.cmu.scs.azurite.ui.commands.interactiveSelectiveUndoCommand");
+		
 		final Action undoEverythingAfterSelectionAction = new CommandAction(
 				"Undo Everything After Selection",
 				"edu.cmu.scs.azurite.ui.commands.undoEverythingAfterSelectionCommand");
@@ -153,8 +157,14 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 					String menuType = browser.evaluate("return cmenu.typeName;").toString();
 					
 					switch (menuType) {
+						case "main_nothing": {
+							manager.add(interactiveSelectiveUndoAction);
+							break;
+						}
+						
 						case "main_single": {
 							manager.add(selectiveUndoAction);
+							manager.add(interactiveSelectiveUndoAction);
 							manager.add(undoEverythingAfterSelectionAction);
 							manager.add(jumpToTheAffectedCodeAction);
 							break;
@@ -162,6 +172,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 							
 						case "main_multi": {
 							manager.add(selectiveUndoAction);
+							manager.add(interactiveSelectiveUndoAction);
 							manager.add(undoEverythingAfterSelectionAction);
 							manager.add(showAllFilesEditedTogetherAction);
 							break;
