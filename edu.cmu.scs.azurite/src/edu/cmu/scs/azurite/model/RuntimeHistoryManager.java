@@ -494,5 +494,19 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		// Timeline view only needs the events newly added.
 		firePastLogsReadEvent(listEvents);
 	}
+
+	public Map<FileKey, List<RuntimeDC>> extractFileDCMapFromOperationIds(
+			List<OperationId> ids) {
+		// Filter only the files that contain one or more selected rectangles.
+		Set<FileKey> fileKeys = getFileKeys();
+		Map<FileKey, List<RuntimeDC>> params = new HashMap<FileKey, List<RuntimeDC>>();
+		for (FileKey key : fileKeys) {
+			List<RuntimeDC> filteredIds = filterDocumentChangesByIds(key, ids);
+			if (filteredIds.size() == 0) { continue; }
+			
+			params.put(key, filteredIds);
+		}
+		return params;
+	}
 	
 }

@@ -1600,15 +1600,21 @@ function showPageDown() {
 function undo() {
 	// close context menu if there is any
 	// hideContextMenu();
+	var result = getStandardRectSelection();
+
+	if (result.length > 0) {
+		azurite.selectiveUndo(result);
+	}
+}
+
+function getStandardRectSelection() {
 	var result = [];
 
 	for ( var i = 0; i < global.selected.length; ++i) {
 		result.push([ global.selected[i].sid, global.selected[i].id ]);
 	}
-
-	if (result.length > 0) {
-		azurite.selectiveUndo(result);
-	}
+	
+	return result;
 }
 
 function undoEverythingAfterSelection() {

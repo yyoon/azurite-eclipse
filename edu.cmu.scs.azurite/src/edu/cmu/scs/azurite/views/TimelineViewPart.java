@@ -8,7 +8,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
@@ -257,35 +256,11 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 			}
 			
 			try {
-				Object[] selected = (Object[])arguments[0];
+				// Convert everything into operation id.
+				List<OperationId> ids = translateSelection(arguments[0]);
 				
-				// Convert everything into integer.
-				List<OperationId> ids = new ArrayList<OperationId>();
-				for (Object element : selected) {
-					if (!(element instanceof Object[])) { continue; }
-					
-					Object[] idComponents = (Object[])element;
-					if (idComponents.length == 2 &&
-							idComponents[0] instanceof Number &&
-							idComponents[1] instanceof Number) {
-						Number sid = (Number)idComponents[0];
-						Number id = (Number)idComponents[1];
-						
-						ids.add(new OperationId(sid.longValue(), id.longValue()));
-					}
-				}
-				
-				RuntimeHistoryManager history = RuntimeHistoryManager.getInstance();
-				
-				// Filter only the files that contain one or more selected rectangles.
-				Set<FileKey> fileKeys = history.getFileKeys();
-				Map<FileKey, List<RuntimeDC>> params = new HashMap<FileKey, List<RuntimeDC>>();
-				for (FileKey key : fileKeys) {
-					List<RuntimeDC> filteredIds = history.filterDocumentChangesByIds(key, ids);
-					if (filteredIds.size() == 0) { continue; }
-					
-					params.put(key, filteredIds);
-				}
+				Map<FileKey, List<RuntimeDC>> params = RuntimeHistoryManager
+						.getInstance().extractFileDCMapFromOperationIds(ids);
 				
 				SelectiveUndoEngine.getInstance()
 						.doSelectiveUndoOnMultipleFiles(params);
@@ -758,6 +733,26 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 		} catch (SWTException e) {
 			return 0;
 		}
+	}
+
+	public static List<OperationId> translateSelection(Object selected) {
+		Object[] selectedArray = (Object[]) selected;
+		
+		List<OperationId> ids = new ArrayList<OperationId>();
+		for (Object element : selectedArray) {
+			if (!(element instanceof Object[])) { continue; }
+			
+			Object[] idComponents = (Object[])element;
+			if (idComponents.length == 2 &&
+					idComponents[0] instanceof Number &&
+					idComponents[1] instanceof Number) {
+				Number sid = (Number)idComponents[0];
+				Number id = (Number)idComponents[1];
+				
+				ids.add(new OperationId(sid.longValue(), id.longValue()));
+			}
+		}
+		return ids;
 	}
 	
 }

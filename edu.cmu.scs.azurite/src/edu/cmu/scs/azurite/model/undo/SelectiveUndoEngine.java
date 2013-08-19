@@ -99,15 +99,13 @@ public class SelectiveUndoEngine {
 			throw new IllegalArgumentException();
 		}
 		
-		// Sort the runtimeDocChanges by their original command IDs.
-		sortRuntimeDocumentChanges(runtimeDocChanges);
-		
-		// Get all the segments.
-		List<Segment> segments = getAllSegments(runtimeDocChanges);
-		
 		// Determine Chunks.
-		List<Chunk> chunks = determineChunks(segments);
+		List<Chunk> chunks = determineChunksWithRuntimeDCs(runtimeDocChanges);
 		
+		doSelectiveUndoWithChunks(chunks, document);
+	}
+
+	public void doSelectiveUndoWithChunks(List<Chunk> chunks, IDocument document) {
 		// Reverse the chunks, so the last chunk comes at first.
 		Collections.reverse(chunks);
 		
@@ -316,7 +314,26 @@ public class SelectiveUndoEngine {
 		return segments;
 	}
 	
-	List<Chunk> determineChunks(List<Segment> segments) {
+	public List<Chunk> determineChunksWithRuntimeDCs(List<RuntimeDC> runtimeDCs) {
+		return determineChunksWithRuntimeDCs(runtimeDCs.toArray(new RuntimeDC[runtimeDCs.size()]));
+	}
+	
+	public List<Chunk> determineChunksWithRuntimeDCs(RuntimeDC[] runtimeDCs) {
+		if (runtimeDCs == null) {
+			throw new IllegalArgumentException();
+		}
+		
+		// Sort the runtimeDocChanges by their original command IDs.
+		sortRuntimeDocumentChanges(runtimeDCs);
+		
+		// Get all the segments.
+		List<Segment> segments = getAllSegments(runtimeDCs);
+		
+		// Determine Chunks.
+		return determineChunks(segments);
+	}
+	
+	public List<Chunk> determineChunks(List<Segment> segments) {
 		// Sort! Collections.sort is guaranteed to be *stable*.
 		Collections.sort(segments, Segment.getLocationComparator());
 		

@@ -4,6 +4,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.eclipse.compare.CompareUI;
 import org.eclipse.jface.action.Action;
@@ -25,10 +26,15 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Shell;
 
+import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.jface.widgets.ChunksTreeViewer;
 import edu.cmu.scs.azurite.model.FileKey;
+import edu.cmu.scs.azurite.model.OperationId;
+import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.azurite.model.undo.Chunk;
+import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
 import edu.cmu.scs.azurite.plugin.Activator;
+import edu.cmu.scs.azurite.views.TimelineViewPart;
 
 public class InteractiveSelectiveUndoDialog extends TitleAreaDialog {
 	
@@ -234,14 +240,8 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog {
 		this.chunksTreeViewer.setComparator(createChunksTreeComparator());
 		this.chunksTreeViewer.addSelectionChangedListener(createSelectionChangedListener());
 		
-		List<Chunk> test = new ArrayList<Chunk>();
-		test.add(new Chunk() {
-			@Override
-			public FileKey getBelongsTo() {
-				return new FileKey("DummyProject", "C:\\TestDirectory\\subdir\\Test.java");
-			}
-		});
-		this.chunksTreeViewer.setInput(test);
+		// Set the initial input
+		setChunksTreeViewerInput();
 		
 		// Set the content of the ViewerPane to the tree-control.
 		chunksPane.setContent(this.chunksTreeViewer.getControl());
@@ -278,6 +278,35 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog {
 				}
 			}
 		};
+	}
+	
+	private void setChunksTreeViewerInput() {
+		// If the viewer is not initialized, do nothing.
+		if (this.chunksTreeViewer == null) {
+			return;
+		}
+		
+		TimelineViewPart timeline = TimelineViewPart.getInstance();
+		// If the timeline is not open, do nothing.
+		if (timeline == null) {
+			return;
+		}
+		
+		Object selected = timeline.evaluateJSCode("return getStandardRectSelection();");
+		List<OperationId> ids = TimelineViewPart.translateSelection(selected);
+		
+		Map<FileKey, List<RuntimeDC>> fileDCMap = RuntimeHistoryManager
+				.getInstance().extractFileDCMapFromOperationIds(ids);
+		
+		List<Chunk> chunks = new ArrayList<Chunk>();
+		for (FileKey fileKey : fileDCMap.keySet()) {
+			List<Chunk> chunksForThisFile = SelectiveUndoEngine.getInstance()
+					.determineChunksWithRuntimeDCs(fileDCMap.get(fileKey));
+			chunks.addAll(chunksForThisFile);
+		}
+		
+		// Set the input here.
+		this.chunksTreeViewer.setInput(chunks);
 	}
 	
 }
