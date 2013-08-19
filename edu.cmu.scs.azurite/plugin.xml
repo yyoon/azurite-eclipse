@@ -268,13 +268,13 @@
                   visible="true">
             </separator>
             <command
+                  commandId="edu.cmu.scs.azurite.ui.commands.interactiveSelectiveUndoCommand"
+                  style="push">
+            </command>
+            <command
                   commandId="edu.cmu.scs.azurite.ui.commands.historySearchCommand"
                   style="push">
             </command>
-            <separator
-                  name="edu.cmu.scs.azurite.separator3"
-                  visible="true">
-            </separator>
             <command
                   commandId="edu.cmu.scs.azurite.ui.commands.readPreviousLog"
                   style="push">
@@ -307,6 +307,10 @@
                name="edu.cmu.scs.azurite.separator1"
                visible="true">
          </separator>
+         <command
+               commandId="edu.cmu.scs.azurite.ui.commands.interactiveSelectiveUndoCommand"
+               style="push">
+         </command>
          <command
                commandId="edu.cmu.scs.azurite.ui.commands.readPreviousLog"
                style="push">
@@ -553,7 +557,7 @@
    <extension
          point="org.eclipse.ui.commandImages">
       <image
-            commandId="edu.cmu.scs.azurite.ui.commands.undoInRegionCommand"
+            commandId="edu.cmu.scs.azurite.ui.commands.interactiveSelectiveUndoCommand"
             icon="icons/undo_in_region.png">
       </image>
       <image
