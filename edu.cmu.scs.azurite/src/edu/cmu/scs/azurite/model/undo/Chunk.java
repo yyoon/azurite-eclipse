@@ -12,6 +12,7 @@ import java.util.TreeSet;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.commands.runtime.Segment;
+import edu.cmu.scs.azurite.model.FileKey;
 
 /**
  * @author yyoon1
@@ -200,5 +201,14 @@ public class Chunk extends ArrayList<Segment> {
 		}
 		
 		return copyChunk;
+	}
+
+	// Assume that all the segments within this chunk came from a same file.
+	public FileKey getBelongsTo() {
+		if (isEmpty()) {
+			throw new IllegalStateException();
+		}
+		
+		return this.get(0).getOwner().getBelongsTo();
 	}
 }
