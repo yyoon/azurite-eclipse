@@ -19,6 +19,7 @@ import org.eclipse.jface.action.IMenuListener;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.Separator;
+import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.text.ITextViewerExtension5;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.SWTException;
@@ -45,6 +46,7 @@ import edu.cmu.scs.azurite.model.OperationId;
 import edu.cmu.scs.azurite.model.RuntimeDCListener;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
+import edu.cmu.scs.azurite.plugin.Activator;
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 import edu.cmu.scs.fluorite.commands.Delete;
 import edu.cmu.scs.fluorite.commands.FileOpenCommand;
@@ -105,9 +107,11 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 				"Selective Undo",
 				"edu.cmu.scs.azurite.ui.commands.selectiveUndoCommand");
 		
+		ImageDescriptor isuIcon = Activator.getImageDescriptor("icons/undo_in_region.png");
 		final Action interactiveSelectiveUndoAction = new CommandAction(
 				"Interactive Selective Undo",
 				"edu.cmu.scs.azurite.ui.commands.interactiveSelectiveUndoCommand");
+		interactiveSelectiveUndoAction.setImageDescriptor(isuIcon);
 		
 		final Action undoEverythingAfterSelectionAction = new CommandAction(
 				"Undo Everything After Selection",
