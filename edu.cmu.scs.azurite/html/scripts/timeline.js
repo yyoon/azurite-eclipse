@@ -1148,6 +1148,7 @@ function initMouseDownHandler() {
 			if (!global.isCtrlDown) {
 				global.selected = [];
 				svg.subRects.selectAll('rect.highlight_rect').remove();
+				azurite.notifySelectionChanged();
 			}
 
 			d3.select('.selection_box').attr('x', mouseX).attr('y', mouseY);
@@ -1532,6 +1533,8 @@ function updateHighlight() {
 			.attr('width', refBBox.width + HIGHLIGHT_WIDTH * 2 / global.scaleX)
 			.attr('height', refBBox.height + HIGHLIGHT_WIDTH * 2 / global.scaleY);
 	}
+	
+	azurite.notifySelectionChanged();
 }
 
 /******************************************************************

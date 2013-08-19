@@ -34,9 +34,10 @@ import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.azurite.model.undo.Chunk;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
 import edu.cmu.scs.azurite.plugin.Activator;
+import edu.cmu.scs.azurite.views.RectSelectionListener;
 import edu.cmu.scs.azurite.views.TimelineViewPart;
 
-public class InteractiveSelectiveUndoDialog extends TitleAreaDialog {
+public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements RectSelectionListener {
 	
 	private static final int MINIMUM_CHUNKS_HEIGHT = 100;
 	
@@ -185,6 +186,17 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog {
 		
 		setTitle(TITLE);
 		setMessage(DEFAULT_MESSAGE);
+		
+		// Register myself to the timeline.
+		TimelineViewPart.getInstance().addRectSelectionListener(this);
+	}
+
+	@Override
+	protected void handleShellCloseEvent() {
+		// Deregister myself from the timeline.
+		TimelineViewPart.getInstance().removeRectSelectionListener(this);
+		
+		super.handleShellCloseEvent();
 	}
 
 	@Override
@@ -271,7 +283,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog {
 			public void selectionChanged(SelectionChangedEvent event) {
 				IStructuredSelection sel = (IStructuredSelection) event.getSelection();
 				if (sel.size() == 1) {
-					
+//					showPreview(something..);
 				}
 				else {
 //					showPreview(null);
@@ -292,8 +304,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog {
 			return;
 		}
 		
-		Object selected = timeline.evaluateJSCode("return getStandardRectSelection();");
-		List<OperationId> ids = TimelineViewPart.translateSelection(selected);
+		List<OperationId> ids = timeline.getRectSelection();
 		
 		Map<FileKey, List<RuntimeDC>> fileDCMap = RuntimeHistoryManager
 				.getInstance().extractFileDCMapFromOperationIds(ids);
@@ -307,6 +318,12 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog {
 		
 		// Set the input here.
 		this.chunksTreeViewer.setInput(chunks);
+	}
+
+	@Override
+	public void rectSelectionChanged() {
+		// TODO maybe preserve the previous selections about the conflict resolution?
+		setChunksTreeViewerInput();
 	}
 	
 }

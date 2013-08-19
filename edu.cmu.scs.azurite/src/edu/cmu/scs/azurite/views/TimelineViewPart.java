@@ -12,6 +12,7 @@ import java.util.Map;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.runtime.FileLocator;
+import org.eclipse.core.runtime.ListenerList;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IMenuListener;
@@ -57,8 +58,6 @@ import edu.cmu.scs.fluorite.model.Events;
 import edu.cmu.scs.fluorite.util.Utilities;
 
 public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
-
-	private Browser browser;
 	
 	private static TimelineViewPart me = null;
 	private static String BROWSER_FUNC_PREFIX = "__AZURITE__";
@@ -71,6 +70,29 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 	 */
 	public static TimelineViewPart getInstance() {
 		return me;
+	}
+
+	private Browser browser;
+	private ListenerList rectSelectionListenerList;
+	
+	public TimelineViewPart() {
+		super();
+		
+		this.rectSelectionListenerList = new ListenerList();
+	}
+	
+	public void addRectSelectionListener(RectSelectionListener listener) {
+		this.rectSelectionListenerList.add(listener);
+	}
+	
+	public void removeRectSelectionListener(RectSelectionListener listener) {
+		this.rectSelectionListenerList.remove(listener);
+	}
+	
+	public void fireRectSelectionChanged() {
+		for (Object listenerObj : this.rectSelectionListenerList.getListeners()) {
+			((RectSelectionListener)listenerObj).rectSelectionChanged();
+		}
 	}
 	
 	@Override
@@ -226,6 +248,8 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 		new MarkerMoveFunction(browser, BROWSER_FUNC_PREFIX + "markerMove");
 		
 		new EclipseCommandFunction(browser, BROWSER_FUNC_PREFIX + "eclipseCommand");
+		
+		new NotifySelectionChangedFunction(browser, BROWSER_FUNC_PREFIX + "notifySelectionChanged");
 	}
 
 	@Override
@@ -521,6 +545,20 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 		}
 	}
 	
+	class NotifySelectionChangedFunction extends BrowserFunction {
+
+		public NotifySelectionChangedFunction(Browser browser, String name) {
+			super(browser, name);
+		}
+
+		@Override
+		public Object function(Object[] arguments) {
+			fireRectSelectionChanged();
+			return "ok";
+		}
+		
+	}
+	
 	@Override
 	public void activeFileChanged(String projectName, String filePath) {
 		if (projectName == null || filePath == null) {
@@ -733,6 +771,11 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 		} catch (SWTException e) {
 			return 0;
 		}
+	}
+	
+	public List<OperationId> getRectSelection() {
+		Object selected = evaluateJSCode("return getStandardRectSelection();");
+		return translateSelection(selected);
 	}
 
 	public static List<OperationId> translateSelection(Object selected) {

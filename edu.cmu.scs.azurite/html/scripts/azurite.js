@@ -1,4 +1,4 @@
-/*global __AZURITE__initialize, __AZURITE__selectiveUndo, __AZURITE__undoEverythingAfterSelection, __AZURITE__jump, __AZURITE__getInfo, __AZURITE__markerMove, __AZURITE__eclipseCommand, __AZURITE__log */
+/*global __AZURITE__initialize, __AZURITE__selectiveUndo, __AZURITE__undoEverythingAfterSelection, __AZURITE__jump, __AZURITE__getInfo, __AZURITE__markerMove, __AZURITE__eclipseCommand, __AZURITE__log, __AZURITE__notifySelectionChanged */
 
 // Workaround for console.log problem.
 if (!window.console) { window.console = {}; }
@@ -17,6 +17,8 @@ try {
 	azurite.markerMove = __AZURITE__markerMove;
     
     azurite.eclipseCommand = __AZURITE__eclipseCommand;
+	
+	azurite.notifySelectionChanged = __AZURITE__notifySelectionChanged;
     
     azurite.log = __AZURITE__log;
 } catch (e) {
@@ -65,6 +67,10 @@ try {
     azurite.eclipseCommand = function(eclipseCmdId) {
         alertFn('azurite.eclipseCommand(' + eclipseCmdId + ') call');
     };
+	
+	azurite.notifySelectionChanged = function () {
+		alertFn('azurite.notifySelectionChanged() call');
+	};
     
     azurite.log = function (msg) {
         alertFn(msg);
