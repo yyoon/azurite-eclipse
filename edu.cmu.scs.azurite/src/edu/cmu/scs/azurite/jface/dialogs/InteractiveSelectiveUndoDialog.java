@@ -243,10 +243,28 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 
 	@Override
 	protected void handleShellCloseEvent() {
-		// Deregister myself from the timeline.
-		TimelineViewPart.getInstance().removeRectSelectionListener(this);
+		cleanup();
 		
 		super.handleShellCloseEvent();
+	}
+
+	@Override
+	protected void cancelPressed() {
+		cleanup();
+		
+		super.cancelPressed();
+	}
+
+	@Override
+	protected void okPressed() {
+		cleanup();
+		
+		super.okPressed();
+	}
+
+	private void cleanup() {
+		// Deregister myself from the timeline.
+		TimelineViewPart.getInstance().removeRectSelectionListener(this);
 	}
 
 	@Override
