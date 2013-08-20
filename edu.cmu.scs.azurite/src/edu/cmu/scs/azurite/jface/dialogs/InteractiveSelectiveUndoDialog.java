@@ -175,8 +175,8 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		public String getText(Object element) {
 			if (element instanceof Chunk) {
 				Chunk chunk = (Chunk) element;
-				FileKey fileKey = chunk.getBelongsTo();
-				return fileKey.getFileNameOnly();
+				IDocument doc = findDocumentForChunk(chunk);
+				return getLabelForChunk(chunk, doc);
 			} else {
 				return super.getText(element);
 			}
@@ -442,7 +442,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			// Calculate the startline / endline from the originalContents.
 			int startLine = doc.getLineOfOffset(chunk.getStartOffset());
 			int endLine = doc.getLineOfOffset(chunk.getEndOffset());
-			mCompareTitle = chunk.getBelongsTo().getFileNameOnly() + ": " + startLine + "-" + endLine;
+			mCompareTitle = getLabelForChunk(chunk, doc);
 			
 			// Add surrounding context before/after the code
 			int contextStartLine = Math.max(startLine - SURROUNDING_CONTEXT_SIZE, 0);
@@ -485,6 +485,22 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			String msg = "Error occurred while generating the preview.";
 			mInformationLabel.setText(msg);
 			showInformationPanel();
+		}
+	}
+	
+	public String getLabelForChunk(Chunk chunk, IDocument doc) {
+		try {
+			int startLine = doc.getLineOfOffset(chunk.getStartOffset());
+			int endLine = doc.getLineOfOffset(chunk.getEndOffset());
+			if (startLine == endLine) {
+				return chunk.getBelongsTo().getFileNameOnly() + ": line " + startLine;
+			}
+			else {
+				return chunk.getBelongsTo().getFileNameOnly() + ": lines " + startLine + "-" + endLine;
+			}
+		}
+		catch (Exception e) {
+			return chunk.getBelongsTo().getFileNameOnly();
 		}
 	}
 
