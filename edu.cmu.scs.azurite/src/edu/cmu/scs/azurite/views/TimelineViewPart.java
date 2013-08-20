@@ -553,7 +553,13 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 
 		@Override
 		public Object function(Object[] arguments) {
-			fireRectSelectionChanged();
+			try {
+				fireRectSelectionChanged();
+			}
+			catch (Exception e) {
+				e.printStackTrace();
+			}
+			
 			return "ok";
 		}
 		
