@@ -1,7 +1,5 @@
 package edu.cmu.scs.azurite.jface.dialogs;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -18,6 +16,7 @@ import org.eclipse.core.resources.IWorkspace;
 import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.Path;
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.ToolBarManager;
 import org.eclipse.jface.dialogs.TitleAreaDialog;
@@ -68,6 +67,8 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	private static final int MARGIN_HEIGHT = 10;
 	
 	private static final int SPACING = 10;
+	
+	private static final int SURROUNDING_CONTEXT_SIZE = 3;
 	
 	private static final String TEXT = "Azurite - Interactive Selective Undo";
 	private static final String TITLE = "Interactive Selective Undo";
@@ -175,9 +176,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			if (element instanceof Chunk) {
 				Chunk chunk = (Chunk) element;
 				FileKey fileKey = chunk.getBelongsTo();
-				
-				Path filePath = Paths.get(fileKey.getFilePath());
-				return filePath.getFileName().toString();
+				return fileKey.getFileNameOnly();
 			} else {
 				return super.getText(element);
 			}
@@ -214,7 +213,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		super(parent);
 		
 		// Make the dialog modeless.
-		setShellStyle(SWT.CLOSE | SWT.MODELESS | SWT.BORDER | SWT.TITLE);
+		setShellStyle(SWT.CLOSE | SWT.MODELESS | SWT.BORDER | SWT.TITLE | SWT.RESIZE);
 		setBlockOnOpen(false);
 		
 		setHelpAvailable(false);
@@ -431,33 +430,43 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		}
 		
 		try {
-			// Retrieve the IDocument, using the file information.
-			FileKey fileKey = chunk.getBelongsTo();
-			
-			IDocument doc = findDocumentFromOpenEditors(fileKey);
-			// If this file is not open, then just connect it with the relative path.
-			if (doc == null) {
-				IWorkspace workspace = ResourcesPlugin.getWorkspace();
-				IWorkspaceRoot root = workspace.getRoot();
-				
-				IPath absPath = new org.eclipse.core.runtime.Path(fileKey.getFilePath());
-				IPath relPath = absPath.makeRelativeTo(root.getLocation());
-				
-				ITextFileBufferManager manager = FileBuffers.getTextFileBufferManager();
-				manager.connect(relPath, LocationKind.IFILE, null);
-				ITextFileBuffer buffer = manager.getTextFileBuffer(relPath, LocationKind.IFILE);
-				
-				doc = buffer.getDocument();
-			}
+			IDocument doc = findDocumentForChunk(chunk);
 			
 			// Original source
 			String originalContents = doc.get(chunk.getStartOffset(), chunk.getChunkLength());
-			SimpleCompareItem leftItem = new SimpleCompareItem("Original Source", originalContents, false);
 			
 			// Calculate the preview using selective undo engine
 			String undoResult = SelectiveUndoEngine.getInstance()
 					.doSelectiveUndoChunkWithoutConflicts(chunk, originalContents);
-			SimpleCompareItem rightItem = new SimpleCompareItem("Preview of Selective Undo", undoResult, false);
+			
+			// Calculate the startline / endline from the originalContents.
+			int startLine = doc.getLineOfOffset(chunk.getStartOffset());
+			int endLine = doc.getLineOfOffset(chunk.getEndOffset());
+			mCompareTitle = chunk.getBelongsTo().getFileNameOnly() + ": " + startLine + "-" + endLine;
+			
+			// Add surrounding context before/after the code
+			int contextStartLine = Math.max(startLine - SURROUNDING_CONTEXT_SIZE, 0);
+			int contextEndLine = Math.min(endLine + SURROUNDING_CONTEXT_SIZE, doc.getNumberOfLines() - 1);
+			
+			int contextStartOffset = doc.getLineOffset(contextStartLine);
+			int contextEndOffset = doc.getLineOffset(contextEndLine) + doc.getLineLength(contextEndLine);
+			
+			String contextBefore = doc.get(
+					contextStartOffset,
+					chunk.getStartOffset() - contextStartOffset);
+			String contextAfter = doc.get(
+					chunk.getEndOffset(),
+					contextEndOffset - chunk.getEndOffset());
+
+			// Left, right items.
+			SimpleCompareItem leftItem = new SimpleCompareItem(
+					"Original Source",
+					contextBefore + originalContents + contextAfter,
+					false);
+			SimpleCompareItem rightItem = new SimpleCompareItem(
+					"Preview of Selective Undo",
+					contextBefore + undoResult + contextAfter,
+					false);
 			
 			// Build the compareInput and feed it into the compare viewer switching pane.
 			AzuriteCompareInput compareInput = new AzuriteCompareInput(
@@ -476,6 +485,34 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			String msg = "Error occurred while generating the preview.";
 			mInformationLabel.setText(msg);
 			showInformationPanel();
+		}
+	}
+
+	public IDocument findDocumentForChunk(Chunk chunk) {
+		try {
+			// Retrieve the IDocument, using the file information.
+			FileKey fileKey = chunk.getBelongsTo();
+			
+			IDocument doc = findDocumentFromOpenEditors(fileKey);
+			// If this file is not open, then just connect it with the relative path.
+			if (doc == null) {
+				IWorkspace workspace = ResourcesPlugin.getWorkspace();
+				IWorkspaceRoot root = workspace.getRoot();
+				
+				IPath absPath = new Path(fileKey.getFilePath());
+				IPath relPath = absPath.makeRelativeTo(root.getLocation());
+				
+				ITextFileBufferManager manager = FileBuffers.getTextFileBufferManager();
+				manager.connect(relPath, LocationKind.IFILE, null);
+				ITextFileBuffer buffer = manager.getTextFileBuffer(relPath, LocationKind.IFILE);
+				
+				doc = buffer.getDocument();
+			}
+			return doc;
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+			return null;
 		}
 	}
 	
