@@ -1,4 +1,4 @@
-package edu.cmu.scs.azurite.jface.widgets;
+package edu.cmu.scs.azurite.jface.viewers;
 
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.widgets.Composite;

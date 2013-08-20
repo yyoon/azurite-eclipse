@@ -48,7 +48,7 @@ import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.compare.AzuriteCompareInput;
 import edu.cmu.scs.azurite.compare.AzuriteCompareLabelProvider;
 import edu.cmu.scs.azurite.compare.SimpleCompareItem;
-import edu.cmu.scs.azurite.jface.widgets.ChunksTreeViewer;
+import edu.cmu.scs.azurite.jface.viewers.ChunksTreeViewer;
 import edu.cmu.scs.azurite.model.FileKey;
 import edu.cmu.scs.azurite.model.OperationId;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;

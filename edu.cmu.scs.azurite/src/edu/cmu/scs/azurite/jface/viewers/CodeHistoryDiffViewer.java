@@ -1,4 +1,4 @@
-package edu.cmu.scs.azurite.jface.widgets;
+package edu.cmu.scs.azurite.jface.viewers;
 
 import java.io.File;
 import java.text.DateFormat;
