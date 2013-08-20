@@ -36,7 +36,7 @@ import org.eclipse.ui.ide.IDE;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.commands.runtime.Segment;
-import edu.cmu.scs.azurite.compare.CodeHistoryCompareInput;
+import edu.cmu.scs.azurite.compare.AzuriteCompareInput;
 import edu.cmu.scs.azurite.compare.SimpleCompareItem;
 import edu.cmu.scs.azurite.model.FileKey;
 import edu.cmu.scs.azurite.model.undo.Chunk;
@@ -208,7 +208,7 @@ public class CodeHistoryDiffViewer extends Composite {
 		
 		SimpleCompareItem leftItem = getCompareItemOfVersion(version);
 		
-		mCompareViewerSwitchingPane.setInput(new CodeHistoryCompareInput(
+		mCompareViewerSwitchingPane.setInput(new AzuriteCompareInput(
 				leftItem, mCurrentItem));
 		
 		mCurrentVersion = version;

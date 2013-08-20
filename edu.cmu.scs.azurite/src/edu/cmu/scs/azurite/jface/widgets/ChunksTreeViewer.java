@@ -8,17 +8,14 @@ public class ChunksTreeViewer extends TreeViewer {
 
 	public ChunksTreeViewer(Composite parent) {
 		super(parent);
-		// TODO Auto-generated constructor stub
 	}
 
 	public ChunksTreeViewer(Composite parent, int style) {
 		super(parent, style);
-		// TODO Auto-generated constructor stub
 	}
 
 	public ChunksTreeViewer(Tree tree) {
 		super(tree);
-		// TODO Auto-generated constructor stub
 	}
 
 	public void revealNext() {

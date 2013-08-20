@@ -6,10 +6,22 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.eclipse.compare.CompareConfiguration;
 import org.eclipse.compare.CompareUI;
+import org.eclipse.compare.CompareViewerSwitchingPane;
+import org.eclipse.core.filebuffers.FileBuffers;
+import org.eclipse.core.filebuffers.ITextFileBuffer;
+import org.eclipse.core.filebuffers.ITextFileBufferManager;
+import org.eclipse.core.filebuffers.LocationKind;
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IWorkspace;
+import org.eclipse.core.resources.IWorkspaceRoot;
+import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.runtime.IPath;
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.ToolBarManager;
 import org.eclipse.jface.dialogs.TitleAreaDialog;
+import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.viewers.ILabelProvider;
 import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.IStructuredSelection;
@@ -19,14 +31,23 @@ import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.jface.viewers.ViewerComparator;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.StackLayout;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
+import org.eclipse.ui.IEditorInput;
+import org.eclipse.ui.IEditorReference;
+import org.eclipse.ui.IFileEditorInput;
+import org.eclipse.ui.PlatformUI;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
+import edu.cmu.scs.azurite.compare.AzuriteCompareInput;
+import edu.cmu.scs.azurite.compare.AzuriteCompareLabelProvider;
+import edu.cmu.scs.azurite.compare.SimpleCompareItem;
 import edu.cmu.scs.azurite.jface.widgets.ChunksTreeViewer;
 import edu.cmu.scs.azurite.model.FileKey;
 import edu.cmu.scs.azurite.model.OperationId;
@@ -36,10 +57,12 @@ import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
 import edu.cmu.scs.azurite.plugin.Activator;
 import edu.cmu.scs.azurite.views.RectSelectionListener;
 import edu.cmu.scs.azurite.views.TimelineViewPart;
+import edu.cmu.scs.fluorite.util.Utilities;
 
 public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements RectSelectionListener {
 	
 	private static final int MINIMUM_CHUNKS_HEIGHT = 100;
+	private static final int MINIMUM_BOTTOM_AREA_HEIGHT = 200;
 	
 	private static final int MARGIN_WIDTH = 10;
 	private static final int MARGIN_HEIGHT = 10;
@@ -48,7 +71,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	
 	private static final String TEXT = "Azurite - Interactive Selective Undo";
 	private static final String TITLE = "Interactive Selective Undo";
-	private static final String DEFAULT_MESSAGE = "The preview will be updated as you select/deselect rectangles from the timeline.";
+	private static final String DEFAULT_MESSAGE = "The preview will be updated as you select/deselect rectangles from the timeline.\nNOTE: Please do not edit source code while this dialog is open.";
 	
 	private static final String CHUNKS_TITLE = "Changes to be performed";
 	
@@ -57,6 +80,9 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	
 	protected static final String PREVIOUS_CHANGE_ID = "edu.cmu.scs.azurite.previousChange";
 	protected static final String PREVIOUS_CHANGE_TOOLTIP = "Select Previous Chunk";
+	
+	private static final String INFORMATION_SELECT_RECTS = "You must select some rectangles to undo.";
+	private static final String INFORMATION_SELECT_CHUNK = "Select a chunk from the list on the top to see the preview.";
 
 	private class NextChunk extends Action {
 		public NextChunk() {
@@ -67,7 +93,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			setToolTipText(NEXT_CHANGE_TOOLTOP);
 		}
 		public void run() {
-			chunksTreeViewer.revealNext();
+			mChunksTreeViewer.revealNext();
 		}
 	}
 
@@ -80,7 +106,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			setToolTipText(PREVIOUS_CHANGE_TOOLTIP);
 		}
 		public void run() {
-			chunksTreeViewer.revealPrevious();
+			mChunksTreeViewer.revealPrevious();
 		}
 	}
 	
@@ -128,19 +154,20 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	
 	private class ChunksLabelProvider extends LabelProvider {
 		
-		private Image exclamationIcon;
+		private Image mExclamationIcon;
 		
 		public ChunksLabelProvider() {
-			super();
-			
-			this.exclamationIcon = Activator.getImageDescriptor("icons/error.png").createImage();
+			mExclamationIcon = Activator.getImageDescriptor("icons/error.png").createImage();
 		}
 
 		@Override
 		public Image getImage(Object element) {
-			// TODO return the exclamation icon when there is a conflict to be resolved in this chunk.
-			return this.exclamationIcon;
-//			return null;
+			if (element instanceof Chunk) {
+				Chunk chunk = (Chunk) element;
+				return chunk.hasConflictOutsideThisChunk() ? mExclamationIcon : null;
+			} else {
+				return null;
+			}
 		}
 
 		@Override
@@ -160,22 +187,46 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		public void dispose() {
 			super.dispose();
 			
-			this.exclamationIcon.dispose();
+			mExclamationIcon.dispose();
 		}
 		
 	}
 	
-	private ChunksTreeViewer chunksTreeViewer;
+	private ChunksTreeViewer mChunksTreeViewer;
+	
+	private Composite mBottomArea;
+	private StackLayout mBottomStackLayout;	// the StackLayout object used for panel switching in the bottom area.
+	
+	// For Normal Preview Panel ---------------
+	private CompareViewerSwitchingPane mPreviewPane;
+	private CompareConfiguration mCompareConfiguration;
+	private String mCompareTitle;
+	// ----------------------------------------
+	
+	// For Conflict Resolution Panel ----------
+	// ----------------------------------------
+	
+	// For Information Panel ------------------
+	private Label mInformationLabel;
+	// ----------------------------------------
 
 	public InteractiveSelectiveUndoDialog(Shell parent) {
 		super(parent);
-		// TODO Auto-generated constructor stub
 		
 		// Make the dialog modeless.
 		setShellStyle(SWT.CLOSE | SWT.MODELESS | SWT.BORDER | SWT.TITLE);
 		setBlockOnOpen(false);
 		
 		setHelpAvailable(false);
+		
+		// Create the default compare configuration.
+		mCompareConfiguration = createCompareConfiguration();
+	}
+
+	private CompareConfiguration createCompareConfiguration() {
+		CompareConfiguration configuration = new CompareConfiguration();
+		configuration.setDefaultLabelProvider(new AzuriteCompareLabelProvider());
+		return configuration;
 	}
 
 	@Override
@@ -203,8 +254,11 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	protected Control createDialogArea(Composite parent) {
 		Composite composite = createMainArea(parent);
 		
-		// Involved Operations Group
+		// Chunks
 		createChunksTreeViewer(composite);
+		
+		// Bottom Area. Use StackLayout to switch between panels.
+		createBottomArea(composite);
 		
 		return composite;
 	}
@@ -213,7 +267,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		Composite composite = new Composite(parent, SWT.NONE);
 		
 		// Use GridLayout.
-		GridLayout gridLayout = new GridLayout(3, false);
+		GridLayout gridLayout = new GridLayout(1, false);
 		gridLayout.marginWidth = MARGIN_WIDTH;
 		gridLayout.marginHeight = 0;
 		gridLayout.marginTop = MARGIN_HEIGHT;
@@ -229,10 +283,10 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	private void createChunksTreeViewer(Composite parent) {
 		org.eclipse.jdt.internal.ui.util.ViewerPane chunksPane =
 				new org.eclipse.jdt.internal.ui.util.ViewerPane(parent, SWT.BORDER | SWT.FLAT);
-		this.chunksTreeViewer = new ChunksTreeViewer(chunksPane, SWT.NONE);
+		mChunksTreeViewer = new ChunksTreeViewer(chunksPane, SWT.NONE);
 		
 		// Layout the chunks pane within the dialog area.
-		GridData gridData = new GridData(GridData.FILL, GridData.FILL, true, true, 3, 1);
+		GridData gridData = new GridData(GridData.FILL, GridData.FILL, true, true, 1, 1);
 		gridData.minimumHeight = MINIMUM_CHUNKS_HEIGHT;
 		chunksPane.setLayoutData(gridData);
 		
@@ -247,16 +301,16 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		tbm.update(true);
 		
 		// Setup the model for the tree viewer.
-		this.chunksTreeViewer.setContentProvider(createChunksTreeContentProvider());
-		this.chunksTreeViewer.setLabelProvider(createChunksTreeLabelProvider());
-		this.chunksTreeViewer.setComparator(createChunksTreeComparator());
-		this.chunksTreeViewer.addSelectionChangedListener(createSelectionChangedListener());
+		mChunksTreeViewer.setContentProvider(createChunksTreeContentProvider());
+		mChunksTreeViewer.setLabelProvider(createChunksTreeLabelProvider());
+		mChunksTreeViewer.setComparator(createChunksTreeComparator());
+		mChunksTreeViewer.addSelectionChangedListener(createSelectionChangedListener());
 		
 		// Set the initial input
 		setChunksTreeViewerInput();
 		
 		// Set the content of the ViewerPane to the tree-control.
-		chunksPane.setContent(this.chunksTreeViewer.getControl());
+		chunksPane.setContent(mChunksTreeViewer.getControl());
 	}
 
 	private ITreeContentProvider createChunksTreeContentProvider() {
@@ -271,8 +325,10 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		return new ViewerComparator() {
 			@Override
 			public int compare(Viewer viewer, Object e1, Object e2) {
-				// TODO implement the comparator.
-				return 0;
+				Chunk lhs = (Chunk) e1;
+				Chunk rhs = (Chunk) e2;
+				
+				return Chunk.getLocationComparator().compare(lhs, rhs);
 			}
 		};
 	}
@@ -282,19 +338,14 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			@Override
 			public void selectionChanged(SelectionChangedEvent event) {
 				IStructuredSelection sel = (IStructuredSelection) event.getSelection();
-				if (sel.size() == 1) {
-//					showPreview(something..);
-				}
-				else {
-//					showPreview(null);
-				}
+				updateBottomPanel(sel);
 			}
 		};
 	}
 	
 	private void setChunksTreeViewerInput() {
 		// If the viewer is not initialized, do nothing.
-		if (this.chunksTreeViewer == null) {
+		if (mChunksTreeViewer == null) {
 			return;
 		}
 		
@@ -317,13 +368,193 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		}
 		
 		// Set the input here.
-		this.chunksTreeViewer.setInput(chunks);
+		mChunksTreeViewer.setInput(chunks);
 	}
 
 	@Override
 	public void rectSelectionChanged() {
 		// TODO maybe preserve the previous selections about the conflict resolution?
 		setChunksTreeViewerInput();
+		updateBottomPanel();
+	}
+	
+	private void createBottomArea(Composite parent) {
+		mBottomArea = new Composite(parent, SWT.NONE);
+		
+		// First, setup the gridlayout parameters here..
+		GridData gridData = new GridData(GridData.FILL, GridData.FILL, true, true, 1, 1);
+		gridData.minimumHeight = MINIMUM_BOTTOM_AREA_HEIGHT;
+		mBottomArea.setLayoutData(gridData);
+		
+		// Use StackLayout
+		mBottomStackLayout = new StackLayout();
+		mBottomArea.setLayout(mBottomStackLayout);
+		
+		// Case #1 - Normal side-by-side preview.
+		createNormalPreviewPanel(mBottomArea);
+		
+		// Case #2 - Need to resolve conflict
+		createConflictResolutionPanel(mBottomArea);
+		
+		// Case #3 - Information panel, telling some useful information
+		createInformationPanel(mBottomArea);
+		
+		// Update the bottom panel.
+		updateBottomPanel();
+	}
+	
+	private void createNormalPreviewPanel(Composite parent) {
+		mPreviewPane = new CompareViewerSwitchingPane(parent, SWT.BORDER | SWT.FLAT) {
+			@Override
+			protected Viewer getViewer(Viewer oldViewer, Object input) {
+				// TODO Auto-generated method stub
+				Viewer v = CompareUI.findContentViewer(oldViewer, input, this, mCompareConfiguration);
+				v.getControl().setData(CompareUI.COMPARE_VIEWER_TITLE, mCompareTitle);
+				
+				return v;
+			}
+		};
+	}
+	
+	private void createConflictResolutionPanel(Composite parent) {
+		// TODO implement
+	}
+	
+	private void createInformationPanel(Composite parent) {
+		mInformationLabel = new Label(parent, SWT.BORDER | SWT.FLAT);
+		mInformationLabel.setText("Fill in some useful information here!");
+	}
+	
+	private void showPreviewPanel(Chunk chunk) {
+		if (chunk == null) {
+			throw new IllegalArgumentException();
+		}
+		
+		try {
+			// Retrieve the IDocument, using the file information.
+			FileKey fileKey = chunk.getBelongsTo();
+			
+			IDocument doc = findDocumentFromOpenEditors(fileKey);
+			// If this file is not open, then just connect it with the relative path.
+			if (doc == null) {
+				IWorkspace workspace = ResourcesPlugin.getWorkspace();
+				IWorkspaceRoot root = workspace.getRoot();
+				
+				IPath absPath = new org.eclipse.core.runtime.Path(fileKey.getFilePath());
+				IPath relPath = absPath.makeRelativeTo(root.getLocation());
+				
+				ITextFileBufferManager manager = FileBuffers.getTextFileBufferManager();
+				manager.connect(relPath, LocationKind.IFILE, null);
+				ITextFileBuffer buffer = manager.getTextFileBuffer(relPath, LocationKind.IFILE);
+				
+				doc = buffer.getDocument();
+			}
+			
+			// Original source
+			String originalContents = doc.get(chunk.getStartOffset(), chunk.getChunkLength());
+			SimpleCompareItem leftItem = new SimpleCompareItem("Original Source", originalContents, false);
+			
+			// Calculate the preview using selective undo engine
+			String undoResult = SelectiveUndoEngine.getInstance()
+					.doSelectiveUndoChunkWithoutConflicts(chunk, originalContents);
+			SimpleCompareItem rightItem = new SimpleCompareItem("Preview of Selective Undo", undoResult, false);
+			
+			// Build the compareInput and feed it into the compare viewer switching pane.
+			AzuriteCompareInput compareInput = new AzuriteCompareInput(
+					leftItem,	// Original Source
+					rightItem);	// Preview Source
+			
+			mPreviewPane.setInput(compareInput);
+			
+			// Bring the preview panel to top.
+			showPanel(mPreviewPane);
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+			
+			// Display an error message on the screen.
+			String msg = "Error occurred while generating the preview.";
+			mInformationLabel.setText(msg);
+			showInformationPanel();
+		}
+	}
+	
+	private IDocument findDocumentFromOpenEditors(FileKey fileKey) {
+		try {
+			IEditorReference[] editorRefs = PlatformUI.getWorkbench()
+					.getActiveWorkbenchWindow().getActivePage()
+					.getEditorReferences();
+			
+			for (IEditorReference editorRef : editorRefs) {
+				IEditorInput input = editorRef.getEditorInput();
+				if (input instanceof IFileEditorInput) {
+					IFileEditorInput fileInput = (IFileEditorInput) input;
+					IFile file = fileInput.getFile();
+					
+					FileKey key = new FileKey(
+							file.getProject().getName(),
+							file.getLocation().toOSString());
+					
+					// This is the same file!
+					// Get the IDocument object from this editor.
+					if (fileKey.equals(key)) {
+						return Utilities.getDocument(editorRef.getEditor(false));
+					}
+				}
+			}
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+		return null;
+	}
+
+	private void showConflictResolutionPanel() {
+		// TODO implement
+	}
+	
+	private void showInformationPanel() {
+		showPanel(mInformationLabel);
+	}
+	
+	private void showPanel(Control panel) {
+		mBottomStackLayout.topControl = panel;
+		mBottomArea.layout();
+	}
+	
+	public void updateBottomPanel() {
+		updateBottomPanel((IStructuredSelection)mChunksTreeViewer.getSelection());
+	}
+
+	public void updateBottomPanel(IStructuredSelection sel) {
+		if (sel.size() == 1) {
+			Chunk chunk = (Chunk) sel.getFirstElement();
+			if (chunk.hasConflictOutsideThisChunk()) {
+			// Show conflict resolution dialog here..
+				// Setup the conflict resolution panel.
+				
+				// Show the conflict resolution panel.
+				showConflictResolutionPanel();
+			} else {
+			// Show a normal preview..
+				// Setup the compare items.
+				
+				// Show the preview panel.
+				showPreviewPanel(chunk);
+			}
+		}
+		else {
+			@SuppressWarnings("unchecked")
+			List<Chunk> chunks = (List<Chunk>) mChunksTreeViewer.getInput();
+			boolean chunksEmpty = chunks == null || chunks.isEmpty();
+			
+			String msg = chunksEmpty ? INFORMATION_SELECT_RECTS
+					: INFORMATION_SELECT_CHUNK;
+			mInformationLabel.setText(msg);
+			
+			showInformationPanel();
+		}
 	}
 	
 }

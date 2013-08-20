@@ -5,19 +5,19 @@ import org.eclipse.compare.structuremergeviewer.ICompareInput;
 import org.eclipse.compare.structuremergeviewer.ICompareInputChangeListener;
 import org.eclipse.swt.graphics.Image;
 
-public class CodeHistoryCompareInput implements ICompareInput {
+public class AzuriteCompareInput implements ICompareInput {
 	
 	private ITypedElement mLeft;
 	private ITypedElement mRight;
 	
-	public CodeHistoryCompareInput(ITypedElement left, ITypedElement right) {
+	public AzuriteCompareInput(ITypedElement left, ITypedElement right) {
 		mLeft = left;
 		mRight = right;
 	}
 
 	@Override
 	public String getName() {
-		return "Particl Code History";
+		return "Azurite Compare Input";
 	}
 
 	@Override
