@@ -1,6 +1,6 @@
 package edu.cmu.scs.azurite.jface.dialogs;
 
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -20,6 +20,7 @@ import org.eclipse.core.runtime.Path;
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.ToolBarManager;
 import org.eclipse.jface.dialogs.TitleAreaDialog;
+import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.viewers.ILabelProvider;
 import org.eclipse.jface.viewers.ISelectionChangedListener;
@@ -41,6 +42,7 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorReference;
 import org.eclipse.ui.IFileEditorInput;
+import org.eclipse.ui.ISharedImages;
 import org.eclipse.ui.PlatformUI;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
@@ -53,7 +55,6 @@ import edu.cmu.scs.azurite.model.OperationId;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.azurite.model.undo.Chunk;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
-import edu.cmu.scs.azurite.plugin.Activator;
 import edu.cmu.scs.azurite.views.RectSelectionListener;
 import edu.cmu.scs.azurite.views.TimelineViewPart;
 import edu.cmu.scs.fluorite.util.Utilities;
@@ -120,6 +121,8 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	}
 	
 	private class ChunksContentProvider implements ITreeContentProvider {
+		
+		private Map<FileKey, List<Chunk>> mInput;
 
 		@Override
 		public void dispose() {
@@ -131,14 +134,14 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			// Do nothing.
 		}
 
-		// Assume that inputElement is typed as List<Chunk>
+		// Assume that inputElement is typed as Map<FileKey, List<Chunk>>
 		@Override
+		@SuppressWarnings("unchecked")
 		public Object[] getElements(Object inputElement) {
-			if (inputElement instanceof List<?>) {
-				@SuppressWarnings("unchecked")
-				List<Chunk> chunkList = (List<Chunk>) inputElement;
+			if (inputElement instanceof Map<?, ?>) {
+				mInput = (Map<FileKey, List<Chunk>>) inputElement;
 				
-				return chunkList.toArray(new Chunk[chunkList.size()]);
+				return mInput.keySet().toArray(new FileKey[mInput.keySet().size()]);
 			} else {
 				return null;
 			}
@@ -146,16 +149,33 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 
 		@Override
 		public Object[] getChildren(Object parentElement) {
+			if (parentElement instanceof FileKey) {
+				if (mInput != null) {
+					return mInput.get(parentElement).toArray();
+				}
+			}
+			
 			return null;
 		}
 
 		@Override
 		public Object getParent(Object element) {
+			if (element instanceof Chunk) {
+				Chunk chunk = (Chunk) element;
+				return chunk.getBelongsTo();
+			}
+			
 			return null;
 		}
 
 		@Override
 		public boolean hasChildren(Object element) {
+			if (element instanceof FileKey) {
+				if (mInput != null && !mInput.get(element).isEmpty()) {
+					return true;
+				}
+			}
+			
 			return false;
 		}
 		
@@ -163,29 +183,44 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	
 	private class ChunksLabelProvider extends LabelProvider {
 		
-		private Image mExclamationIcon;
+		private Map<ImageDescriptor, Image> mImages;
 		
 		public ChunksLabelProvider() {
-			mExclamationIcon = Activator.getImageDescriptor("icons/error.png").createImage();
+			mImages = new HashMap<ImageDescriptor, Image>();
 		}
 
 		@Override
 		public Image getImage(Object element) {
-			if (element instanceof Chunk) {
+			if (element instanceof FileKey) {
+				FileKey fileKey = (FileKey) element;
+				
+				ImageDescriptor baseImage = PlatformUI.getWorkbench().getEditorRegistry().getImageDescriptor(fileKey.getFileNameOnly());
+				// TODO determine whether there is a conflict, and draw overlay image.
+				return getImage(baseImage);
+			}
+			else if (element instanceof Chunk) {
 				Chunk chunk = (Chunk) element;
-				return chunk.hasConflictOutsideThisChunk() ? mExclamationIcon : null;
-			} else {
+				
+				ImageDescriptor errorImage = PlatformUI.getWorkbench().getSharedImages().getImageDescriptor(ISharedImages.IMG_OBJS_ERROR_TSK);
+				return chunk.hasConflictOutsideThisChunk() ? getImage(errorImage) : null;
+			}
+			else {
 				return null;
 			}
 		}
 
 		@Override
 		public String getText(Object element) {
-			if (element instanceof Chunk) {
+			if (element instanceof FileKey) {
+				FileKey fileKey = (FileKey) element;
+				return fileKey.getFileNameOnly();
+			}
+			else if (element instanceof Chunk) {
 				Chunk chunk = (Chunk) element;
 				IDocument doc = findDocumentForChunk(chunk);
 				return getLabelForChunk(chunk, doc);
-			} else {
+			}
+			else {
 				return super.getText(element);
 			}
 		}
@@ -194,12 +229,25 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		public void dispose() {
 			super.dispose();
 			
-			mExclamationIcon.dispose();
+			for (Image image : mImages.values()) {
+				image.dispose();
+			}
+		}
+		
+		private Image getImage(ImageDescriptor imgDesc) {
+			if (!mImages.containsKey(imgDesc)) {
+				Image image = imgDesc.createImage();
+				mImages.put(imgDesc, image);
+			}
+			
+			return mImages.get(imgDesc);
 		}
 		
 	}
 	
+	// For the top part
 	private ChunksTreeViewer mChunksTreeViewer;
+	// ----------------------------------------
 	
 	private Composite mBottomArea;
 	private StackLayout mBottomStackLayout;	// the StackLayout object used for panel switching in the bottom area.
@@ -391,15 +439,16 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		Map<FileKey, List<RuntimeDC>> fileDCMap = RuntimeHistoryManager
 				.getInstance().extractFileDCMapFromOperationIds(ids);
 		
-		List<Chunk> chunks = new ArrayList<Chunk>();
+		Map<FileKey, List<Chunk>> input = new HashMap<FileKey, List<Chunk>>();
+		
 		for (FileKey fileKey : fileDCMap.keySet()) {
 			List<Chunk> chunksForThisFile = SelectiveUndoEngine.getInstance()
 					.determineChunksWithRuntimeDCs(fileDCMap.get(fileKey));
-			chunks.addAll(chunksForThisFile);
+			input.put(fileKey, chunksForThisFile);
 		}
 		
 		// Set the input here.
-		mChunksTreeViewer.setInput(chunks);
+		mChunksTreeViewer.setInput(input);
 	}
 
 	@Override
@@ -614,25 +663,31 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 
 	public void updateBottomPanel(IStructuredSelection sel) {
 		if (sel.size() == 1) {
-			Chunk chunk = (Chunk) sel.getFirstElement();
-			if (chunk.hasConflictOutsideThisChunk()) {
-			// Show conflict resolution dialog here..
-				// Setup the conflict resolution panel.
+			Object firstElement = sel.getFirstElement();
+			
+			if (firstElement instanceof Chunk) {
+				Chunk chunk = (Chunk) firstElement;
 				
-				// Show the conflict resolution panel.
-				showConflictResolutionPanel();
-			} else {
-			// Show a normal preview..
-				// Setup the compare items.
-				
-				// Show the preview panel.
-				showPreviewPanel(chunk);
+				if (chunk.hasConflictOutsideThisChunk()) {
+				// Show conflict resolution dialog here..
+					// Setup the conflict resolution panel.
+					
+					// Show the conflict resolution panel.
+					showConflictResolutionPanel();
+				} else {
+				// Show a normal preview..
+					showPreviewPanel(chunk);
+				}
+			}
+			else if (firstElement instanceof FileKey) {
+				FileKey fileKey = (FileKey) firstElement;
+//				showPreviewPanel(fileKey);
 			}
 		}
 		else {
 			@SuppressWarnings("unchecked")
-			List<Chunk> chunks = (List<Chunk>) mChunksTreeViewer.getInput();
-			boolean chunksEmpty = chunks == null || chunks.isEmpty();
+			Map<FileKey, List<Chunk>> input = (Map<FileKey, List<Chunk>>) mChunksTreeViewer.getInput(); 
+			boolean chunksEmpty = input == null || input.keySet().isEmpty();
 			
 			String msg = chunksEmpty ? INFORMATION_SELECT_RECTS
 					: INFORMATION_SELECT_CHUNK;
