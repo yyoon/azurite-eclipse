@@ -87,6 +87,11 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	
 	private static final String INFORMATION_SELECT_RECTS = "You must select some rectangles to undo.";
 	private static final String INFORMATION_SELECT_CHUNK = "Select a chunk from the list on the top to see the preview.";
+	
+	private static InteractiveSelectiveUndoDialog instance = null;
+	public static InteractiveSelectiveUndoDialog getInstance() {
+		return instance;
+	}
 
 	private class NextChunk extends Action {
 		public NextChunk() {
@@ -235,6 +240,8 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	public void create() {
 		super.create();
 		
+		instance = this;
+		
 		getShell().setText(TEXT);
 		
 		setTitle(TITLE);
@@ -270,6 +277,8 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	private void cleanup() {
 		// Deregister myself from the timeline.
 		TimelineViewPart.getInstance().removeRectSelectionListener(this);
+		
+		instance = null;
 	}
 
 	@Override

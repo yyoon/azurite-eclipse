@@ -12,10 +12,17 @@ public class InteractiveSelectiveUndoHandler extends AbstractHandler {
 
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
-		final Shell parentShell = Display.getDefault().getActiveShell();
-		InteractiveSelectiveUndoDialog isuDialog = new InteractiveSelectiveUndoDialog(parentShell);
-		isuDialog.create();
-		isuDialog.open();
+		// Check if there is already a dialog.
+		InteractiveSelectiveUndoDialog isuDialog = InteractiveSelectiveUndoDialog.getInstance();
+		if (isuDialog != null) {
+			isuDialog.getShell().forceActive();
+		}
+		else {
+			final Shell parentShell = Display.getDefault().getActiveShell();
+			isuDialog = new InteractiveSelectiveUndoDialog(parentShell);
+			isuDialog.create();
+			isuDialog.open();
+		}
 		
 		return null;
 	}
