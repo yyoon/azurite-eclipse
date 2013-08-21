@@ -1,5 +1,7 @@
 package edu.cmu.scs.azurite.jface.dialogs;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,7 +23,10 @@ import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.ToolBarManager;
 import org.eclipse.jface.dialogs.TitleAreaDialog;
 import org.eclipse.jface.resource.ImageDescriptor;
+import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IDocument;
+import org.eclipse.jface.viewers.DecorationOverlayIcon;
+import org.eclipse.jface.viewers.IDecoration;
 import org.eclipse.jface.viewers.ILabelProvider;
 import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.IStructuredSelection;
@@ -120,6 +125,72 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		}
 	}
 	
+	private class TopLevelElement {
+		private FileKey mFileKey;
+		private List<ChunkLevelElement> mChunks;
+		
+		public TopLevelElement(FileKey fileKey, List<Chunk> chunks) {
+			if (fileKey == null || chunks == null) {
+				throw new IllegalArgumentException();
+			}
+			
+			mFileKey = fileKey;
+			
+			mChunks = new ArrayList<ChunkLevelElement>();
+			for (Chunk chunk : chunks) {
+				mChunks.add(new ChunkLevelElement(chunk, this));
+			}
+		}
+		
+		public FileKey getFileKey() {
+			return mFileKey;
+		}
+		
+		public List<ChunkLevelElement> getChunks() {
+			return Collections.unmodifiableList(mChunks);
+		}
+		
+		public boolean hasUnresolvedConflict() {
+			for (ChunkLevelElement chunkElem : mChunks) {
+				if (chunkElem.hasUnresolvedConflict()) {
+					return true;
+				}
+			}
+			
+			return false;
+		}
+	}
+	
+	private class ChunkLevelElement {
+		private Chunk mChunk;
+		private boolean mResolved;
+		
+		private TopLevelElement mParent;
+		
+		public ChunkLevelElement(Chunk chunk, TopLevelElement parent) {
+			if (chunk == null || parent == null) {
+				throw new IllegalArgumentException();
+			}
+			
+			mChunk = chunk;
+			mResolved = false;
+			
+			mParent = parent;
+		}
+		
+		public Chunk getChunk() {
+			return mChunk;
+		}
+		
+		public TopLevelElement getParent() {
+			return mParent;
+		}
+		
+		public boolean hasUnresolvedConflict() {
+			return mChunk.hasConflictOutsideThisChunk() && !mResolved;
+		}
+	}
+	
 	private class ChunksContentProvider implements ITreeContentProvider {
 		
 		private Map<FileKey, List<Chunk>> mInput;
@@ -141,7 +212,12 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			if (inputElement instanceof Map<?, ?>) {
 				mInput = (Map<FileKey, List<Chunk>>) inputElement;
 				
-				return mInput.keySet().toArray(new FileKey[mInput.keySet().size()]);
+				List<TopLevelElement> result = new ArrayList<TopLevelElement>();
+				for (FileKey fileKey : mInput.keySet()) {
+					result.add(new TopLevelElement(fileKey, mInput.get(fileKey)));
+				}
+				
+				return result.toArray(new TopLevelElement[mInput.keySet().size()]);
 			} else {
 				return null;
 			}
@@ -149,10 +225,9 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 
 		@Override
 		public Object[] getChildren(Object parentElement) {
-			if (parentElement instanceof FileKey) {
-				if (mInput != null) {
-					return mInput.get(parentElement).toArray();
-				}
+			if (parentElement instanceof TopLevelElement) {
+				TopLevelElement topElem = (TopLevelElement) parentElement;
+				return topElem.getChunks().toArray();
 			}
 			
 			return null;
@@ -160,9 +235,9 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 
 		@Override
 		public Object getParent(Object element) {
-			if (element instanceof Chunk) {
-				Chunk chunk = (Chunk) element;
-				return chunk.getBelongsTo();
+			if (element instanceof ChunkLevelElement) {
+				ChunkLevelElement chunkElem = (ChunkLevelElement) element;
+				return chunkElem.getParent();
 			}
 			
 			return null;
@@ -170,10 +245,9 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 
 		@Override
 		public boolean hasChildren(Object element) {
-			if (element instanceof FileKey) {
-				if (mInput != null && !mInput.get(element).isEmpty()) {
-					return true;
-				}
+			if (element instanceof TopLevelElement) {
+				TopLevelElement topElem = (TopLevelElement) element;
+				return !topElem.getChunks().isEmpty();
 			}
 			
 			return false;
@@ -191,18 +265,28 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 
 		@Override
 		public Image getImage(Object element) {
-			if (element instanceof FileKey) {
-				FileKey fileKey = (FileKey) element;
+			if (element instanceof TopLevelElement) {
+				TopLevelElement topElem = (TopLevelElement) element;
+				FileKey fileKey = topElem.getFileKey();
 				
-				ImageDescriptor baseImage = PlatformUI.getWorkbench().getEditorRegistry().getImageDescriptor(fileKey.getFileNameOnly());
-				// TODO determine whether there is a conflict, and draw overlay image.
-				return getImage(baseImage);
+				ImageDescriptor baseImageDesc = PlatformUI.getWorkbench().getEditorRegistry().getImageDescriptor(fileKey.getFileNameOnly());
+				Image baseImage = getImage(baseImageDesc);
+
+				if (topElem.hasUnresolvedConflict()) {
+					ImageDescriptor decError = PlatformUI.getWorkbench().getSharedImages().getImageDescriptor(ISharedImages.IMG_DEC_FIELD_ERROR);
+					DecorationOverlayIcon decorated = new DecorationOverlayIcon(baseImage, decError, IDecoration.BOTTOM_RIGHT);
+					
+					return getImage(decorated);
+				}
+				else {
+					return baseImage;
+				}
 			}
-			else if (element instanceof Chunk) {
-				Chunk chunk = (Chunk) element;
+			else if (element instanceof ChunkLevelElement) {
+				ChunkLevelElement chunkElem = (ChunkLevelElement) element;
 				
 				ImageDescriptor errorImage = PlatformUI.getWorkbench().getSharedImages().getImageDescriptor(ISharedImages.IMG_OBJS_ERROR_TSK);
-				return chunk.hasConflictOutsideThisChunk() ? getImage(errorImage) : null;
+				return chunkElem.hasUnresolvedConflict() ? getImage(errorImage) : null;
 			}
 			else {
 				return null;
@@ -211,12 +295,13 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 
 		@Override
 		public String getText(Object element) {
-			if (element instanceof FileKey) {
-				FileKey fileKey = (FileKey) element;
-				return fileKey.getFileNameOnly();
+			if (element instanceof TopLevelElement) {
+				TopLevelElement topElem = (TopLevelElement) element;
+				return topElem.getFileKey().getFileNameOnly();
 			}
-			else if (element instanceof Chunk) {
-				Chunk chunk = (Chunk) element;
+			else if (element instanceof ChunkLevelElement) {
+				ChunkLevelElement chunkElem = (ChunkLevelElement) element;
+				Chunk chunk = chunkElem.getChunk();
 				IDocument doc = findDocumentForChunk(chunk);
 				return getLabelForChunk(chunk, doc);
 			}
@@ -404,10 +489,10 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		return new ViewerComparator() {
 			@Override
 			public int compare(Viewer viewer, Object e1, Object e2) {
-				Chunk lhs = (Chunk) e1;
-				Chunk rhs = (Chunk) e2;
+				ChunkLevelElement lhs = (ChunkLevelElement) e1;
+				ChunkLevelElement rhs = (ChunkLevelElement) e2;
 				
-				return Chunk.getLocationComparator().compare(lhs, rhs);
+				return Chunk.getLocationComparator().compare(lhs.getChunk(), rhs.getChunk());
 			}
 		};
 	}
@@ -545,8 +630,65 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 					contextBefore + originalContents + contextAfter,
 					false);
 			SimpleCompareItem rightItem = new SimpleCompareItem(
-					"Preview of Selective Undo",
+					"Preview of Selective Undo Result",
 					contextBefore + undoResult + contextAfter,
+					false);
+			
+			// Build the compareInput and feed it into the compare viewer switching pane.
+			AzuriteCompareInput compareInput = new AzuriteCompareInput(
+					leftItem,	// Original Source
+					rightItem);	// Preview Source
+			
+			mPreviewPane.setInput(compareInput);
+			
+			// Bring the preview panel to top.
+			showPanel(mPreviewPane);
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+			
+			// Display an error message on the screen.
+			String msg = "Error occurred while generating the preview.";
+			mInformationLabel.setText(msg);
+			showInformationPanel();
+		}
+	}
+	
+	private void showPreviewPanel(TopLevelElement topElem) {
+		if (topElem == null) {
+			throw new IllegalArgumentException();
+		}
+		
+		try {
+			FileKey fileKey = topElem.getFileKey();
+			IDocument doc = findDocumentForKey(fileKey);
+			
+			// Get the chunks.
+			List<ChunkLevelElement> chunkElems = topElem.getChunks();
+			List<Chunk> chunks = new ArrayList<Chunk>();
+			for (ChunkLevelElement chunkElem : chunkElems) {
+				chunks.add(chunkElem.getChunk());
+			}
+			
+			// Original source
+			String originalContents = doc.get();
+			
+			// Copy of the source.
+			IDocument docResult = new Document(originalContents);
+			SelectiveUndoEngine.getInstance()
+					.doSelectiveUndoWithChunks(chunks, docResult);
+			String undoResult = docResult.get();
+			
+			mCompareTitle = fileKey.getFileNameOnly();
+
+			// Left, right items.
+			SimpleCompareItem leftItem = new SimpleCompareItem(
+					"Original Source",
+					originalContents,
+					false);
+			SimpleCompareItem rightItem = new SimpleCompareItem(
+					"Preview of Selective Undo Result",
+					undoResult,
 					false);
 			
 			// Build the compareInput and feed it into the compare viewer switching pane.
@@ -586,10 +728,12 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	}
 
 	public IDocument findDocumentForChunk(Chunk chunk) {
+		return findDocumentForKey(chunk.getBelongsTo());
+	}
+	
+	public IDocument findDocumentForKey(FileKey fileKey) {
 		try {
 			// Retrieve the IDocument, using the file information.
-			FileKey fileKey = chunk.getBelongsTo();
-			
 			IDocument doc = findDocumentFromOpenEditors(fileKey);
 			// If this file is not open, then just connect it with the relative path.
 			if (doc == null) {
@@ -665,8 +809,9 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		if (sel.size() == 1) {
 			Object firstElement = sel.getFirstElement();
 			
-			if (firstElement instanceof Chunk) {
-				Chunk chunk = (Chunk) firstElement;
+			if (firstElement instanceof ChunkLevelElement) {
+				ChunkLevelElement chunkElem = (ChunkLevelElement) firstElement;
+				Chunk chunk = chunkElem.getChunk();
 				
 				if (chunk.hasConflictOutsideThisChunk()) {
 				// Show conflict resolution dialog here..
@@ -679,9 +824,15 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 					showPreviewPanel(chunk);
 				}
 			}
-			else if (firstElement instanceof FileKey) {
-				FileKey fileKey = (FileKey) firstElement;
-//				showPreviewPanel(fileKey);
+			else if (firstElement instanceof TopLevelElement) {
+				TopLevelElement topElem = (TopLevelElement) firstElement;
+				
+				if (topElem.hasUnresolvedConflict()) {
+					
+				}
+				else {
+					showPreviewPanel(topElem);
+				}
 			}
 		}
 		else {
