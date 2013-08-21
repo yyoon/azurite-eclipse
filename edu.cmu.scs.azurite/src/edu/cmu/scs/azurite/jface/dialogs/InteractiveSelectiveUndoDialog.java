@@ -60,6 +60,9 @@ import edu.cmu.scs.fluorite.util.Utilities;
 
 public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements RectSelectionListener {
 	
+	private static final int DEFAULT_WIDTH = 800;
+	private static final int DEFAULT_HEIGHT = 600;
+	
 	private static final int MINIMUM_CHUNKS_HEIGHT = 100;
 	private static final int MINIMUM_BOTTOM_AREA_HEIGHT = 200;
 	
@@ -236,6 +239,8 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		
 		setTitle(TITLE);
 		setMessage(DEFAULT_MESSAGE);
+		
+		getShell().setSize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
 		
 		// Register myself to the timeline.
 		TimelineViewPart.getInstance().addRectSelectionListener(this);
