@@ -43,6 +43,8 @@ import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Menu;
+import org.eclipse.swt.widgets.MenuItem;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorReference;
@@ -330,6 +332,10 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		
 	}
 	
+	// Menu
+	private Menu mMenuBar;
+	// ----------------------------------------
+	
 	// For the top part
 	private ChunksTreeViewer mChunksTreeViewer;
 	// ----------------------------------------
@@ -424,7 +430,19 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		// Bottom Area. Use StackLayout to switch between panels.
 		createBottomArea(composite);
 		
+		// Setup the menu
+		createMenuBar();
+		
 		return composite;
+	}
+
+	private void createMenuBar() {
+		mMenuBar = new Menu(getShell(), SWT.BAR);
+		
+		final MenuItem testMenu = new MenuItem(mMenuBar, SWT.CASCADE);
+		testMenu.setText("Test");
+		
+		getShell().setMenuBar(mMenuBar);
 	}
 
 	private Composite createMainArea(Composite parent) {
