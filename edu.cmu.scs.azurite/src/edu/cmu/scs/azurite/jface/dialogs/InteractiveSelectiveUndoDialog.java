@@ -36,10 +36,11 @@ import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.jface.viewers.ViewerComparator;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.custom.StackLayout;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.GridData;
-import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Label;
@@ -336,6 +337,11 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	private Menu mMenuBar;
 	// ----------------------------------------
 	
+	// Sash Forms
+	private SashForm mTopSash;
+	private SashForm mBottomSash;
+	// ----------------------------------------
+	
 	// For the top part
 	private ChunksTreeViewer mChunksTreeViewer;
 	// ----------------------------------------
@@ -343,7 +349,9 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	private Composite mBottomArea;
 	private StackLayout mBottomStackLayout;	// the StackLayout object used for panel switching in the bottom area.
 	
-	// For Normal Preview Panel ---------------
+	// For Preview Panel ---------------
+	private Composite mConflictResolutionArea;
+	
 	private CompareViewerSwitchingPane mPreviewPane;
 	private CompareConfiguration mCompareConfiguration;
 	private String mCompareTitle;
@@ -424,11 +432,16 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	protected Control createDialogArea(Composite parent) {
 		Composite composite = createMainArea(parent);
 		
+		mTopSash = new SashForm(composite, SWT.VERTICAL);
+		
 		// Chunks
-		createChunksTreeViewer(composite);
+		createChunksTreeViewer(mTopSash);
 		
 		// Bottom Area. Use StackLayout to switch between panels.
-		createBottomArea(composite);
+		createBottomArea(mTopSash);
+		
+		mTopSash.setSashWidth(SPACING);
+		mTopSash.setWeights(new int[] { 1, 3 });
 		
 		// Setup the menu
 		createMenuBar();
@@ -448,14 +461,12 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	private Composite createMainArea(Composite parent) {
 		Composite composite = new Composite(parent, SWT.NONE);
 		
-		// Use GridLayout.
-		GridLayout gridLayout = new GridLayout(1, false);
-		gridLayout.marginWidth = MARGIN_WIDTH;
-		gridLayout.marginHeight = 0;
-		gridLayout.marginTop = MARGIN_HEIGHT;
-		gridLayout.horizontalSpacing = SPACING;
-		gridLayout.verticalSpacing = SPACING;
-		composite.setLayout(gridLayout);
+		// Use SashForm.
+		FillLayout fillLayout = new FillLayout();
+		fillLayout.marginWidth = MARGIN_WIDTH;
+		fillLayout.marginHeight = MARGIN_HEIGHT;
+		
+		composite.setLayout(fillLayout);
 		composite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 		
 		return composite;
@@ -466,11 +477,6 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		org.eclipse.jdt.internal.ui.util.ViewerPane chunksPane =
 				new org.eclipse.jdt.internal.ui.util.ViewerPane(parent, SWT.BORDER | SWT.FLAT);
 		mChunksTreeViewer = new ChunksTreeViewer(chunksPane, SWT.NONE);
-		
-		// Layout the chunks pane within the dialog area.
-		GridData gridData = new GridData(GridData.FILL, GridData.FILL, true, true, 1, 1);
-		gridData.minimumHeight = MINIMUM_CHUNKS_HEIGHT;
-		chunksPane.setLayoutData(gridData);
 		
 		// Set the label text.
 		chunksPane.setText(CHUNKS_TITLE);
@@ -564,20 +570,13 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	private void createBottomArea(Composite parent) {
 		mBottomArea = new Composite(parent, SWT.NONE);
 		
-		// First, setup the gridlayout parameters here..
-		GridData gridData = new GridData(GridData.FILL, GridData.FILL, true, true, 1, 1);
-		gridData.minimumHeight = MINIMUM_BOTTOM_AREA_HEIGHT;
-		mBottomArea.setLayoutData(gridData);
-		
 		// Use StackLayout
 		mBottomStackLayout = new StackLayout();
 		mBottomArea.setLayout(mBottomStackLayout);
 		
 		// Case #1 - Normal side-by-side preview.
-		createNormalPreviewPanel(mBottomArea);
-		
 		// Case #2 - Need to resolve conflict
-		createConflictResolutionPanel(mBottomArea);
+		createPreviewPanel(mBottomArea);
 		
 		// Case #3 - Information panel, telling some useful information
 		createInformationPanel(mBottomArea);
@@ -586,8 +585,12 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		updateBottomPanel();
 	}
 	
-	private void createNormalPreviewPanel(Composite parent) {
-		mPreviewPane = new CompareViewerSwitchingPane(parent, SWT.BORDER | SWT.FLAT) {
+	private void createPreviewPanel(Composite parent) {
+		mBottomSash = new SashForm(parent, SWT.VERTICAL);
+		
+		mConflictResolutionArea = new Composite(mBottomSash, SWT.NONE);
+		
+		mPreviewPane = new CompareViewerSwitchingPane(mBottomSash, SWT.BORDER | SWT.FLAT) {
 			@Override
 			protected Viewer getViewer(Viewer oldViewer, Object input) {
 				// TODO Auto-generated method stub
@@ -597,10 +600,18 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 				return v;
 			}
 		};
+		
+		mBottomSash.setSashWidth(SPACING);
+		mBottomSash.setWeights(new int[] { 1, 3 });
 	}
 	
-	private void createConflictResolutionPanel(Composite parent) {
-		// TODO implement
+	private void showConflictResolution() {
+		mBottomSash.setMaximizedControl(null);
+		mBottomSash.setWeights(new int[] { 1, 3 });
+	}
+	
+	private void hideConflictResolution() {
+		mBottomSash.setMaximizedControl(mPreviewPane);
 	}
 	
 	private void createInformationPanel(Composite parent) {
@@ -660,6 +671,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			mPreviewPane.setInput(compareInput);
 			
 			// Bring the preview panel to top.
+			hideConflictResolution();
 			showPanel(mPreviewPane);
 		}
 		catch (Exception e) {
@@ -717,7 +729,8 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			mPreviewPane.setInput(compareInput);
 			
 			// Bring the preview panel to top.
-			showPanel(mPreviewPane);
+			hideConflictResolution();
+			showPanel(mBottomSash);
 		}
 		catch (Exception e) {
 			e.printStackTrace();
@@ -806,8 +819,11 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		return null;
 	}
 
-	private void showConflictResolutionPanel() {
-		// TODO implement
+	private void showConflictResolutionPanel(Chunk chunk) {
+		// Calculate such and such..
+		
+		showConflictResolution();
+		showPanel(mBottomSash);
 	}
 	
 	private void showInformationPanel() {
@@ -836,7 +852,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 					// Setup the conflict resolution panel.
 					
 					// Show the conflict resolution panel.
-					showConflictResolutionPanel();
+					showConflictResolutionPanel(chunk);
 				} else {
 				// Show a normal preview..
 					showPreviewPanel(chunk);
