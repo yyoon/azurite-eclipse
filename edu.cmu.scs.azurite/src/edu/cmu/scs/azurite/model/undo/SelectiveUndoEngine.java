@@ -31,7 +31,7 @@ import edu.cmu.scs.fluorite.util.Utilities;
  */
 public class SelectiveUndoEngine {
 	
-	private static final int MAX_EXPANSION_DEPTH = 2;
+	public static final int MAX_EXPANSION_DEPTH = 2;
 
 	// Singleton pattern.
 	private static SelectiveUndoEngine instance = null;
@@ -106,6 +106,10 @@ public class SelectiveUndoEngine {
 	}
 
 	public void doSelectiveUndoWithChunks(List<Chunk> chunks, IDocument document) {
+		doSelectiveUndoWithChunks(chunks, document, null);
+	}
+	
+	public void doSelectiveUndoWithChunks(List<Chunk> chunks, IDocument document, Map<Chunk, UndoAlternative> alternativeChoices) {
 		// Reverse the chunks, so the last chunk comes at first.
 		Collections.reverse(chunks);
 		
@@ -119,7 +123,6 @@ public class SelectiveUndoEngine {
 				
 				// Is there a conflict?
 				if (chunk.hasConflictOutsideThisChunk()) {
-					
 					List<UndoAlternative> alternatives = doSelectiveUndoChunkWithConflicts(
 							chunk, initialContent);
 					
@@ -127,6 +130,10 @@ public class SelectiveUndoEngine {
 					if (alternatives.size() <= 2) {
 						document.replace(initialOffset, initialContent.length(),
 								alternatives.get(0).getResultingCode());
+					}
+					else if (alternativeChoices != null && alternativeChoices.get(chunk) != null) {
+						UndoAlternative chosenAlternative = alternativeChoices.get(chunk);
+						document.replace(initialOffset, initialContent.length(), chosenAlternative.getResultingCode());
 					}
 					else {
 						final Shell parentShell = Display.getDefault().getActiveShell();
@@ -159,7 +166,7 @@ public class SelectiveUndoEngine {
 		Arrays.sort(runtimeDocChanges, RuntimeDC.getCommandIDComparator());
 	}
 	
-	private List<UndoAlternative> doSelectiveUndoChunkWithConflicts(
+	public List<UndoAlternative> doSelectiveUndoChunkWithConflicts(
 			Chunk chunk, String initialContent) {
 		List<UndoAlternative> result = new ArrayList<UndoAlternative>();
 		

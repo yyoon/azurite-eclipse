@@ -38,6 +38,8 @@ import org.eclipse.jface.viewers.ViewerComparator;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.custom.StackLayout;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.GridData;
@@ -58,11 +60,13 @@ import edu.cmu.scs.azurite.compare.AzuriteCompareInput;
 import edu.cmu.scs.azurite.compare.AzuriteCompareLabelProvider;
 import edu.cmu.scs.azurite.compare.SimpleCompareItem;
 import edu.cmu.scs.azurite.jface.viewers.ChunksTreeViewer;
+import edu.cmu.scs.azurite.jface.widgets.AlternativeButton;
 import edu.cmu.scs.azurite.model.FileKey;
 import edu.cmu.scs.azurite.model.OperationId;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.azurite.model.undo.Chunk;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
+import edu.cmu.scs.azurite.model.undo.UndoAlternative;
 import edu.cmu.scs.azurite.views.RectSelectionListener;
 import edu.cmu.scs.azurite.views.TimelineViewPart;
 import edu.cmu.scs.fluorite.util.Utilities;
@@ -87,6 +91,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	private static final String DEFAULT_MESSAGE = "The preview will be updated as you select/deselect rectangles from the timeline.\nNOTE: Please do not edit source code while this dialog is open.";
 	
 	private static final String CHUNKS_TITLE = "Changes to be performed";
+	private static final String ALTERNATIVES_TITLE = "Choose one of the alternatives below to resolve the conflict.";
 	
 	protected static final String NEXT_CHANGE_ID = "edu.cmu.scs.azurite.nextChange";
 	protected static final String NEXT_CHANGE_TOOLTOP = "Select Next Chunk";
@@ -166,7 +171,9 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	
 	private class ChunkLevelElement {
 		private Chunk mChunk;
-		private boolean mResolved;
+		
+		private List<UndoAlternative> mAlternatives;
+		private UndoAlternative mChosenAlternative;
 		
 		private TopLevelElement mParent;
 		
@@ -176,11 +183,29 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			}
 			
 			mChunk = chunk;
-			mResolved = false;
 			
 			mParent = parent;
+			
+			calculateUndoAlternatives();
 		}
 		
+		private void calculateUndoAlternatives() {
+			if (getChunk().hasConflictOutsideThisChunk()) {
+				try {
+					IDocument doc = findDocumentForChunk(getChunk());
+					Chunk expandedChunk = getChunk().getExpandedChunkWithDepth(SelectiveUndoEngine.MAX_EXPANSION_DEPTH);
+					int initialOffset = expandedChunk.getStartOffset();
+					String initialContent = doc.get(initialOffset, expandedChunk.getChunkLength());
+					
+					mAlternatives = SelectiveUndoEngine.getInstance().doSelectiveUndoChunkWithConflicts(getChunk(), initialContent);
+					mChosenAlternative = null;
+				}
+				catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		}
+
 		public Chunk getChunk() {
 			return mChunk;
 		}
@@ -190,7 +215,19 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		}
 		
 		public boolean hasUnresolvedConflict() {
-			return mChunk.hasConflictOutsideThisChunk() && !mResolved;
+			return mChunk.hasConflictOutsideThisChunk() && mChosenAlternative == null;
+		}
+		
+		public List<UndoAlternative> getUndoAlternatives() {
+			return mAlternatives;
+		}
+		
+		public UndoAlternative getChosenAlternative() {
+			return mChosenAlternative;
+		}
+		
+		public void setChosenAlternative(UndoAlternative chosenAlternative) {
+			mChosenAlternative = chosenAlternative;
 		}
 	}
 	
@@ -358,6 +395,8 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	// ----------------------------------------
 	
 	// For Conflict Resolution Panel ----------
+	@SuppressWarnings("restriction")
+	private org.eclipse.jdt.internal.ui.util.ViewerPane mConflictResolutionPane;
 	// ----------------------------------------
 	
 	// For Information Panel ------------------
@@ -585,10 +624,15 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		updateBottomPanel();
 	}
 	
+	@SuppressWarnings("restriction")
 	private void createPreviewPanel(Composite parent) {
 		mBottomSash = new SashForm(parent, SWT.VERTICAL);
 		
-		mConflictResolutionArea = new Composite(mBottomSash, SWT.NONE);
+		mConflictResolutionPane = new org.eclipse.jdt.internal.ui.util.ViewerPane(
+				mBottomSash, SWT.BORDER | SWT.FLAT);
+		
+		// Set the label text.
+		mConflictResolutionPane.setText(ALTERNATIVES_TITLE);
 		
 		mPreviewPane = new CompareViewerSwitchingPane(mBottomSash, SWT.BORDER | SWT.FLAT) {
 			@Override
@@ -696,8 +740,15 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			// Get the chunks.
 			List<ChunkLevelElement> chunkElems = topElem.getChunks();
 			List<Chunk> chunks = new ArrayList<Chunk>();
+			Map<Chunk, UndoAlternative> chosenAlternatives =
+					new HashMap<Chunk, UndoAlternative>();
 			for (ChunkLevelElement chunkElem : chunkElems) {
+				Chunk chunk = chunkElem.getChunk();
 				chunks.add(chunkElem.getChunk());
+				
+				if (chunk.hasConflictOutsideThisChunk()) {
+					chosenAlternatives.put(chunk, chunkElem.getChosenAlternative());
+				}
 			}
 			
 			// Original source
@@ -706,7 +757,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			// Copy of the source.
 			IDocument docResult = new Document(originalContents);
 			SelectiveUndoEngine.getInstance()
-					.doSelectiveUndoWithChunks(chunks, docResult);
+					.doSelectiveUndoWithChunks(chunks, docResult, chosenAlternatives);
 			String undoResult = docResult.get();
 			
 			mCompareTitle = fileKey.getFileNameOnly();
@@ -819,11 +870,110 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		return null;
 	}
 
-	private void showConflictResolutionPanel(Chunk chunk) {
+	private void showConflictResolutionPanel(final ChunkLevelElement chunkElem) {
 		// Calculate such and such..
 		
+		// Delete the conflict resolution area if there was previously.
+		clearConflictResolutionArea();
+		
+		mConflictResolutionArea = new Composite(mConflictResolutionPane, SWT.NONE);
+		mConflictResolutionArea.setLayout(new FillLayout());
+		
+		mConflictResolutionPane.setContent(mConflictResolutionArea);
+		
+		// Add the alternatives
+		for (final UndoAlternative alternative : chunkElem.getUndoAlternatives()) {
+			AlternativeButton buttonAlternative = new AlternativeButton(mConflictResolutionArea, SWT.RADIO);
+			buttonAlternative.setAlternativeCode(alternative.getResultingCode());
+			buttonAlternative.setToolTipText(alternative.getDescription());
+			
+			if (chunkElem.getChosenAlternative() == alternative) {
+				buttonAlternative.setSelected(true);
+			}
+			
+			buttonAlternative.addSelectionListener(new SelectionAdapter() {
+				@Override
+				public void widgetSelected(SelectionEvent e) {
+					chunkElem.setChosenAlternative(alternative);
+					mChunksTreeViewer.update(chunkElem, null);
+					mChunksTreeViewer.update(chunkElem.getParent(), null);
+					showPreviewForConflictResolution(chunkElem);
+				}
+			});
+		}
+		
+		mConflictResolutionArea.layout(true);
+
+		// update the layout so that the conflict resolution panel is shown.
 		showConflictResolution();
 		showPanel(mBottomSash);
+	}
+	
+	private void showPreviewForConflictResolution(ChunkLevelElement chunkElem) {
+		try {
+			Chunk chunk = chunkElem.getChunk();
+			IDocument doc = findDocumentForChunk(chunk);
+			
+			Chunk expandedChunk = chunk.getExpandedChunkWithDepth(SelectiveUndoEngine.MAX_EXPANSION_DEPTH);
+			
+			// Original source
+			String originalContents = doc.get(expandedChunk.getStartOffset(), expandedChunk.getChunkLength());
+			
+			// Calculate the preview using selective undo engine
+			String undoResult = chunkElem.getChosenAlternative().getResultingCode();
+			
+			// Calculate the startline / endline from the originalContents.
+			int startLine = doc.getLineOfOffset(expandedChunk.getStartOffset());
+			int endLine = doc.getLineOfOffset(expandedChunk.getEndOffset());
+			mCompareTitle = getLabelForChunk(expandedChunk, doc);
+			
+			// Add surrounding context before/after the code
+			int contextStartLine = Math.max(startLine - SURROUNDING_CONTEXT_SIZE, 0);
+			int contextEndLine = Math.min(endLine + SURROUNDING_CONTEXT_SIZE, doc.getNumberOfLines() - 1);
+			
+			int contextStartOffset = doc.getLineOffset(contextStartLine);
+			int contextEndOffset = doc.getLineOffset(contextEndLine) + doc.getLineLength(contextEndLine);
+			
+			String contextBefore = doc.get(
+					contextStartOffset,
+					expandedChunk.getStartOffset() - contextStartOffset);
+			String contextAfter = doc.get(
+					expandedChunk.getEndOffset(),
+					contextEndOffset - expandedChunk.getEndOffset());
+
+			// Left, right items.
+			SimpleCompareItem leftItem = new SimpleCompareItem(
+					"Original Source",
+					contextBefore + originalContents + contextAfter,
+					false);
+			SimpleCompareItem rightItem = new SimpleCompareItem(
+					"Preview of Selective Undo Result",
+					contextBefore + undoResult + contextAfter,
+					false);
+			
+			// Build the compareInput and feed it into the compare viewer switching pane.
+			AzuriteCompareInput compareInput = new AzuriteCompareInput(
+					leftItem,	// Original Source
+					rightItem);	// Preview Source
+			
+			mPreviewPane.setInput(compareInput);
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+			
+			// Display an error message on the screen.
+			String msg = "Error occurred while generating the preview.";
+			mInformationLabel.setText(msg);
+			showInformationPanel();
+		}
+	}
+
+	public void clearConflictResolutionArea() {
+		if (mConflictResolutionArea != null) {
+			mConflictResolutionArea.dispose();
+			mConflictResolutionArea = null;
+			mConflictResolutionPane.layout(true);
+		}
 	}
 	
 	private void showInformationPanel() {
@@ -848,13 +998,10 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 				Chunk chunk = chunkElem.getChunk();
 				
 				if (chunk.hasConflictOutsideThisChunk()) {
-				// Show conflict resolution dialog here..
-					// Setup the conflict resolution panel.
-					
 					// Show the conflict resolution panel.
-					showConflictResolutionPanel(chunk);
+					showConflictResolutionPanel(chunkElem);
 				} else {
-				// Show a normal preview..
+					// Show a normal preview..
 					showPreviewPanel(chunk);
 				}
 			}
