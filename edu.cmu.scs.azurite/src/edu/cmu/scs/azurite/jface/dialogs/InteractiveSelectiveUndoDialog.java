@@ -1024,7 +1024,8 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 				TopLevelElement topElem = (TopLevelElement) firstElement;
 				
 				if (topElem.hasUnresolvedConflict()) {
-					
+					String msg = "You must resolve all the conflicts under this file to be able to see the entire preview.";
+					showBottomPanel(false, msg);
 				}
 				else {
 					showPreviewPanel(topElem);
