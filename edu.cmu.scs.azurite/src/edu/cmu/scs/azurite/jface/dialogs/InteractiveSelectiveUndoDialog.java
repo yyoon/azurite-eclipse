@@ -534,6 +534,9 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		mChunksTreeViewer.setComparator(createChunksTreeComparator());
 		mChunksTreeViewer.addSelectionChangedListener(createSelectionChangedListener());
 		
+		// This means that the top-level elements will automatically be expanded.
+		mChunksTreeViewer.setAutoExpandLevel(2);
+		
 		// Set the initial input
 		setChunksTreeViewerInput();
 		
