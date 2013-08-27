@@ -471,9 +471,10 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	protected Control createDialogArea(Composite parent) {
 		Composite composite = createMainArea(parent);
 		
+		// Create the top sash.
 		mTopSash = new SashForm(composite, SWT.VERTICAL);
 		
-		// Chunks
+		// Chunks tree on the top.
 		createChunksTreeViewer(mTopSash);
 		
 		// Bottom Area. Use StackLayout to switch between panels.
@@ -607,17 +608,25 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	}
 	
 	private void createBottomArea(Composite parent) {
-		mBottomArea = new Composite(parent, SWT.NONE);
+		// Create the bottom sash form.
+		mBottomSash = new SashForm(parent, SWT.VERTICAL);
+		mBottomSash.setSashWidth(SPACING);
+		
+		// Create the conflict resolution area.
+		createConflictResolutionArea(mBottomSash);
+		
+		// Create the bottom area
+		mBottomArea = new Composite(mBottomSash, SWT.NONE);
+		mBottomSash.setWeights(new int[] { 1, 3 });
 		
 		// Use StackLayout
 		mBottomStackLayout = new StackLayout();
 		mBottomArea.setLayout(mBottomStackLayout);
 		
-		// Case #1 - Normal side-by-side preview.
-		// Case #2 - Need to resolve conflict
+		// Create the side-by-side preview panel.
 		createPreviewPanel(mBottomArea);
 		
-		// Case #3 - Information panel, telling some useful information
+		// Information panel, telling some useful information
 		createInformationPanel(mBottomArea);
 		
 		// Update the bottom panel.
@@ -625,16 +634,16 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	}
 	
 	@SuppressWarnings("restriction")
-	private void createPreviewPanel(Composite parent) {
-		mBottomSash = new SashForm(parent, SWT.VERTICAL);
-		
+	private void createConflictResolutionArea(Composite parent) {
 		mConflictResolutionPane = new org.eclipse.jdt.internal.ui.util.ViewerPane(
 				mBottomSash, SWT.BORDER | SWT.FLAT);
 		
 		// Set the label text.
 		mConflictResolutionPane.setText(ALTERNATIVES_TITLE);
-		
-		mPreviewPane = new CompareViewerSwitchingPane(mBottomSash, SWT.BORDER | SWT.FLAT) {
+	}
+	
+	private void createPreviewPanel(Composite parent) {
+		mPreviewPane = new CompareViewerSwitchingPane(parent, SWT.BORDER | SWT.FLAT) {
 			@Override
 			protected Viewer getViewer(Viewer oldViewer, Object input) {
 				// TODO Auto-generated method stub
@@ -644,9 +653,6 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 				return v;
 			}
 		};
-		
-		mBottomSash.setSashWidth(SPACING);
-		mBottomSash.setWeights(new int[] { 1, 3 });
 	}
 	
 	private void showConflictResolution() {
@@ -655,12 +661,30 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	}
 	
 	private void hideConflictResolution() {
-		mBottomSash.setMaximizedControl(mPreviewPane);
+		mBottomSash.setMaximizedControl(mBottomArea);
+	}
+	
+	private void showBottomPanel(boolean showConflictResolution, String informationMessage) {
+		if (showConflictResolution) {
+			showConflictResolution();
+		} else {
+			hideConflictResolution();
+		}
+		
+		if (informationMessage != null) {
+			// Show the information panel.
+			mInformationLabel.setText(informationMessage);
+			mBottomStackLayout.topControl = mInformationLabel;
+		} else {
+			// Show the preview panel.
+			mBottomStackLayout.topControl = mPreviewPane;
+		}
+		
+		mBottomArea.layout();
 	}
 	
 	private void createInformationPanel(Composite parent) {
 		mInformationLabel = new Label(parent, SWT.BORDER | SWT.FLAT);
-		mInformationLabel.setText("Fill in some useful information here!");
 	}
 	
 	private void showPreviewPanel(Chunk chunk) {
@@ -715,16 +739,14 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			mPreviewPane.setInput(compareInput);
 			
 			// Bring the preview panel to top.
-			hideConflictResolution();
-			showPanel(mPreviewPane);
+			showBottomPanel(false, null);
 		}
 		catch (Exception e) {
 			e.printStackTrace();
 			
 			// Display an error message on the screen.
 			String msg = "Error occurred while generating the preview.";
-			mInformationLabel.setText(msg);
-			showInformationPanel();
+			showBottomPanel(false, msg);
 		}
 	}
 	
@@ -780,16 +802,14 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			mPreviewPane.setInput(compareInput);
 			
 			// Bring the preview panel to top.
-			hideConflictResolution();
-			showPanel(mBottomSash);
+			showBottomPanel(false, null);
 		}
 		catch (Exception e) {
 			e.printStackTrace();
 			
 			// Display an error message on the screen.
 			String msg = "Error occurred while generating the preview.";
-			mInformationLabel.setText(msg);
-			showInformationPanel();
+			showBottomPanel(false, msg);
 		}
 	}
 	
@@ -871,8 +891,6 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	}
 
 	private void showConflictResolutionPanel(final ChunkLevelElement chunkElem) {
-		// Calculate such and such..
-		
 		// Delete the conflict resolution area if there was previously.
 		clearConflictResolutionArea();
 		
@@ -889,6 +907,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			
 			if (chunkElem.getChosenAlternative() == alternative) {
 				buttonAlternative.setSelected(true);
+				showPreviewForConflictResolution(chunkElem);
 			}
 			
 			buttonAlternative.addSelectionListener(new SelectionAdapter() {
@@ -905,8 +924,12 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		mConflictResolutionArea.layout(true);
 
 		// update the layout so that the conflict resolution panel is shown.
-		showConflictResolution();
-		showPanel(mBottomSash);
+		if (chunkElem.getChosenAlternative() == null) {
+			String msg = "Please select one of the alternatives to resolve this conflict.";
+			showBottomPanel(true, msg);
+		} else {
+			showBottomPanel(true, null);
+		}
 	}
 	
 	private void showPreviewForConflictResolution(ChunkLevelElement chunkElem) {
@@ -957,14 +980,15 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 					rightItem);	// Preview Source
 			
 			mPreviewPane.setInput(compareInput);
+			
+			showBottomPanel(true, null);
 		}
 		catch (Exception e) {
 			e.printStackTrace();
 			
 			// Display an error message on the screen.
 			String msg = "Error occurred while generating the preview.";
-			mInformationLabel.setText(msg);
-			showInformationPanel();
+			showBottomPanel(true, msg);
 		}
 	}
 
@@ -974,15 +998,6 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			mConflictResolutionArea = null;
 			mConflictResolutionPane.layout(true);
 		}
-	}
-	
-	private void showInformationPanel() {
-		showPanel(mInformationLabel);
-	}
-	
-	private void showPanel(Control panel) {
-		mBottomStackLayout.topControl = panel;
-		mBottomArea.layout();
 	}
 	
 	public void updateBottomPanel() {
@@ -1023,9 +1038,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			
 			String msg = chunksEmpty ? INFORMATION_SELECT_RECTS
 					: INFORMATION_SELECT_CHUNK;
-			mInformationLabel.setText(msg);
-			
-			showInformationPanel();
+			showBottomPanel(false, msg);
 		}
 	}
 	
