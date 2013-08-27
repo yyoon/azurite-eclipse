@@ -43,6 +43,7 @@ import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Label;
@@ -234,6 +235,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	private class ChunksContentProvider implements ITreeContentProvider {
 		
 		private Map<FileKey, List<Chunk>> mInput;
+		private TopLevelElement[] mTranslatedInput;
 
 		@Override
 		public void dispose() {
@@ -257,7 +259,8 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 					result.add(new TopLevelElement(fileKey, mInput.get(fileKey)));
 				}
 				
-				return result.toArray(new TopLevelElement[mInput.keySet().size()]);
+				mTranslatedInput = result.toArray(new TopLevelElement[mInput.keySet().size()]); 
+				return mTranslatedInput; 
 			} else {
 				return null;
 			}
@@ -291,6 +294,10 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			}
 			
 			return false;
+		}
+		
+		public TopLevelElement[] getTopLevelElements() {
+			return mTranslatedInput;
 		}
 		
 	}
@@ -489,6 +496,15 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		return composite;
 	}
 
+	@Override
+	protected Control createContents(Composite parent) {
+		Control contents = super.createContents(parent);
+		
+		updateOKButtonEnabled();
+		
+		return contents;
+	}
+
 	private void createMenuBar() {
 		mMenuBar = new Menu(getShell(), SWT.BAR);
 		
@@ -601,6 +617,8 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		
 		// Set the input here.
 		mChunksTreeViewer.setInput(input);
+		
+		updateOKButtonEnabled();
 	}
 
 	@Override
@@ -920,6 +938,8 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 					mChunksTreeViewer.update(chunkElem, null);
 					mChunksTreeViewer.update(chunkElem.getParent(), null);
 					showPreviewForConflictResolution(chunkElem);
+					
+					updateOKButtonEnabled();
 				}
 			});
 		}
@@ -932,6 +952,30 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			showBottomPanel(true, msg);
 		} else {
 			showBottomPanel(true, null);
+		}
+	}
+	
+	private void updateOKButtonEnabled() {
+		Button okButton = null;
+		
+		try {
+			okButton = getButton(OK);
+			ChunksContentProvider cp = (ChunksContentProvider) mChunksTreeViewer.getContentProvider();
+			
+			boolean enabled = true;
+			for (TopLevelElement topElem : cp.getTopLevelElements()) {
+				if (topElem.hasUnresolvedConflict()) {
+					enabled = false;
+					break;
+				}
+			}
+			
+			okButton.setEnabled(enabled);
+		}
+		catch (Exception e) {
+			if (okButton != null) {
+				okButton.setEnabled(false);
+			}
 		}
 	}
 	
