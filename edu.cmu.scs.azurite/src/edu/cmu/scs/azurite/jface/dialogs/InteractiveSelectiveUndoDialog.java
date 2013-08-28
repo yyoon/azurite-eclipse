@@ -68,6 +68,7 @@ import edu.cmu.scs.azurite.model.OperationId;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.azurite.model.undo.Chunk;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
+import edu.cmu.scs.azurite.model.undo.SelectiveUndoParams;
 import edu.cmu.scs.azurite.model.undo.UndoAlternative;
 import edu.cmu.scs.azurite.plugin.Activator;
 import edu.cmu.scs.azurite.views.RectSelectionListener;
@@ -138,7 +139,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	
 	private class TopLevelElement {
 		private FileKey mFileKey;
-		private List<ChunkLevelElement> mChunks;
+		private List<ChunkLevelElement> mChunkElements;
 		
 		public TopLevelElement(FileKey fileKey, List<Chunk> chunks) {
 			if (fileKey == null || chunks == null) {
@@ -147,9 +148,9 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			
 			mFileKey = fileKey;
 			
-			mChunks = new ArrayList<ChunkLevelElement>();
+			mChunkElements = new ArrayList<ChunkLevelElement>();
 			for (Chunk chunk : chunks) {
-				mChunks.add(new ChunkLevelElement(chunk, this));
+				mChunkElements.add(new ChunkLevelElement(chunk, this));
 			}
 		}
 		
@@ -157,12 +158,39 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			return mFileKey;
 		}
 		
-		public List<ChunkLevelElement> getChunks() {
-			return Collections.unmodifiableList(mChunks);
+		public List<ChunkLevelElement> getChunkElements() {
+			return Collections.unmodifiableList(mChunkElements);
+		}
+		
+		public List<Chunk> getChunks() {
+			List<Chunk> result = new ArrayList<Chunk>();
+			for (ChunkLevelElement chunkElem : getChunkElements()) {
+				result.add(chunkElem.getChunk());
+			}
+			
+			return result;
+		}
+
+		public Map<Chunk, UndoAlternative> getAlternativeChoiceMap() {
+			List<ChunkLevelElement> chunkElems = getChunkElements();
+			Map<Chunk, UndoAlternative> chosenAlternatives =
+					new HashMap<Chunk, UndoAlternative>();
+			for (ChunkLevelElement chunkElem : chunkElems) {
+				Chunk chunk = chunkElem.getChunk();
+				
+				if (chunk.hasConflictOutsideThisChunk()) {
+					chosenAlternatives.put(chunk, chunkElem.getChosenAlternative());
+				}
+			}
+			return chosenAlternatives;
+		}
+		
+		public SelectiveUndoParams getSelectiveUndoParams() {
+			return new SelectiveUndoParams(getChunks(), findDocumentForKey(getFileKey()), getAlternativeChoiceMap());
 		}
 		
 		public boolean hasUnresolvedConflict() {
-			for (ChunkLevelElement chunkElem : mChunks) {
+			for (ChunkLevelElement chunkElem : mChunkElements) {
 				if (chunkElem.hasUnresolvedConflict()) {
 					return true;
 				}
@@ -260,7 +288,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		public Object[] getChildren(Object parentElement) {
 			if (parentElement instanceof TopLevelElement) {
 				TopLevelElement topElem = (TopLevelElement) parentElement;
-				return topElem.getChunks().toArray();
+				return topElem.getChunkElements().toArray();
 			}
 			
 			return null;
@@ -280,7 +308,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		public boolean hasChildren(Object element) {
 			if (element instanceof TopLevelElement) {
 				TopLevelElement topElem = (TopLevelElement) element;
-				return !topElem.getChunks().isEmpty();
+				return !topElem.getChunkElements().isEmpty();
 			}
 			
 			return false;
@@ -451,8 +479,19 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 
 	@Override
 	protected void okPressed() {
+		// Cleanup the listeners
 		cleanup();
 		
+		// Actually perform the selective undo
+		TopLevelElement[] topElems = (TopLevelElement[]) mChunksTreeViewer.getInput();
+		Map<FileKey, SelectiveUndoParams> paramsMap = new HashMap<FileKey, SelectiveUndoParams>();
+		for (TopLevelElement topElem : topElems) {
+			paramsMap.put(topElem.getFileKey(), topElem.getSelectiveUndoParams());
+		}
+		
+		SelectiveUndoEngine.getInstance().doSelectiveUndoOnMultipleFilesWithChoices(paramsMap);
+		
+		// Call the original method so that the dialog is properly disposed.
 		super.okPressed();
 	}
 
@@ -809,27 +848,13 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			FileKey fileKey = topElem.getFileKey();
 			IDocument doc = findDocumentForKey(fileKey);
 			
-			// Get the chunks.
-			List<ChunkLevelElement> chunkElems = topElem.getChunks();
-			List<Chunk> chunks = new ArrayList<Chunk>();
-			Map<Chunk, UndoAlternative> chosenAlternatives =
-					new HashMap<Chunk, UndoAlternative>();
-			for (ChunkLevelElement chunkElem : chunkElems) {
-				Chunk chunk = chunkElem.getChunk();
-				chunks.add(chunkElem.getChunk());
-				
-				if (chunk.hasConflictOutsideThisChunk()) {
-					chosenAlternatives.put(chunk, chunkElem.getChosenAlternative());
-				}
-			}
-			
 			// Original source
 			String originalContents = doc.get();
 			
 			// Copy of the source.
 			IDocument docResult = new Document(originalContents);
 			SelectiveUndoEngine.getInstance()
-					.doSelectiveUndoWithChunks(chunks, docResult, chosenAlternatives);
+					.doSelectiveUndoWithChunks(topElem.getChunks(), docResult, topElem.getAlternativeChoiceMap());
 			String undoResult = docResult.get();
 			
 			mCompareTitle = fileKey.getFileNameOnly();

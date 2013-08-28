@@ -310,6 +310,14 @@ public class SelectiveUndoEngine {
 
 		return buffer.toString();
 	}
+	
+	public void doSelectiveUndoWithParams(SelectiveUndoParams params) {
+		if (params == null) {
+			throw new IllegalArgumentException();
+		}
+		
+		doSelectiveUndoWithChunks(params.getChunks(), params.getDocument(), params.getAlternativeChoices());
+	}
 
 	List<Segment> getAllSegments(
 			RuntimeDC[] runtimeDocChanges) {
@@ -404,7 +412,6 @@ public class SelectiveUndoEngine {
 			 
 			    try {
 			        IDE.openEditorOnFileStore( page, fileStore );
-//			        while ( RuntimeHistoryManager.getInstance().getCurrentFileKey() != key );
 			    	
 					// 2. Perform selective undo.
 			        doSelectiveUndo(runtimeDCs);
@@ -416,5 +423,29 @@ public class SelectiveUndoEngine {
 			}
 		}
 	}
+	
+	public void doSelectiveUndoOnMultipleFilesWithChoices(
+			Map<FileKey, SelectiveUndoParams> params) {
+		for (FileKey key : params.keySet()) {
+			// 1. Open the file in the editor.
+			File fileToOpen = new File(key.getFilePath());
 			
+			if (fileToOpen.exists() && fileToOpen.isFile()) {
+			    IFileStore fileStore = EFS.getLocalFileSystem().getStore(fileToOpen.toURI());
+			    IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
+			 
+			    try {
+			        IDE.openEditorOnFileStore( page, fileStore );
+			    	
+					// 2. Perform selective undo.
+			        doSelectiveUndoWithParams(params.get(key));
+			    } catch ( PartInitException e ) {
+			    	e.printStackTrace();
+				}
+			} else {
+			    //Do something if the file does not exist
+			}
+		}
+	}
+	
 }
