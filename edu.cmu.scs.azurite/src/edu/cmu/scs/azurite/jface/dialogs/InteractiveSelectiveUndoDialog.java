@@ -69,6 +69,7 @@ import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.azurite.model.undo.Chunk;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
 import edu.cmu.scs.azurite.model.undo.UndoAlternative;
+import edu.cmu.scs.azurite.plugin.Activator;
 import edu.cmu.scs.azurite.views.RectSelectionListener;
 import edu.cmu.scs.azurite.views.TimelineViewPart;
 import edu.cmu.scs.fluorite.util.Utilities;
@@ -318,7 +319,10 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 				ChunkLevelElement chunkElem = (ChunkLevelElement) element;
 				
 				ImageDescriptor errorImage = PlatformUI.getWorkbench().getSharedImages().getImageDescriptor(ISharedImages.IMG_OBJS_ERROR_TSK);
-				return chunkElem.hasUnresolvedConflict() ? getImage(errorImage) : null;
+				ImageDescriptor resolvedImage = Activator.getImageDescriptor("icons/tick.png");
+				return chunkElem.hasUnresolvedConflict() ? getImage(errorImage)
+						: chunkElem.getChunk().hasConflictOutsideThisChunk() ? getImage(resolvedImage)
+						: null;
 			}
 			else {
 				return null;
