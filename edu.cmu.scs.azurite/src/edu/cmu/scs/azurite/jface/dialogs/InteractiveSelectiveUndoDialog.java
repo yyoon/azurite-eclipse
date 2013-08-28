@@ -709,10 +709,11 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			String undoResult = SelectiveUndoEngine.getInstance()
 					.doSelectiveUndoChunkWithoutConflicts(chunk, originalContents);
 			
+			mCompareTitle = getLabelForChunk(chunk, doc);
+			
 			// Calculate the startline / endline from the originalContents.
 			int startLine = doc.getLineOfOffset(chunk.getStartOffset());
 			int endLine = doc.getLineOfOffset(chunk.getEndOffset());
-			mCompareTitle = getLabelForChunk(chunk, doc);
 			
 			// Add surrounding context before/after the code
 			int contextStartLine = Math.max(startLine - SURROUNDING_CONTEXT_SIZE, 0);
@@ -727,23 +728,10 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			String contextAfter = doc.get(
 					chunk.getEndOffset(),
 					contextEndOffset - chunk.getEndOffset());
-
-			// Left, right items.
-			SimpleCompareItem leftItem = new SimpleCompareItem(
-					"Original Source",
+			
+			setPreviewInput(
 					contextBefore + originalContents + contextAfter,
-					false);
-			SimpleCompareItem rightItem = new SimpleCompareItem(
-					"Preview of Selective Undo Result",
-					contextBefore + undoResult + contextAfter,
-					false);
-			
-			// Build the compareInput and feed it into the compare viewer switching pane.
-			AzuriteCompareInput compareInput = new AzuriteCompareInput(
-					leftItem,	// Original Source
-					rightItem);	// Preview Source
-			
-			mPreviewPane.setInput(compareInput);
+					contextBefore + undoResult + contextAfter);
 			
 			// Bring the preview panel to top.
 			showBottomPanel(false, null);
@@ -755,6 +743,25 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			String msg = "Error occurred while generating the preview.";
 			showBottomPanel(false, msg);
 		}
+	}
+	
+	private void setPreviewInput(String originalContents, String undoResult) {
+		// Left, right items.
+		SimpleCompareItem leftItem = new SimpleCompareItem(
+				"Original Source",
+				originalContents,
+				false);
+		SimpleCompareItem rightItem = new SimpleCompareItem(
+				"Preview of Selective Undo Result",
+				undoResult,
+				false);
+		
+		// Build the compareInput and feed it into the compare viewer switching pane.
+		AzuriteCompareInput compareInput = new AzuriteCompareInput(
+				leftItem,	// Original Source
+				rightItem);	// Preview Source
+		
+		mPreviewPane.setInput(compareInput);
 	}
 	
 	private void showPreviewPanel(TopLevelElement topElem) {
@@ -790,23 +797,8 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			String undoResult = docResult.get();
 			
 			mCompareTitle = fileKey.getFileNameOnly();
-
-			// Left, right items.
-			SimpleCompareItem leftItem = new SimpleCompareItem(
-					"Original Source",
-					originalContents,
-					false);
-			SimpleCompareItem rightItem = new SimpleCompareItem(
-					"Preview of Selective Undo Result",
-					undoResult,
-					false);
 			
-			// Build the compareInput and feed it into the compare viewer switching pane.
-			AzuriteCompareInput compareInput = new AzuriteCompareInput(
-					leftItem,	// Original Source
-					rightItem);	// Preview Source
-			
-			mPreviewPane.setInput(compareInput);
+			setPreviewInput(originalContents, undoResult);
 			
 			// Bring the preview panel to top.
 			showBottomPanel(false, null);
@@ -977,10 +969,11 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			// Calculate the preview using selective undo engine
 			String undoResult = chunkElem.getChosenAlternative().getResultingCode();
 			
+			mCompareTitle = getLabelForChunk(expandedChunk, doc);
+			
 			// Calculate the startline / endline from the originalContents.
 			int startLine = doc.getLineOfOffset(expandedChunk.getStartOffset());
 			int endLine = doc.getLineOfOffset(expandedChunk.getEndOffset());
-			mCompareTitle = getLabelForChunk(expandedChunk, doc);
 			
 			// Add surrounding context before/after the code
 			int contextStartLine = Math.max(startLine - SURROUNDING_CONTEXT_SIZE, 0);
@@ -996,22 +989,9 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 					expandedChunk.getEndOffset(),
 					contextEndOffset - expandedChunk.getEndOffset());
 
-			// Left, right items.
-			SimpleCompareItem leftItem = new SimpleCompareItem(
-					"Original Source",
+			setPreviewInput(
 					contextBefore + originalContents + contextAfter,
-					false);
-			SimpleCompareItem rightItem = new SimpleCompareItem(
-					"Preview of Selective Undo Result",
-					contextBefore + undoResult + contextAfter,
-					false);
-			
-			// Build the compareInput and feed it into the compare viewer switching pane.
-			AzuriteCompareInput compareInput = new AzuriteCompareInput(
-					leftItem,	// Original Source
-					rightItem);	// Preview Source
-			
-			mPreviewPane.setInput(compareInput);
+					contextBefore + undoResult + contextAfter);
 			
 			showBottomPanel(true, null);
 		}
