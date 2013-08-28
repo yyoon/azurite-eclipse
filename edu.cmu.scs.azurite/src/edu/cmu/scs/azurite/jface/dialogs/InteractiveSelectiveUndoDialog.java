@@ -79,8 +79,8 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	private static final int DEFAULT_WIDTH = 800;
 	private static final int DEFAULT_HEIGHT = 600;
 	
-	private static final int MINIMUM_CHUNKS_HEIGHT = 100;
-	private static final int MINIMUM_BOTTOM_AREA_HEIGHT = 200;
+//	private static final int MINIMUM_CHUNKS_HEIGHT = 100;
+//	private static final int MINIMUM_BOTTOM_AREA_HEIGHT = 200;
 	
 	private static final int MARGIN_WIDTH = 10;
 	private static final int MARGIN_HEIGHT = 10;
