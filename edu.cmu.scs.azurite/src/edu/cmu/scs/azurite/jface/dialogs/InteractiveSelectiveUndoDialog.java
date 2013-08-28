@@ -233,9 +233,6 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	}
 	
 	private class ChunksContentProvider implements ITreeContentProvider {
-		
-		private Map<FileKey, List<Chunk>> mInput;
-		private TopLevelElement[] mTranslatedInput;
 
 		@Override
 		public void dispose() {
@@ -249,18 +246,9 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 
 		// Assume that inputElement is typed as Map<FileKey, List<Chunk>>
 		@Override
-		@SuppressWarnings("unchecked")
 		public Object[] getElements(Object inputElement) {
-			if (inputElement instanceof Map<?, ?>) {
-				mInput = (Map<FileKey, List<Chunk>>) inputElement;
-				
-				List<TopLevelElement> result = new ArrayList<TopLevelElement>();
-				for (FileKey fileKey : mInput.keySet()) {
-					result.add(new TopLevelElement(fileKey, mInput.get(fileKey)));
-				}
-				
-				mTranslatedInput = result.toArray(new TopLevelElement[mInput.keySet().size()]); 
-				return mTranslatedInput; 
+			if (inputElement instanceof Object[]) {
+				return (Object[]) inputElement; 
 			} else {
 				return null;
 			}
@@ -294,10 +282,6 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			}
 			
 			return false;
-		}
-		
-		public TopLevelElement[] getTopLevelElements() {
-			return mTranslatedInput;
 		}
 		
 	}
@@ -607,16 +591,18 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		Map<FileKey, List<RuntimeDC>> fileDCMap = RuntimeHistoryManager
 				.getInstance().extractFileDCMapFromOperationIds(ids);
 		
-		Map<FileKey, List<Chunk>> input = new HashMap<FileKey, List<Chunk>>();
+		List<TopLevelElement> topList = new ArrayList<TopLevelElement>();
 		
 		for (FileKey fileKey : fileDCMap.keySet()) {
 			List<Chunk> chunksForThisFile = SelectiveUndoEngine.getInstance()
 					.determineChunksWithRuntimeDCs(fileDCMap.get(fileKey));
-			input.put(fileKey, chunksForThisFile);
+			
+			TopLevelElement topElem = new TopLevelElement(fileKey, chunksForThisFile);
+			topList.add(topElem);
 		}
 		
 		// Set the input here.
-		mChunksTreeViewer.setInput(input);
+		mChunksTreeViewer.setInput(topList.toArray(new TopLevelElement[topList.size()]));
 		
 		updateOKButtonEnabled();
 	}
@@ -960,10 +946,9 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		
 		try {
 			okButton = getButton(OK);
-			ChunksContentProvider cp = (ChunksContentProvider) mChunksTreeViewer.getContentProvider();
 			
 			boolean enabled = true;
-			for (TopLevelElement topElem : cp.getTopLevelElements()) {
+			for (TopLevelElement topElem : (TopLevelElement[]) mChunksTreeViewer.getInput()) {
 				if (topElem.hasUnresolvedConflict()) {
 					enabled = false;
 					break;
@@ -1080,9 +1065,8 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			}
 		}
 		else {
-			@SuppressWarnings("unchecked")
-			Map<FileKey, List<Chunk>> input = (Map<FileKey, List<Chunk>>) mChunksTreeViewer.getInput(); 
-			boolean chunksEmpty = input == null || input.keySet().isEmpty();
+			TopLevelElement[] input = (TopLevelElement[]) mChunksTreeViewer.getInput();
+			boolean chunksEmpty = input == null || input.length == 0;
 			
 			String msg = chunksEmpty ? INFORMATION_SELECT_RECTS
 					: INFORMATION_SELECT_CHUNK;
