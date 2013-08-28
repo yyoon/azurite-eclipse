@@ -23,6 +23,7 @@ import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.ToolBarManager;
 import org.eclipse.jface.dialogs.TitleAreaDialog;
 import org.eclipse.jface.resource.ImageDescriptor;
+import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.viewers.DecorationOverlayIcon;
@@ -711,27 +712,12 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			
 			mCompareTitle = getLabelForChunk(chunk, doc);
 			
-			// Calculate the startline / endline from the originalContents.
-			int startLine = doc.getLineOfOffset(chunk.getStartOffset());
-			int endLine = doc.getLineOfOffset(chunk.getEndOffset());
-			
-			// Add surrounding context before/after the code
-			int contextStartLine = Math.max(startLine - SURROUNDING_CONTEXT_SIZE, 0);
-			int contextEndLine = Math.min(endLine + SURROUNDING_CONTEXT_SIZE, doc.getNumberOfLines() - 1);
-			
-			int contextStartOffset = doc.getLineOffset(contextStartLine);
-			int contextEndOffset = doc.getLineOffset(contextEndLine) + doc.getLineLength(contextEndLine);
-			
-			String contextBefore = doc.get(
-					contextStartOffset,
-					chunk.getStartOffset() - contextStartOffset);
-			String contextAfter = doc.get(
-					chunk.getEndOffset(),
-					contextEndOffset - chunk.getEndOffset());
-			
-			setPreviewInput(
-					contextBefore + originalContents + contextAfter,
-					contextBefore + undoResult + contextAfter);
+			setPreviewInputWithSurroundingContext(
+					originalContents,
+					undoResult,
+					doc,
+					chunk.getStartOffset(),
+					chunk.getEndOffset());
 			
 			// Bring the preview panel to top.
 			showBottomPanel(false, null);
@@ -743,6 +729,30 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			String msg = "Error occurred while generating the preview.";
 			showBottomPanel(false, msg);
 		}
+	}
+	
+	private void setPreviewInputWithSurroundingContext(String originalContents, String undoResult, IDocument doc, int startOffset, int endOffset) throws BadLocationException {
+		// Calculate the startline / endline from the originalContents.
+		int startLine = doc.getLineOfOffset(startOffset);
+		int endLine = doc.getLineOfOffset(endOffset);
+		
+		// Add surrounding context before/after the code
+		int contextStartLine = Math.max(startLine - SURROUNDING_CONTEXT_SIZE, 0);
+		int contextEndLine = Math.min(endLine + SURROUNDING_CONTEXT_SIZE, doc.getNumberOfLines() - 1);
+		
+		int contextStartOffset = doc.getLineOffset(contextStartLine);
+		int contextEndOffset = doc.getLineOffset(contextEndLine) + doc.getLineLength(contextEndLine);
+		
+		String contextBefore = doc.get(
+				contextStartOffset,
+				startOffset - contextStartOffset);
+		String contextAfter = doc.get(
+				endOffset,
+				contextEndOffset - endOffset);
+		
+		setPreviewInput(
+				contextBefore + originalContents + contextAfter,
+				contextBefore + undoResult + contextAfter);
 	}
 	
 	private void setPreviewInput(String originalContents, String undoResult) {
@@ -971,27 +981,12 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			
 			mCompareTitle = getLabelForChunk(expandedChunk, doc);
 			
-			// Calculate the startline / endline from the originalContents.
-			int startLine = doc.getLineOfOffset(expandedChunk.getStartOffset());
-			int endLine = doc.getLineOfOffset(expandedChunk.getEndOffset());
-			
-			// Add surrounding context before/after the code
-			int contextStartLine = Math.max(startLine - SURROUNDING_CONTEXT_SIZE, 0);
-			int contextEndLine = Math.min(endLine + SURROUNDING_CONTEXT_SIZE, doc.getNumberOfLines() - 1);
-			
-			int contextStartOffset = doc.getLineOffset(contextStartLine);
-			int contextEndOffset = doc.getLineOffset(contextEndLine) + doc.getLineLength(contextEndLine);
-			
-			String contextBefore = doc.get(
-					contextStartOffset,
-					expandedChunk.getStartOffset() - contextStartOffset);
-			String contextAfter = doc.get(
-					expandedChunk.getEndOffset(),
-					contextEndOffset - expandedChunk.getEndOffset());
-
-			setPreviewInput(
-					contextBefore + originalContents + contextAfter,
-					contextBefore + undoResult + contextAfter);
+			setPreviewInputWithSurroundingContext(
+					originalContents,
+					undoResult,
+					doc,
+					expandedChunk.getStartOffset(),
+					expandedChunk.getEndOffset());
 			
 			showBottomPanel(true, null);
 		}
