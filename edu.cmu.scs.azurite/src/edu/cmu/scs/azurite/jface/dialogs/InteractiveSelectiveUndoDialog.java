@@ -561,10 +561,32 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		return new ViewerComparator() {
 			@Override
 			public int compare(Viewer viewer, Object e1, Object e2) {
-				ChunkLevelElement lhs = (ChunkLevelElement) e1;
-				ChunkLevelElement rhs = (ChunkLevelElement) e2;
+				if (e1 instanceof TopLevelElement && e2 instanceof TopLevelElement) {
+					TopLevelElement lhs = (TopLevelElement) e1;
+					TopLevelElement rhs = (TopLevelElement) e2;
+					
+					String lhsFileName = lhs.getFileKey().getFileNameOnly();
+					String rhsFileName = rhs.getFileKey().getFileNameOnly();
+					
+					int result = lhsFileName.compareTo(rhsFileName);
+					if (result != 0) {
+						return result;
+					} else {
+						// Compare the full paths.
+						lhsFileName = lhs.getFileKey().getFilePath();
+						rhsFileName = rhs.getFileKey().getFilePath();
+						
+						return lhsFileName.compareTo(rhsFileName);
+					}
+				}
+				else if (e1 instanceof ChunkLevelElement && e2 instanceof ChunkLevelElement) {
+					ChunkLevelElement lhs = (ChunkLevelElement) e1;
+					ChunkLevelElement rhs = (ChunkLevelElement) e2;
+					
+					return Chunk.getLocationComparator().compare(lhs.getChunk(), rhs.getChunk());
+				}
 				
-				return Chunk.getLocationComparator().compare(lhs.getChunk(), rhs.getChunk());
+				return 0;
 			}
 		};
 	}
