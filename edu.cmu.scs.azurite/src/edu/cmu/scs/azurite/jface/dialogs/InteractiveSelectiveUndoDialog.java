@@ -125,6 +125,50 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		return instance;
 	}
 	
+	private class KeepSelectedCodeUnchanged extends Action {
+		private final ITextSelection sel;
+
+		private KeepSelectedCodeUnchanged(String text, ITextSelection sel) {
+			super(text);
+			this.sel = sel;
+		}
+
+		@Override
+		public void run() {
+			// Determine the currently shown file.
+			try {
+				IStructuredSelection treeSelection = (IStructuredSelection) mChunksTreeViewer.getSelection();
+				Object treeSelElem = treeSelection.getFirstElement();
+				
+				FileKey key = null;
+				if (treeSelElem instanceof TopLevelElement) {
+					key = ((TopLevelElement) treeSelElem).getFileKey();
+				} else if (treeSelElem instanceof ChunkLevelElement) {
+					key = ((ChunkLevelElement) treeSelElem).getParent().getFileKey();
+				}
+				
+				// Get the runtime dcs.
+				List<RuntimeDC> runtimeDCs = RuntimeHistoryManager.getInstance()
+						.filterDocumentChangesByRegion(
+								key,
+								sel.getOffset(),
+								sel.getOffset() + sel.getLength());
+				
+				// Get the operation ids.
+				List<OperationId> ids = OperationId.getOperationIdsFromRuntimeDCs(runtimeDCs);
+				
+				// Tell the timeline to REMOVE these from the selection.
+				TimelineViewPart timeline = TimelineViewPart.getInstance();
+				if (timeline != null) {
+					timeline.removeSelection(ids);
+				}
+			}
+			catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
 	private class ChunksTreeViewer extends TreeViewer {
 	
 		public ChunksTreeViewer(Composite parent) {
@@ -686,42 +730,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 				if (mLeftSourceViewer != null) {
 					final ITextSelection sel = (ITextSelection) mLeftSourceViewer.getSelection();
 					if (sel.getLength() > 0) {
-						manager.add(new Action("Keep this code unchanged") {
-							@Override
-							public void run() {
-								// Determine the currently shown file.
-								try {
-									IStructuredSelection treeSelection = (IStructuredSelection) mChunksTreeViewer.getSelection();
-									Object treeSelElem = treeSelection.getFirstElement();
-									
-									FileKey key = null;
-									if (treeSelElem instanceof TopLevelElement) {
-										key = ((TopLevelElement) treeSelElem).getFileKey();
-									} else if (treeSelElem instanceof ChunkLevelElement) {
-										key = ((ChunkLevelElement) treeSelElem).getParent().getFileKey();
-									}
-									
-									// Get the runtime dcs.
-									List<RuntimeDC> runtimeDCs = RuntimeHistoryManager.getInstance()
-											.filterDocumentChangesByRegion(
-													key,
-													sel.getOffset(),
-													sel.getOffset() + sel.getLength());
-									
-									// Get the operation ids.
-									List<OperationId> ids = OperationId.getOperationIdsFromRuntimeDCs(runtimeDCs);
-									
-									// Tell the timeline to REMOVE these from the selection.
-									TimelineViewPart timeline = TimelineViewPart.getInstance();
-									if (timeline != null) {
-										timeline.removeSelection(ids);
-									}
-								}
-								catch (Exception e) {
-									e.printStackTrace();
-								}
-							}
-						});
+						manager.add(new KeepSelectedCodeUnchanged("Keep this code unchanged", sel));
 					}
 				}
 			}
