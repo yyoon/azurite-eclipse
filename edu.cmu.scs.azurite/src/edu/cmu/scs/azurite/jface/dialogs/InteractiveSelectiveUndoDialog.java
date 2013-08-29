@@ -341,7 +341,11 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 					String initialContent = doc.get(initialOffset, expandedChunk.getChunkLength());
 					
 					mAlternatives = SelectiveUndoEngine.getInstance().doSelectiveUndoChunkWithConflicts(getChunk(), initialContent);
-					mChosenAlternative = null;
+					if (mAlternatives.size() == 1) {
+						mChosenAlternative = mAlternatives.get(0);
+					} else {
+						mChosenAlternative = null;
+					}
 				}
 				catch (Exception e) {
 					e.printStackTrace();
@@ -461,7 +465,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 				ImageDescriptor errorImage = PlatformUI.getWorkbench().getSharedImages().getImageDescriptor(ISharedImages.IMG_OBJS_ERROR_TSK);
 				ImageDescriptor resolvedImage = Activator.getImageDescriptor("icons/tick.png");
 				return chunkElem.hasUnresolvedConflict() ? getImage(errorImage)
-						: chunkElem.getChunk().hasConflictOutsideThisChunk() ? getImage(resolvedImage)
+						: chunkElem.getChunk().hasConflictOutsideThisChunk() && chunkElem.getUndoAlternatives().size() > 1 ? getImage(resolvedImage)
 						: null;
 			}
 			else {
@@ -479,7 +483,14 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 				ChunkLevelElement chunkElem = (ChunkLevelElement) element;
 				Chunk chunk = chunkElem.getChunk();
 				IDocument doc = findDocumentForChunk(chunk);
-				return getLabelForChunk(chunk, doc);
+				
+				String label = getLabelForChunk(chunk, doc);
+				
+				if (chunkElem.getChunk().hasConflictOutsideThisChunk() && chunkElem.getUndoAlternatives().size() == 1) {
+					label += " [no effect]";
+				}
+				
+				return label;
 			}
 			else {
 				return super.getText(element);
@@ -1174,7 +1185,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 				ChunkLevelElement chunkElem = (ChunkLevelElement) firstElement;
 				Chunk chunk = chunkElem.getChunk();
 				
-				if (chunk.hasConflictOutsideThisChunk()) {
+				if (chunk.hasConflictOutsideThisChunk() && chunkElem.getUndoAlternatives().size() > 1) {
 					// Show the conflict resolution panel.
 					showConflictResolutionPanel(chunkElem);
 				} else {
