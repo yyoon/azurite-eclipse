@@ -791,8 +791,81 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			topList.add(topElem);
 		}
 		
+		// Remember the old input / selection before setting a new one.
+		TopLevelElement[] oldInput = (TopLevelElement[]) mChunksTreeViewer.getInput();
+		Object oldSelection = ((IStructuredSelection) mChunksTreeViewer.getSelection()).getFirstElement();
+
+		TopLevelElement[] newInput = topList.toArray(new TopLevelElement[topList.size()]);
+		
+		// Restore the chosen alternatives.
+		if (oldInput != null) {
+			for (TopLevelElement oldTopElem : oldInput) {
+				TopLevelElement matchingTopElem = null;
+				for (TopLevelElement newTopElem : newInput) {
+					if (oldTopElem.getFileKey().equals(newTopElem.getFileKey())) {
+						matchingTopElem = newTopElem;
+						break;
+					}
+				}
+				
+				if (matchingTopElem == null) {
+					continue;
+				}
+				
+				for (ChunkLevelElement oldChunkElem : oldTopElem.getChunkElements()) {
+					if (oldChunkElem.getChosenAlternative() == null) {
+						continue;
+					}
+					
+					boolean found = false;
+					
+					for (ChunkLevelElement newChunkElem : matchingTopElem.getChunkElements()) {
+						if (areSameChunks(oldChunkElem.getChunk(), newChunkElem.getChunk()) &&
+								oldChunkElem.getUndoAlternatives().size() == newChunkElem.getUndoAlternatives().size()) {
+							int oldAlternativeIndex = oldChunkElem.getUndoAlternatives().indexOf(oldChunkElem.getChosenAlternative());
+							newChunkElem.setChosenAlternative(newChunkElem.getUndoAlternatives().get(oldAlternativeIndex));
+							
+							found = true;
+							break;
+						}
+					}
+					
+					if (found) {
+						continue;
+					}
+				}
+			}
+		}
+		
 		// Set the input here.
-		mChunksTreeViewer.setInput(topList.toArray(new TopLevelElement[topList.size()]));
+		mChunksTreeViewer.setInput(newInput);
+		
+		// Restore selections, if possible.
+		if (oldSelection instanceof TopLevelElement) {
+			TopLevelElement oldTopElem = (TopLevelElement) oldSelection;
+			
+			for (TopLevelElement newTopElem : newInput) {
+				if (oldTopElem.getFileKey().equals(newTopElem.getFileKey())) {
+					mChunksTreeViewer.setSelection(new StructuredSelection(newTopElem), true);
+					break;
+				}
+			}
+		} else if (oldSelection instanceof ChunkLevelElement) {
+			ChunkLevelElement oldChunkElem = (ChunkLevelElement) oldSelection;
+			TopLevelElement oldTopElem = oldChunkElem.getParent();
+			
+			for (TopLevelElement newTopElem : newInput) {
+				if (oldTopElem.getFileKey().equals(newTopElem.getFileKey())) {
+					for (ChunkLevelElement newChunkElem : newTopElem.getChunkElements()) {
+						if (areSameChunks(oldChunkElem.getChunk(), newChunkElem.getChunk())) {
+							mChunksTreeViewer.setSelection(new StructuredSelection(newChunkElem), true);
+							break;
+						}
+					}
+					break;
+				}
+			}
+		}
 		
 		updateOKButtonEnabled();
 	}
@@ -1219,6 +1292,29 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 					: INFORMATION_SELECT_CHUNK;
 			showBottomPanel(false, msg);
 		}
+	}
+	
+	// TODO maybe move to Chunk class?
+	private boolean areSameChunks(Chunk lhs, Chunk rhs) {
+		if (lhs == null || rhs == null) {
+			return false;
+		}
+		
+		if (!lhs.getBelongsTo().equals(rhs.getBelongsTo())) {
+			return false;
+		}
+		
+		if (lhs.size() != rhs.size()) {
+			return false;
+		}
+		
+		for (int i = 0; i < lhs.size(); ++i) {
+			if (lhs.get(i) != rhs.get(i)) {
+				return false;
+			}
+		}
+		
+		return true;
 	}
 	
 }
