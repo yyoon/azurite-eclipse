@@ -1,5 +1,6 @@
 package edu.cmu.scs.azurite.model.undo;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -20,7 +21,7 @@ public class SelectiveUndoParams {
 			throw new IllegalArgumentException();
 		}
 		
-		mChunks = Collections.unmodifiableList(chunks);
+		mChunks = new ArrayList<Chunk>(chunks);
 		mDocument = doc;
 		mFileKey = chunks.get(0).getBelongsTo();
 		mAlternativeChoices = Collections.unmodifiableMap(alternativeChoices);
