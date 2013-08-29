@@ -19,6 +19,7 @@ import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
+import org.eclipse.jdt.ui.text.IJavaPartitions;
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.ToolBarManager;
 import org.eclipse.jface.dialogs.TitleAreaDialog;
@@ -26,6 +27,7 @@ import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IDocument;
+import org.eclipse.jface.text.IDocumentPartitioner;
 import org.eclipse.jface.viewers.DecorationOverlayIcon;
 import org.eclipse.jface.viewers.IDecoration;
 import org.eclipse.jface.viewers.ILabelProvider;
@@ -60,7 +62,7 @@ import org.eclipse.ui.PlatformUI;
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.compare.AzuriteCompareInput;
 import edu.cmu.scs.azurite.compare.AzuriteCompareLabelProvider;
-import edu.cmu.scs.azurite.compare.SimpleCompareItem;
+import edu.cmu.scs.azurite.compare.DocumentRangeCompareItem;
 import edu.cmu.scs.azurite.jface.viewers.ChunksTreeViewer;
 import edu.cmu.scs.azurite.jface.widgets.AlternativeButton;
 import edu.cmu.scs.azurite.model.FileKey;
@@ -777,12 +779,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			
 			mCompareTitle = getLabelForChunk(chunk, doc);
 			
-			setPreviewInputWithSurroundingContext(
-					originalContents,
-					undoResult,
-					doc,
-					chunk.getStartOffset(),
-					chunk.getEndOffset());
+			setPreviewInput(doc, undoResult, chunk.getStartOffset(), chunk.getChunkLength());
 			
 			// Bring the preview panel to top.
 			showBottomPanel(false, null);
@@ -796,10 +793,20 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		}
 	}
 	
-	private void setPreviewInputWithSurroundingContext(String originalContents, String undoResult, IDocument doc, int startOffset, int endOffset) throws BadLocationException {
+	private void setPreviewInput(IDocument doc, String undoResult, int start, int length) throws BadLocationException {
+		Document resultDoc = new Document();
+		resultDoc.set(doc.get());
+		resultDoc.replace(start, length, undoResult);
+		
+		// Setup the resultDoc.
+		@SuppressWarnings("restriction")
+		IDocumentPartitioner partitioner = org.eclipse.jdt.internal.ui.JavaPlugin.getDefault().getJavaTextTools().createDocumentPartitioner();
+		resultDoc.setDocumentPartitioner(IJavaPartitions.JAVA_PARTITIONING, partitioner);
+		partitioner.connect(resultDoc);
+		
 		// Calculate the startline / endline from the originalContents.
-		int startLine = doc.getLineOfOffset(startOffset);
-		int endLine = doc.getLineOfOffset(endOffset);
+		int startLine = doc.getLineOfOffset(start);
+		int endLine = doc.getLineOfOffset(start + length);
 		
 		// Add surrounding context before/after the code
 		int contextStartLine = Math.max(startLine - SURROUNDING_CONTEXT_SIZE, 0);
@@ -808,27 +815,21 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		int contextStartOffset = doc.getLineOffset(contextStartLine);
 		int contextEndOffset = doc.getLineOffset(contextEndLine) + doc.getLineLength(contextEndLine);
 		
-		String contextBefore = doc.get(
-				contextStartOffset,
-				startOffset - contextStartOffset);
-		String contextAfter = doc.get(
-				endOffset,
-				contextEndOffset - endOffset);
+		int beforeContextLength = start - contextStartOffset;
+		int afterContextLength = contextEndOffset - (start + length);
 		
-		setPreviewInput(
-				contextBefore + originalContents + contextAfter,
-				contextBefore + undoResult + contextAfter);
-	}
-	
-	private void setPreviewInput(String originalContents, String undoResult) {
-		// Left, right items.
-		SimpleCompareItem leftItem = new SimpleCompareItem(
+		DocumentRangeCompareItem leftItem = new DocumentRangeCompareItem(
 				"Original Source",
-				originalContents,
+				doc,
+				contextStartOffset,
+				beforeContextLength + length + afterContextLength,
 				false);
-		SimpleCompareItem rightItem = new SimpleCompareItem(
+		
+		DocumentRangeCompareItem rightItem = new DocumentRangeCompareItem(
 				"Preview of Selective Undo Result",
-				undoResult,
+				resultDoc,
+				contextStartOffset,
+				beforeContextLength + undoResult.length() + afterContextLength,
 				false);
 		
 		// Build the compareInput and feed it into the compare viewer switching pane.
@@ -859,7 +860,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			
 			mCompareTitle = fileKey.getFileNameOnly();
 			
-			setPreviewInput(originalContents, undoResult);
+			setPreviewInput(doc, undoResult, 0, doc.get().length());
 			
 			// Bring the preview panel to top.
 			showBottomPanel(false, null);
@@ -1024,20 +1025,12 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			
 			Chunk expandedChunk = chunk.getExpandedChunkWithDepth(SelectiveUndoEngine.MAX_EXPANSION_DEPTH);
 			
-			// Original source
-			String originalContents = doc.get(expandedChunk.getStartOffset(), expandedChunk.getChunkLength());
-			
 			// Calculate the preview using selective undo engine
 			String undoResult = chunkElem.getChosenAlternative().getResultingCode();
 			
 			mCompareTitle = getLabelForChunk(expandedChunk, doc);
 			
-			setPreviewInputWithSurroundingContext(
-					originalContents,
-					undoResult,
-					doc,
-					expandedChunk.getStartOffset(),
-					expandedChunk.getEndOffset());
+			setPreviewInput(doc, undoResult, expandedChunk.getStartOffset(), expandedChunk.getChunkLength());
 			
 			showBottomPanel(true, null);
 		}
