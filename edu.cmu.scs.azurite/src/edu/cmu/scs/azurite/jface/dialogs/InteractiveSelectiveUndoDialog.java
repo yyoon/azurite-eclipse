@@ -1,7 +1,9 @@
 package edu.cmu.scs.azurite.jface.dialogs;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +38,8 @@ import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.jface.viewers.SelectionChangedEvent;
+import org.eclipse.jface.viewers.StructuredSelection;
+import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.jface.viewers.ViewerComparator;
 import org.eclipse.swt.SWT;
@@ -53,6 +57,7 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MenuItem;
 import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.Tree;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorReference;
 import org.eclipse.ui.IFileEditorInput;
@@ -63,7 +68,6 @@ import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.compare.AzuriteCompareInput;
 import edu.cmu.scs.azurite.compare.AzuriteCompareLabelProvider;
 import edu.cmu.scs.azurite.compare.DocumentRangeCompareItem;
-import edu.cmu.scs.azurite.jface.viewers.ChunksTreeViewer;
 import edu.cmu.scs.azurite.jface.widgets.AlternativeButton;
 import edu.cmu.scs.azurite.model.FileKey;
 import edu.cmu.scs.azurite.model.OperationId;
@@ -111,6 +115,112 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	private static InteractiveSelectiveUndoDialog instance = null;
 	public static InteractiveSelectiveUndoDialog getInstance() {
 		return instance;
+	}
+	
+	private class ChunksTreeViewer extends TreeViewer {
+	
+		public ChunksTreeViewer(Composite parent) {
+			super(parent);
+		}
+	
+		public ChunksTreeViewer(Composite parent, int style) {
+			super(parent, style);
+		}
+	
+		public ChunksTreeViewer(Tree tree) {
+			super(tree);
+		}
+	
+		public void revealNext() {
+			revealElement(true);
+		}
+	
+		public void revealPrevious() {
+			revealElement(false);
+		}
+	
+		private void revealElement(boolean next) {
+			TopLevelElement[] topElements = (TopLevelElement[]) getInput();
+			topElements = Arrays.copyOf(topElements, topElements.length);
+			Arrays.sort(topElements, new Comparator<TopLevelElement>() {
+				@Override
+				public int compare(TopLevelElement lhs, TopLevelElement rhs) {
+					return getComparator().compare(ChunksTreeViewer.this, lhs, rhs);
+				}
+			});
+			
+			Object current = null;
+			Object candidate = null;
+			
+			IStructuredSelection selection = (IStructuredSelection) getSelection();
+			if (!selection.isEmpty()) {
+				current = selection.iterator().next();
+			}
+			
+			if (current instanceof TopLevelElement) {
+				TopLevelElement topElem = (TopLevelElement) current;
+				int curIndex = Arrays.asList(topElements).indexOf(topElem);
+				
+				if (next) {
+					// There must be some children here.
+					candidate = topElem.getChunkElements().get(0);
+				} else {
+					// Find the last chunk of the previous top level element.
+					if (curIndex > 0) {
+						TopLevelElement prevTopElem = topElements[curIndex - 1];
+						candidate = prevTopElem.getChunkElements().get(prevTopElem.getChunkElements().size() - 1);
+					} else {
+						candidate = null;
+					}
+				}
+			} else if (current instanceof ChunkLevelElement) {
+				ChunkLevelElement chunkElem = (ChunkLevelElement) current;
+				TopLevelElement parentElem = chunkElem.getParent();
+				
+				int curChunkIndex = parentElem.getChunkElements().indexOf(chunkElem);
+				int curParentIndex = Arrays.asList(topElements).indexOf(parentElem);
+				
+				if (next) {
+					if (curChunkIndex < parentElem.getChunkElements().size() - 1) {
+						candidate = parentElem.getChunkElements().get(curChunkIndex + 1);
+					} else {
+						// Find the next top level element.
+						if (curParentIndex < topElements.length - 1) {
+							candidate = topElements[curParentIndex + 1];
+						} else {
+							candidate = null;
+						}
+					}
+				} else {
+					if (curChunkIndex > 0) {
+						candidate = parentElem.getChunkElements().get(curChunkIndex - 1);
+					} else {
+						// Select my own parent.
+						candidate = parentElem;
+					}
+				}
+			} else {
+				// If there are some elements at least..
+				if (topElements.length > 0) {
+					if (next) {
+						// Select the first element
+						candidate = topElements[0];
+					} else {
+						candidate = topElements[topElements.length - 1];
+					}
+				} else {
+					candidate = null;
+				}
+			}
+			
+			if (candidate != null) {
+				setSelection(new StructuredSelection(candidate), true);
+			}
+			else {
+				getControl().getDisplay().beep();
+			}
+		}
+	
 	}
 
 	private class NextChunk extends Action {
