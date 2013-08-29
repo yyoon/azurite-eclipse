@@ -25,6 +25,9 @@ import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.jdt.ui.text.IJavaPartitions;
 import org.eclipse.jface.action.Action;
+import org.eclipse.jface.action.IMenuListener;
+import org.eclipse.jface.action.IMenuManager;
+import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.ToolBarManager;
 import org.eclipse.jface.dialogs.TitleAreaDialog;
 import org.eclipse.jface.resource.ImageDescriptor;
@@ -32,6 +35,7 @@ import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IDocumentPartitioner;
+import org.eclipse.jface.text.ITextSelection;
 import org.eclipse.jface.text.source.SourceViewer;
 import org.eclipse.jface.viewers.DecorationOverlayIcon;
 import org.eclipse.jface.viewers.IDecoration;
@@ -48,6 +52,7 @@ import org.eclipse.jface.viewers.ViewerComparator;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.custom.StackLayout;
+import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.graphics.Image;
@@ -522,6 +527,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	
 	// Menu
 	private Menu mMenuBar;
+	private MenuManager mLeftSourceViewerMenuMgr;
 	// ----------------------------------------
 	
 	// Sash Forms
@@ -670,6 +676,56 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		
 		// Uncomment the following line to restore the menu bar.
 //		getShell().setMenuBar(mMenuBar);
+		
+		// Setup the menu manager for the left source viewer.
+		mLeftSourceViewerMenuMgr = new MenuManager();
+		mLeftSourceViewerMenuMgr.setRemoveAllWhenShown(true);
+		mLeftSourceViewerMenuMgr.addMenuListener(new IMenuListener() {
+			@Override
+			public void menuAboutToShow(IMenuManager manager) {
+				if (mLeftSourceViewer != null) {
+					final ITextSelection sel = (ITextSelection) mLeftSourceViewer.getSelection();
+					if (sel.getLength() > 0) {
+						manager.add(new Action("Keep this code unchanged") {
+							@Override
+							public void run() {
+								// Determine the currently shown file.
+								try {
+									IStructuredSelection treeSelection = (IStructuredSelection) mChunksTreeViewer.getSelection();
+									Object treeSelElem = treeSelection.getFirstElement();
+									
+									FileKey key = null;
+									if (treeSelElem instanceof TopLevelElement) {
+										key = ((TopLevelElement) treeSelElem).getFileKey();
+									} else if (treeSelElem instanceof ChunkLevelElement) {
+										key = ((ChunkLevelElement) treeSelElem).getParent().getFileKey();
+									}
+									
+									// Get the runtime dcs.
+									List<RuntimeDC> runtimeDCs = RuntimeHistoryManager.getInstance()
+											.filterDocumentChangesByRegion(
+													key,
+													sel.getOffset(),
+													sel.getOffset() + sel.getLength());
+									
+									// Get the operation ids.
+									List<OperationId> ids = OperationId.getOperationIdsFromRuntimeDCs(runtimeDCs);
+									
+									// Tell the timeline to REMOVE these from the selection.
+									TimelineViewPart timeline = TimelineViewPart.getInstance();
+									if (timeline != null) {
+										timeline.removeSelection(ids);
+									}
+								}
+								catch (Exception e) {
+									e.printStackTrace();
+								}
+							}
+						});
+					}
+				}
+			}
+		});
 	}
 
 	private Composite createMainArea(Composite parent) {
@@ -942,6 +998,16 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 					mRightSourceViewer = ((org.eclipse.compare.internal.MergeSourceViewer) rightField.get(v)).getSourceViewer();
 				} catch (Exception e) {
 					e.printStackTrace();
+				}
+				
+				if (mLeftSourceViewer != null) {
+					StyledText te = mLeftSourceViewer.getTextWidget();
+					te.setMenu(mLeftSourceViewerMenuMgr.createContextMenu(te));
+				}
+				
+				if (mRightSourceViewer != null) {
+					StyledText te = mRightSourceViewer.getTextWidget();
+					te.setMenu(null);
 				}
 				
 				return v;

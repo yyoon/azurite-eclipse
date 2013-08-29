@@ -691,8 +691,29 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 	 */
 	public void addSelection(List<OperationId> ids, boolean clearSelection) {
 		StringBuffer buffer = new StringBuffer();
-		buffer.append("addSelectionsByIds([");
+		buffer.append("addSelectionsByIds(");
 		
+		getJavaScriptListFromOperationIds(buffer, ids);
+		
+		buffer.append(", " + Boolean.toString(clearSelection) + ");");
+		
+		browser.execute(buffer.toString());
+	}
+	
+	public void removeSelection(List<OperationId> ids) {
+		StringBuffer buffer = new StringBuffer();
+		buffer.append("removeSelectionsByIds(");
+		
+		getJavaScriptListFromOperationIds(buffer, ids);
+		
+		buffer.append(");");
+		
+		browser.execute(buffer.toString());
+	}
+
+	private void getJavaScriptListFromOperationIds(StringBuffer buffer,
+			List<OperationId> ids) {
+		buffer.append("[");
 		Iterator<OperationId> it;
 		
 		it = ids.iterator();
@@ -713,9 +734,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 			}
 		}
 		
-		buffer.append("], " + Boolean.toString(clearSelection) + ");");
-		
-		browser.execute(buffer.toString());
+		buffer.append("]");
 	}
 	
 	public void activateFirebugLite() {

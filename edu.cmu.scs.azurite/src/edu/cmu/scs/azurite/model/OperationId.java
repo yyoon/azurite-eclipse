@@ -1,5 +1,11 @@
 package edu.cmu.scs.azurite.model;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
+import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
+
 public class OperationId implements Comparable<OperationId> {
 
 	public final long sid;
@@ -43,6 +49,15 @@ public class OperationId implements Comparable<OperationId> {
 		if (this.id > other.id) { return 1; }
 		
 		return 0;
+	}
+
+	public static List<OperationId> getOperationIdsFromRuntimeDCs(List<RuntimeDC> dcs) {
+		List<OperationId> ids = new ArrayList<OperationId>();
+		for (RuntimeDC dc : dcs) {
+			BaseDocumentChangeEvent original = dc.getOriginal();
+			ids.add(new OperationId(original.getSessionId(), original.getCommandIndex()));
+		}
+		return ids;
 	}
 	
 }

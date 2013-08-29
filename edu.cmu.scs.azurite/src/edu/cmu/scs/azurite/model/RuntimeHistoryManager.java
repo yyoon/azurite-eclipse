@@ -394,7 +394,11 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 	}
 	
 	public List<RuntimeDC> filterDocumentChangesByRegion(final int startOffset, final int endOffset) {
-		return filterDocumentChanges(new IRuntimeDCFilter() {
+		return filterDocumentChangesByRegion(getCurrentFileKey(), startOffset, endOffset);
+	}
+	
+	public List<RuntimeDC> filterDocumentChangesByRegion(FileKey key, final int startOffset, final int endOffset) {
+		return filterDocumentChanges(key, new IRuntimeDCFilter() {
 			@Override
 			public boolean filter(RuntimeDC runtimeDC) {
 				List<Segment> segments = runtimeDC.getAllSegments();

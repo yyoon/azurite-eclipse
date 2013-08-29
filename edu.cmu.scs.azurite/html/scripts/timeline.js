@@ -2,7 +2,7 @@
 /*global d3, azurite */
 
 /* Things to be called from Azurite */
-/*exported setStartTimestamp, updateOperation, getRightmostTimestamp, showContextMenu, addSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarker, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile */
+/*exported setStartTimestamp, updateOperation, getRightmostTimestamp, showContextMenu, addSelectionsByIds, removeSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarker, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile */
 
 /* Things to be called manually when debugging */
 /*exported test */
@@ -1462,6 +1462,20 @@ function addSelectionsByIds(sids, ids, clearPreviousSelection) {
 	}
 
 	updateHighlight();
+}
+
+function removeSelectionsByIds(sids, ids) {
+    for ( var i = 0; i < ids.length; ++i) {
+        var sid = sids[i];
+        var id = ids[i];
+        
+        var index = indexOfSelected(sid, id);
+        if (index !== -1) {
+            global.selected.splice(index, 1);
+        }
+    }
+    
+    updateHighlight();
 }
 
 function addSelections(x1, y1, x2, y2, toggle) {
