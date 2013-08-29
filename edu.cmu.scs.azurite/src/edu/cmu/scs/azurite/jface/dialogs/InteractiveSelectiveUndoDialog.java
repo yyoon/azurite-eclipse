@@ -916,33 +916,32 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	}
 	
 	private void setPreviewInput(IDocument doc, String undoResult, int start, int length) throws BadLocationException {
-		Document resultDoc = new Document();
-		resultDoc.set(doc.get());
+		Document originalDoc = new Document(doc.get());
+		
+		Document resultDoc = new Document(originalDoc.get());
 		resultDoc.replace(start, length, undoResult);
 		
-		// Setup the resultDoc.
-		@SuppressWarnings("restriction")
-		IDocumentPartitioner partitioner = org.eclipse.jdt.internal.ui.JavaPlugin.getDefault().getJavaTextTools().createDocumentPartitioner();
-		resultDoc.setDocumentPartitioner(IJavaPartitions.JAVA_PARTITIONING, partitioner);
-		partitioner.connect(resultDoc);
+		// Setup the documents.
+		setupDocumentForJava(originalDoc);
+		setupDocumentForJava(resultDoc);
 		
 		// Calculate the startline / endline from the originalContents.
-		int startLine = doc.getLineOfOffset(start);
-		int endLine = doc.getLineOfOffset(start + length);
+		int startLine = originalDoc.getLineOfOffset(start);
+		int endLine = originalDoc.getLineOfOffset(start + length);
 		
 		// Add surrounding context before/after the code
 		int contextStartLine = Math.max(startLine - SURROUNDING_CONTEXT_SIZE, 0);
-		int contextEndLine = Math.min(endLine + SURROUNDING_CONTEXT_SIZE, doc.getNumberOfLines() - 1);
+		int contextEndLine = Math.min(endLine + SURROUNDING_CONTEXT_SIZE, originalDoc.getNumberOfLines() - 1);
 		
-		int contextStartOffset = doc.getLineOffset(contextStartLine);
-		int contextEndOffset = doc.getLineOffset(contextEndLine) + doc.getLineLength(contextEndLine);
+		int contextStartOffset = originalDoc.getLineOffset(contextStartLine);
+		int contextEndOffset = originalDoc.getLineOffset(contextEndLine) + originalDoc.getLineLength(contextEndLine);
 		
 		int beforeContextLength = start - contextStartOffset;
 		int afterContextLength = contextEndOffset - (start + length);
 		
 		DocumentRangeCompareItem leftItem = new DocumentRangeCompareItem(
 				"Original Source",
-				doc,
+				originalDoc,
 				contextStartOffset,
 				beforeContextLength + length + afterContextLength,
 				false);
@@ -960,6 +959,13 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 				rightItem);	// Preview Source
 		
 		mPreviewPane.setInput(compareInput);
+	}
+
+	private void setupDocumentForJava(Document resultDoc) {
+		@SuppressWarnings("restriction")
+		IDocumentPartitioner partitioner = org.eclipse.jdt.internal.ui.JavaPlugin.getDefault().getJavaTextTools().createDocumentPartitioner();
+		resultDoc.setDocumentPartitioner(IJavaPartitions.JAVA_PARTITIONING, partitioner);
+		partitioner.connect(resultDoc);
 	}
 	
 	private void showPreviewPanel(TopLevelElement topElem) {
