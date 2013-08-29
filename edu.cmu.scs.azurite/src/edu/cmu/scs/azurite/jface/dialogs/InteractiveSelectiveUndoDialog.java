@@ -1,5 +1,6 @@
 package edu.cmu.scs.azurite.jface.dialogs;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -11,6 +12,7 @@ import java.util.Map;
 import org.eclipse.compare.CompareConfiguration;
 import org.eclipse.compare.CompareUI;
 import org.eclipse.compare.CompareViewerSwitchingPane;
+import org.eclipse.compare.contentmergeviewer.TextMergeViewer;
 import org.eclipse.core.filebuffers.FileBuffers;
 import org.eclipse.core.filebuffers.ITextFileBuffer;
 import org.eclipse.core.filebuffers.ITextFileBufferManager;
@@ -30,6 +32,7 @@ import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IDocumentPartitioner;
+import org.eclipse.jface.text.source.SourceViewer;
 import org.eclipse.jface.viewers.DecorationOverlayIcon;
 import org.eclipse.jface.viewers.IDecoration;
 import org.eclipse.jface.viewers.ILabelProvider;
@@ -539,6 +542,9 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	private CompareViewerSwitchingPane mPreviewPane;
 	private CompareConfiguration mCompareConfiguration;
 	private String mCompareTitle;
+	
+	private SourceViewer mLeftSourceViewer;
+	private SourceViewer mRightSourceViewer;
 	// ----------------------------------------
 	
 	// For Conflict Resolution Panel ----------
@@ -914,15 +920,48 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	
 	private void createPreviewPanel(Composite parent) {
 		mPreviewPane = new CompareViewerSwitchingPane(parent, SWT.BORDER | SWT.FLAT) {
+			@SuppressWarnings("restriction")
 			@Override
 			protected Viewer getViewer(Viewer oldViewer, Object input) {
 				// TODO Auto-generated method stub
 				Viewer v = CompareUI.findContentViewer(oldViewer, input, this, mCompareConfiguration);
 				v.getControl().setData(CompareUI.COMPARE_VIEWER_TITLE, mCompareTitle);
 				
+				mLeftSourceViewer = null;
+				mRightSourceViewer = null;
+				
+				// HACK HACK access the private field directly from TextMergeViewer, in order to get the SourceViewer instances.
+				try {
+					Field leftField = getField(TextMergeViewer.class, "fLeft");
+					Field rightField = getField(TextMergeViewer.class, "fRight");
+					
+					leftField.setAccessible(true);
+					rightField.setAccessible(true);
+					
+					mLeftSourceViewer = ((org.eclipse.compare.internal.MergeSourceViewer) leftField.get(v)).getSourceViewer();
+					mRightSourceViewer = ((org.eclipse.compare.internal.MergeSourceViewer) rightField.get(v)).getSourceViewer();
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+				
 				return v;
 			}
 		};
+	}
+	
+	public static Field getField(Class<?> clazz, String fieldName) {
+	    Class<?> tmpClass = clazz;
+	    do {
+	        try {
+	            Field f = tmpClass.getDeclaredField(fieldName);
+	            return f;
+	        } catch (NoSuchFieldException e) {
+	            tmpClass = tmpClass.getSuperclass();
+	        }
+	    } while (tmpClass != null);
+
+	    throw new RuntimeException("Field '" + fieldName
+	            + "' not found on class " + clazz);
 	}
 	
 	private void showConflictResolution() {
