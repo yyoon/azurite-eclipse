@@ -31,7 +31,7 @@ import edu.cmu.scs.fluorite.util.Utilities;
  */
 public class SelectiveUndoEngine {
 	
-	private static final int MAX_EXPANSION_DEPTH = 2;
+	public static final int MAX_EXPANSION_DEPTH = 2;
 
 	// Singleton pattern.
 	private static SelectiveUndoEngine instance = null;
@@ -99,15 +99,17 @@ public class SelectiveUndoEngine {
 			throw new IllegalArgumentException();
 		}
 		
-		// Sort the runtimeDocChanges by their original command IDs.
-		sortRuntimeDocumentChanges(runtimeDocChanges);
-		
-		// Get all the segments.
-		List<Segment> segments = getAllSegments(runtimeDocChanges);
-		
 		// Determine Chunks.
-		List<Chunk> chunks = determineChunks(segments);
+		List<Chunk> chunks = determineChunksWithRuntimeDCs(runtimeDocChanges);
 		
+		doSelectiveUndoWithChunks(chunks, document);
+	}
+
+	public void doSelectiveUndoWithChunks(List<Chunk> chunks, IDocument document) {
+		doSelectiveUndoWithChunks(chunks, document, null);
+	}
+	
+	public void doSelectiveUndoWithChunks(List<Chunk> chunks, IDocument document, Map<Chunk, UndoAlternative> alternativeChoices) {
 		// Reverse the chunks, so the last chunk comes at first.
 		Collections.reverse(chunks);
 		
@@ -121,7 +123,6 @@ public class SelectiveUndoEngine {
 				
 				// Is there a conflict?
 				if (chunk.hasConflictOutsideThisChunk()) {
-					
 					List<UndoAlternative> alternatives = doSelectiveUndoChunkWithConflicts(
 							chunk, initialContent);
 					
@@ -129,6 +130,10 @@ public class SelectiveUndoEngine {
 					if (alternatives.size() <= 2) {
 						document.replace(initialOffset, initialContent.length(),
 								alternatives.get(0).getResultingCode());
+					}
+					else if (alternativeChoices != null && alternativeChoices.get(chunk) != null) {
+						UndoAlternative chosenAlternative = alternativeChoices.get(chunk);
+						document.replace(initialOffset, initialContent.length(), chosenAlternative.getResultingCode());
 					}
 					else {
 						final Shell parentShell = Display.getDefault().getActiveShell();
@@ -161,7 +166,7 @@ public class SelectiveUndoEngine {
 		Arrays.sort(runtimeDocChanges, RuntimeDC.getCommandIDComparator());
 	}
 	
-	private List<UndoAlternative> doSelectiveUndoChunkWithConflicts(
+	public List<UndoAlternative> doSelectiveUndoChunkWithConflicts(
 			Chunk chunk, String initialContent) {
 		List<UndoAlternative> result = new ArrayList<UndoAlternative>();
 		
@@ -305,6 +310,14 @@ public class SelectiveUndoEngine {
 
 		return buffer.toString();
 	}
+	
+	public void doSelectiveUndoWithParams(SelectiveUndoParams params) {
+		if (params == null) {
+			throw new IllegalArgumentException();
+		}
+		
+		doSelectiveUndoWithChunks(params.getChunks(), params.getDocument(), params.getAlternativeChoices());
+	}
 
 	List<Segment> getAllSegments(
 			RuntimeDC[] runtimeDocChanges) {
@@ -316,7 +329,26 @@ public class SelectiveUndoEngine {
 		return segments;
 	}
 	
-	List<Chunk> determineChunks(List<Segment> segments) {
+	public List<Chunk> determineChunksWithRuntimeDCs(List<RuntimeDC> runtimeDCs) {
+		return determineChunksWithRuntimeDCs(runtimeDCs.toArray(new RuntimeDC[runtimeDCs.size()]));
+	}
+	
+	public List<Chunk> determineChunksWithRuntimeDCs(RuntimeDC[] runtimeDCs) {
+		if (runtimeDCs == null) {
+			throw new IllegalArgumentException();
+		}
+		
+		// Sort the runtimeDocChanges by their original command IDs.
+		sortRuntimeDocumentChanges(runtimeDCs);
+		
+		// Get all the segments.
+		List<Segment> segments = getAllSegments(runtimeDCs);
+		
+		// Determine Chunks.
+		return determineChunks(segments);
+	}
+	
+	public List<Chunk> determineChunks(List<Segment> segments) {
 		// Sort! Collections.sort is guaranteed to be *stable*.
 		Collections.sort(segments, Segment.getLocationComparator());
 		
@@ -380,7 +412,6 @@ public class SelectiveUndoEngine {
 			 
 			    try {
 			        IDE.openEditorOnFileStore( page, fileStore );
-//			        while ( RuntimeHistoryManager.getInstance().getCurrentFileKey() != key );
 			    	
 					// 2. Perform selective undo.
 			        doSelectiveUndo(runtimeDCs);
@@ -392,5 +423,29 @@ public class SelectiveUndoEngine {
 			}
 		}
 	}
+	
+	public void doSelectiveUndoOnMultipleFilesWithChoices(
+			Map<FileKey, SelectiveUndoParams> params) {
+		for (FileKey key : params.keySet()) {
+			// 1. Open the file in the editor.
+			File fileToOpen = new File(key.getFilePath());
 			
+			if (fileToOpen.exists() && fileToOpen.isFile()) {
+			    IFileStore fileStore = EFS.getLocalFileSystem().getStore(fileToOpen.toURI());
+			    IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
+			 
+			    try {
+			        IDE.openEditorOnFileStore( page, fileStore );
+			    	
+					// 2. Perform selective undo.
+			        doSelectiveUndoWithParams(params.get(key));
+			    } catch ( PartInitException e ) {
+			    	e.printStackTrace();
+				}
+			} else {
+			    //Do something if the file does not exist
+			}
+		}
+	}
+	
 }

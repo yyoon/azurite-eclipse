@@ -10,8 +10,8 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.part.ViewPart;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
-import edu.cmu.scs.azurite.compare.CodeHistoryCompareLabelProvider;
-import edu.cmu.scs.azurite.jface.widgets.CodeHistoryDiffViewer;
+import edu.cmu.scs.azurite.compare.AzuriteCompareLabelProvider;
+import edu.cmu.scs.azurite.jface.viewers.CodeHistoryDiffViewer;
 import edu.cmu.scs.azurite.model.FileKey;
 
 public class CodeHistoryDiffViewPart extends ViewPart {
@@ -69,7 +69,7 @@ public class CodeHistoryDiffViewPart extends ViewPart {
 	private CompareConfiguration createConfiguration() {
 		CompareConfiguration configuration = new CompareConfiguration();
 		configuration
-				.setDefaultLabelProvider(new CodeHistoryCompareLabelProvider());
+				.setDefaultLabelProvider(new AzuriteCompareLabelProvider());
 		return configuration;
 	}
 	

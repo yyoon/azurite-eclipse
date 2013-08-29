@@ -23,7 +23,7 @@ public class AlternativeButton extends Composite {
 	
 	private static final int THICK_BORDER_WIDTH = 5;
 	private static final int THIN_BORDER_WIDTH = 1;
-	private static final int MARGIN_WIDTH = 10;
+	private static final int MARGIN_WIDTH = 3;
 	
 	private boolean mSelected;
 	

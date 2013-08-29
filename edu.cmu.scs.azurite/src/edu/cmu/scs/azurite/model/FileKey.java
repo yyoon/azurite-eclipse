@@ -25,6 +25,11 @@ public class FileKey {
 	public String getFilePath() {
 		return mFilePath == null ? null : mFilePath.toString();
 	}
+	
+	public String getFileNameOnly() {
+		String filePath = getFilePath();
+		return filePath == null ? null : Paths.get(filePath).getFileName().toString();
+	}
 
 	@Override
 	public int hashCode() {

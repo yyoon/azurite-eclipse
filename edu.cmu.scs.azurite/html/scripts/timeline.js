@@ -2,7 +2,7 @@
 /*global d3, azurite */
 
 /* Things to be called from Azurite */
-/*exported setStartTimestamp, updateOperation, getRightmostTimestamp, showContextMenu, addSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarker, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile */
+/*exported setStartTimestamp, updateOperation, getRightmostTimestamp, showContextMenu, addSelectionsByIds, removeSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarker, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile */
 
 /* Things to be called manually when debugging */
 /*exported test */
@@ -1148,6 +1148,7 @@ function initMouseDownHandler() {
 			if (!global.isCtrlDown) {
 				global.selected = [];
 				svg.subRects.selectAll('rect.highlight_rect').remove();
+				azurite.notifySelectionChanged();
 			}
 
 			d3.select('.selection_box').attr('x', mouseX).attr('y', mouseY);
@@ -1343,6 +1344,9 @@ function initMouseUpHandler() {
 					// showContextMenu(e, '#cmenu_main');
 					cmenu.typeName = 'main_multi';
 				}
+                else {
+                    cmenu.typeName = 'main_nothing';
+                }
 			}
 			else if (cursorInArea(mouseX, mouseY, global.fileArea)) {
 				var numVisibleFiles = global.getVisibleFiles().length + global.translateY;
@@ -1460,6 +1464,20 @@ function addSelectionsByIds(sids, ids, clearPreviousSelection) {
 	updateHighlight();
 }
 
+function removeSelectionsByIds(sids, ids) {
+    for ( var i = 0; i < ids.length; ++i) {
+        var sid = sids[i];
+        var id = ids[i];
+        
+        var index = indexOfSelected(sid, id);
+        if (index !== -1) {
+            global.selected.splice(index, 1);
+        }
+    }
+    
+    updateHighlight();
+}
+
 function addSelections(x1, y1, x2, y2, toggle) {
 	var rect = svg.main.node().createSVGRect();
 	rect.x = x1;
@@ -1529,6 +1547,8 @@ function updateHighlight() {
 			.attr('width', refBBox.width + HIGHLIGHT_WIDTH * 2 / global.scaleX)
 			.attr('height', refBBox.height + HIGHLIGHT_WIDTH * 2 / global.scaleY);
 	}
+	
+	azurite.notifySelectionChanged();
 }
 
 /******************************************************************
@@ -1597,15 +1617,21 @@ function showPageDown() {
 function undo() {
 	// close context menu if there is any
 	// hideContextMenu();
+	var result = getStandardRectSelection();
+
+	if (result.length > 0) {
+		azurite.selectiveUndo(result);
+	}
+}
+
+function getStandardRectSelection() {
 	var result = [];
 
 	for ( var i = 0; i < global.selected.length; ++i) {
 		result.push([ global.selected[i].sid, global.selected[i].id ]);
 	}
-
-	if (result.length > 0) {
-		azurite.selectiveUndo(result);
-	}
+	
+	return result;
 }
 
 function undoEverythingAfterSelection() {

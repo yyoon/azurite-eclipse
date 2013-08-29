@@ -8,17 +8,18 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.runtime.FileLocator;
+import org.eclipse.core.runtime.ListenerList;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IMenuListener;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.Separator;
+import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.text.ITextViewerExtension5;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.SWTException;
@@ -45,6 +46,7 @@ import edu.cmu.scs.azurite.model.OperationId;
 import edu.cmu.scs.azurite.model.RuntimeDCListener;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
+import edu.cmu.scs.azurite.plugin.Activator;
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 import edu.cmu.scs.fluorite.commands.Delete;
 import edu.cmu.scs.fluorite.commands.FileOpenCommand;
@@ -56,8 +58,6 @@ import edu.cmu.scs.fluorite.model.Events;
 import edu.cmu.scs.fluorite.util.Utilities;
 
 public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
-
-	private Browser browser;
 	
 	private static TimelineViewPart me = null;
 	private static String BROWSER_FUNC_PREFIX = "__AZURITE__";
@@ -70,6 +70,29 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 	 */
 	public static TimelineViewPart getInstance() {
 		return me;
+	}
+
+	private Browser browser;
+	private ListenerList rectSelectionListenerList;
+	
+	public TimelineViewPart() {
+		super();
+		
+		this.rectSelectionListenerList = new ListenerList();
+	}
+	
+	public void addRectSelectionListener(RectSelectionListener listener) {
+		this.rectSelectionListenerList.add(listener);
+	}
+	
+	public void removeRectSelectionListener(RectSelectionListener listener) {
+		this.rectSelectionListenerList.remove(listener);
+	}
+	
+	public void fireRectSelectionChanged() {
+		for (Object listenerObj : this.rectSelectionListenerList.getListeners()) {
+			((RectSelectionListener)listenerObj).rectSelectionChanged();
+		}
 	}
 	
 	@Override
@@ -104,6 +127,12 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 		final Action selectiveUndoAction = new CommandAction(
 				"Selective Undo",
 				"edu.cmu.scs.azurite.ui.commands.selectiveUndoCommand");
+		
+		ImageDescriptor isuIcon = Activator.getImageDescriptor("icons/undo_in_region.png");
+		final Action interactiveSelectiveUndoAction = new CommandAction(
+				"Interactive Selective Undo",
+				"edu.cmu.scs.azurite.ui.commands.interactiveSelectiveUndoCommand");
+		interactiveSelectiveUndoAction.setImageDescriptor(isuIcon);
 		
 		final Action undoEverythingAfterSelectionAction = new CommandAction(
 				"Undo Everything After Selection",
@@ -153,8 +182,14 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 					String menuType = browser.evaluate("return cmenu.typeName;").toString();
 					
 					switch (menuType) {
+						case "main_nothing": {
+							manager.add(interactiveSelectiveUndoAction);
+							break;
+						}
+						
 						case "main_single": {
 							manager.add(selectiveUndoAction);
+							manager.add(interactiveSelectiveUndoAction);
 							manager.add(undoEverythingAfterSelectionAction);
 							manager.add(jumpToTheAffectedCodeAction);
 							break;
@@ -162,6 +197,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 							
 						case "main_multi": {
 							manager.add(selectiveUndoAction);
+							manager.add(interactiveSelectiveUndoAction);
 							manager.add(undoEverythingAfterSelectionAction);
 							manager.add(showAllFilesEditedTogetherAction);
 							break;
@@ -212,6 +248,8 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 		new MarkerMoveFunction(browser, BROWSER_FUNC_PREFIX + "markerMove");
 		
 		new EclipseCommandFunction(browser, BROWSER_FUNC_PREFIX + "eclipseCommand");
+		
+		new NotifySelectionChangedFunction(browser, BROWSER_FUNC_PREFIX + "notifySelectionChanged");
 	}
 
 	@Override
@@ -242,35 +280,11 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 			}
 			
 			try {
-				Object[] selected = (Object[])arguments[0];
+				// Convert everything into operation id.
+				List<OperationId> ids = translateSelection(arguments[0]);
 				
-				// Convert everything into integer.
-				List<OperationId> ids = new ArrayList<OperationId>();
-				for (Object element : selected) {
-					if (!(element instanceof Object[])) { continue; }
-					
-					Object[] idComponents = (Object[])element;
-					if (idComponents.length == 2 &&
-							idComponents[0] instanceof Number &&
-							idComponents[1] instanceof Number) {
-						Number sid = (Number)idComponents[0];
-						Number id = (Number)idComponents[1];
-						
-						ids.add(new OperationId(sid.longValue(), id.longValue()));
-					}
-				}
-				
-				RuntimeHistoryManager history = RuntimeHistoryManager.getInstance();
-				
-				// Filter only the files that contain one or more selected rectangles.
-				Set<FileKey> fileKeys = history.getFileKeys();
-				Map<FileKey, List<RuntimeDC>> params = new HashMap<FileKey, List<RuntimeDC>>();
-				for (FileKey key : fileKeys) {
-					List<RuntimeDC> filteredIds = history.filterDocumentChangesByIds(key, ids);
-					if (filteredIds.size() == 0) { continue; }
-					
-					params.put(key, filteredIds);
-				}
+				Map<FileKey, List<RuntimeDC>> params = RuntimeHistoryManager
+						.getInstance().extractFileDCMapFromOperationIds(ids);
 				
 				SelectiveUndoEngine.getInstance()
 						.doSelectiveUndoOnMultipleFiles(params);
@@ -531,6 +545,26 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 		}
 	}
 	
+	class NotifySelectionChangedFunction extends BrowserFunction {
+
+		public NotifySelectionChangedFunction(Browser browser, String name) {
+			super(browser, name);
+		}
+
+		@Override
+		public Object function(Object[] arguments) {
+			try {
+				fireRectSelectionChanged();
+			}
+			catch (Exception e) {
+				e.printStackTrace();
+			}
+			
+			return "ok";
+		}
+		
+	}
+	
 	@Override
 	public void activeFileChanged(String projectName, String filePath) {
 		if (projectName == null || filePath == null) {
@@ -657,8 +691,29 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 	 */
 	public void addSelection(List<OperationId> ids, boolean clearSelection) {
 		StringBuffer buffer = new StringBuffer();
-		buffer.append("addSelectionsByIds([");
+		buffer.append("addSelectionsByIds(");
 		
+		getJavaScriptListFromOperationIds(buffer, ids);
+		
+		buffer.append(", " + Boolean.toString(clearSelection) + ");");
+		
+		browser.execute(buffer.toString());
+	}
+	
+	public void removeSelection(List<OperationId> ids) {
+		StringBuffer buffer = new StringBuffer();
+		buffer.append("removeSelectionsByIds(");
+		
+		getJavaScriptListFromOperationIds(buffer, ids);
+		
+		buffer.append(");");
+		
+		browser.execute(buffer.toString());
+	}
+
+	private void getJavaScriptListFromOperationIds(StringBuffer buffer,
+			List<OperationId> ids) {
+		buffer.append("[");
 		Iterator<OperationId> it;
 		
 		it = ids.iterator();
@@ -679,9 +734,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 			}
 		}
 		
-		buffer.append("], " + Boolean.toString(clearSelection) + ");");
-		
-		browser.execute(buffer.toString());
+		buffer.append("]");
 	}
 	
 	public void activateFirebugLite() {
@@ -743,6 +796,31 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 		} catch (SWTException e) {
 			return 0;
 		}
+	}
+	
+	public List<OperationId> getRectSelection() {
+		Object selected = evaluateJSCode("return getStandardRectSelection();");
+		return translateSelection(selected);
+	}
+
+	public static List<OperationId> translateSelection(Object selected) {
+		Object[] selectedArray = (Object[]) selected;
+		
+		List<OperationId> ids = new ArrayList<OperationId>();
+		for (Object element : selectedArray) {
+			if (!(element instanceof Object[])) { continue; }
+			
+			Object[] idComponents = (Object[])element;
+			if (idComponents.length == 2 &&
+					idComponents[0] instanceof Number &&
+					idComponents[1] instanceof Number) {
+				Number sid = (Number)idComponents[0];
+				Number id = (Number)idComponents[1];
+				
+				ids.add(new OperationId(sid.longValue(), id.longValue()));
+			}
+		}
+		return ids;
 	}
 	
 }

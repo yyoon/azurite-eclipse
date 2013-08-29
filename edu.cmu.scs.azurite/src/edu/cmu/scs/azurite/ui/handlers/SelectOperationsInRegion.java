@@ -1,6 +1,5 @@
 package edu.cmu.scs.azurite.ui.handlers;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.core.commands.AbstractHandler;
@@ -13,7 +12,6 @@ import org.eclipse.ui.PlatformUI;
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.model.OperationId;
 import edu.cmu.scs.azurite.views.TimelineViewPart;
-import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 
 public class SelectOperationsInRegion extends AbstractHandler {
 
@@ -25,11 +23,7 @@ public class SelectOperationsInRegion extends AbstractHandler {
 		}
 		
 		// Extract the ids.
-		List<OperationId> ids = new ArrayList<OperationId>();
-		for (RuntimeDC dc : dcs) {
-			BaseDocumentChangeEvent original = dc.getOriginal();
-			ids.add(new OperationId(original.getSessionId(), original.getCommandIndex()));
-		}
+		List<OperationId> ids = OperationId.getOperationIdsFromRuntimeDCs(dcs);
 		
 		if (ids.isEmpty()) {
 			Shell shell = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell();

@@ -394,7 +394,11 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 	}
 	
 	public List<RuntimeDC> filterDocumentChangesByRegion(final int startOffset, final int endOffset) {
-		return filterDocumentChanges(new IRuntimeDCFilter() {
+		return filterDocumentChangesByRegion(getCurrentFileKey(), startOffset, endOffset);
+	}
+	
+	public List<RuntimeDC> filterDocumentChangesByRegion(FileKey key, final int startOffset, final int endOffset) {
+		return filterDocumentChanges(key, new IRuntimeDCFilter() {
 			@Override
 			public boolean filter(RuntimeDC runtimeDC) {
 				List<Segment> segments = runtimeDC.getAllSegments();
@@ -493,6 +497,20 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		// Notify the listeners (mainly, Timeline View)
 		// Timeline view only needs the events newly added.
 		firePastLogsReadEvent(listEvents);
+	}
+
+	public Map<FileKey, List<RuntimeDC>> extractFileDCMapFromOperationIds(
+			List<OperationId> ids) {
+		// Filter only the files that contain one or more selected rectangles.
+		Set<FileKey> fileKeys = getFileKeys();
+		Map<FileKey, List<RuntimeDC>> params = new HashMap<FileKey, List<RuntimeDC>>();
+		for (FileKey key : fileKeys) {
+			List<RuntimeDC> filteredIds = filterDocumentChangesByIds(key, ids);
+			if (filteredIds.size() == 0) { continue; }
+			
+			params.put(key, filteredIds);
+		}
+		return params;
 	}
 	
 }

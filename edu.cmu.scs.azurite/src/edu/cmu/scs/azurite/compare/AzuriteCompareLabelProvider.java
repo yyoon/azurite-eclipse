@@ -1,10 +1,12 @@
 package edu.cmu.scs.azurite.compare;
 
 import org.eclipse.compare.ICompareInputLabelProvider;
+import org.eclipse.compare.ITypedElement;
+import org.eclipse.compare.structuremergeviewer.ICompareInput;
 import org.eclipse.jface.viewers.ILabelProviderListener;
 import org.eclipse.swt.graphics.Image;
 
-public class CodeHistoryCompareLabelProvider implements
+public class AzuriteCompareLabelProvider implements
 		ICompareInputLabelProvider {
 
 	@Override
@@ -22,7 +24,7 @@ public class CodeHistoryCompareLabelProvider implements
 
 	@Override
 	public String getText(Object element) {
-		return "Partial Code History Compare";
+		return "Azurite Compare";
 	}
 
 	@Override
@@ -36,18 +38,29 @@ public class CodeHistoryCompareLabelProvider implements
 
 	@Override
 	public String getAncestorLabel(Object input) {
+		if (input instanceof ICompareInput) {
+			ITypedElement ancestor = ((ICompareInput)input).getAncestor();
+			return ancestor == null ? null : ancestor.getName();
+		}
+		
 		return null;
 	}
 
 	@Override
 	public Image getAncestorImage(Object input) {
+		if (input instanceof ICompareInput) {
+			ITypedElement ancestor = ((ICompareInput)input).getAncestor();
+			return ancestor == null ? null : ancestor.getImage();
+		}
+		
 		return null;
 	}
 
 	@Override
 	public String getLeftLabel(Object input) {
-		if (input instanceof CodeHistoryCompareInput) {
-			return ((CodeHistoryCompareInput)input).getLeft().getName();
+		if (input instanceof ICompareInput) {
+			ITypedElement left = ((ICompareInput)input).getLeft();
+			return left == null ? null : left.getName();
 		}
 		
 		return null;
@@ -55,8 +68,9 @@ public class CodeHistoryCompareLabelProvider implements
 
 	@Override
 	public Image getLeftImage(Object input) {
-		if (input instanceof CodeHistoryCompareInput) {
-			return ((CodeHistoryCompareInput)input).getLeft().getImage();
+		if (input instanceof ICompareInput) {
+			ITypedElement left = ((ICompareInput)input).getLeft();
+			return left == null ? null : left.getImage();
 		}
 		
 		return null;
@@ -64,8 +78,9 @@ public class CodeHistoryCompareLabelProvider implements
 
 	@Override
 	public String getRightLabel(Object input) {
-		if (input instanceof CodeHistoryCompareInput) {
-			return ((CodeHistoryCompareInput)input).getRight().getName();
+		if (input instanceof ICompareInput) {
+			ITypedElement right = ((ICompareInput)input).getRight();
+			return right == null ? null : right.getName();
 		}
 		
 		return null;
@@ -73,8 +88,9 @@ public class CodeHistoryCompareLabelProvider implements
 
 	@Override
 	public Image getRightImage(Object input) {
-		if (input instanceof CodeHistoryCompareInput) {
-			return ((CodeHistoryCompareInput)input).getRight().getImage();
+		if (input instanceof ICompareInput) {
+			ITypedElement right = ((ICompareInput)input).getRight();
+			return right == null ? null : right.getImage();
 		}
 		
 		return null;

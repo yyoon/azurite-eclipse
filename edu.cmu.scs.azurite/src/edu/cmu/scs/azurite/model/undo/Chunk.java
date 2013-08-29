@@ -3,6 +3,7 @@ package edu.cmu.scs.azurite.model.undo;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -12,6 +13,7 @@ import java.util.TreeSet;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.commands.runtime.Segment;
+import edu.cmu.scs.azurite.model.FileKey;
 
 /**
  * @author yyoon1
@@ -200,5 +202,45 @@ public class Chunk extends ArrayList<Segment> {
 		}
 		
 		return copyChunk;
+	}
+
+	// Assume that all the segments within this chunk came from a same file.
+	public FileKey getBelongsTo() {
+		if (isEmpty()) {
+			throw new IllegalStateException();
+		}
+		
+		return this.get(0).getOwner().getBelongsTo();
+	}
+	
+	private static Comparator<Chunk> locationComparator;
+	
+	public static Comparator<Chunk> getLocationComparator() {
+		if (locationComparator == null) {
+			locationComparator = new Comparator<Chunk>() {
+				
+				@Override
+				public int compare(Chunk lhs, Chunk rhs) {
+					if (lhs.getStartOffset() < rhs.getStartOffset()) {
+						return -1;
+					}
+					else if (lhs.getStartOffset() > rhs.getStartOffset()) {
+						return 1;
+					}
+					else if (lhs.getEndOffset() < rhs.getEndOffset()) {
+						return -1;
+					}
+					else if (lhs.getEndOffset() > rhs.getEndOffset()) {
+						return 1;
+					}
+					
+					// TODO maybe sompare the session ids, command indices?
+					
+					return 0;
+				}
+			};
+		}
+		
+		return locationComparator;
 	}
 }
