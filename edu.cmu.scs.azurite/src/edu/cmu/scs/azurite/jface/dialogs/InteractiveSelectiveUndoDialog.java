@@ -651,7 +651,8 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		final MenuItem testMenu = new MenuItem(mMenuBar, SWT.CASCADE);
 		testMenu.setText("Test");
 		
-		getShell().setMenuBar(mMenuBar);
+		// Uncomment the following line to restore the menu bar.
+//		getShell().setMenuBar(mMenuBar);
 	}
 
 	private Composite createMainArea(Composite parent) {
