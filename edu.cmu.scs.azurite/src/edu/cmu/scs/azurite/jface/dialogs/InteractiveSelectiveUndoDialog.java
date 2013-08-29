@@ -98,7 +98,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	
 	private static final String TEXT = "Azurite - Interactive Selective Undo";
 	private static final String TITLE = "Interactive Selective Undo";
-	private static final String DEFAULT_MESSAGE = "The preview will be updated as you select/deselect rectangles from the timeline.\nNOTE: Please do not edit source code while this dialog is open.";
+	private static final String DEFAULT_MESSAGE = "The preview will be updated as you select/deselect rectangles from the timeline.";
 	
 	private static final String CHUNKS_TITLE = "Changes to be performed";
 	private static final String ALTERNATIVES_TITLE = "Choose one of the alternatives below to resolve the conflict.";
