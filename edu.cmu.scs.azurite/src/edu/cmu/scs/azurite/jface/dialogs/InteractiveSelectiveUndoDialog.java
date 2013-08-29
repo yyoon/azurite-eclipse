@@ -572,6 +572,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	// Menu
 	private Menu mMenuBar;
 	private MenuManager mLeftSourceViewerMenuMgr;
+	private MenuManager mTreeViewerMenuMgr;
 	// ----------------------------------------
 	
 	// Sash Forms
@@ -735,6 +736,62 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 				}
 			}
 		});
+		
+		// Setup the menu manager for the chunks tree viewer.
+		mTreeViewerMenuMgr = new MenuManager();
+		mTreeViewerMenuMgr.setRemoveAllWhenShown(true);
+		mTreeViewerMenuMgr.addMenuListener(new IMenuListener() {
+			@Override
+			public void menuAboutToShow(IMenuManager manager) {
+				IStructuredSelection treeSel = (IStructuredSelection) mChunksTreeViewer.getSelection();
+				if (treeSel != null && treeSel.size() > 0) {
+					final Object selElem = treeSel.getFirstElement();
+					if (selElem instanceof TopLevelElement) {
+						manager.add(new Action("Remove this file from the selection (Keep it unchanged)") {
+							@Override
+							public void run() {
+								TopLevelElement topElem = (TopLevelElement) selElem;
+								List<RuntimeDC> runtimeDCs = new ArrayList<RuntimeDC>();
+								
+								for (Chunk chunk : topElem.getChunks()) {
+									runtimeDCs.addAll(chunk.getInvolvedChanges());
+								}
+								
+								// Get the operation ids.
+								List<OperationId> ids = OperationId.getOperationIdsFromRuntimeDCs(runtimeDCs);
+								
+								// Tell the timeline to REMOVE these from the selection.
+								TimelineViewPart timeline = TimelineViewPart.getInstance();
+								if (timeline != null) {
+									timeline.removeSelection(ids);
+								}
+							}
+						});
+					}
+					else if (selElem instanceof ChunkLevelElement) {
+						manager.add(new Action("Remove this chunk from the selection (Keep it unchanged)") {
+							@Override
+							public void run() {
+								ChunkLevelElement chunkElem = (ChunkLevelElement) selElem;
+								List<RuntimeDC> runtimeDCs = chunkElem.getChunk().getInvolvedChanges();
+								
+								// Get the operation ids.
+								List<OperationId> ids = OperationId.getOperationIdsFromRuntimeDCs(runtimeDCs);
+								
+								// Tell the timeline to REMOVE these from the selection.
+								TimelineViewPart timeline = TimelineViewPart.getInstance();
+								if (timeline != null) {
+									timeline.removeSelection(ids);
+								}
+							}
+						});
+					}
+				}
+			}
+		});
+		
+		Control treeControl = mChunksTreeViewer.getControl();
+		treeControl.setMenu(mTreeViewerMenuMgr.createContextMenu(treeControl));
 	}
 
 	private Composite createMainArea(Composite parent) {
