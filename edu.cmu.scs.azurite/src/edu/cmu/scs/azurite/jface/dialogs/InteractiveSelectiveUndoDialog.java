@@ -1184,7 +1184,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		int afterContextLength = contextEndOffset - (start + length);
 		
 		DocumentRangeCompareItem leftItem = new DocumentRangeCompareItem(
-				"Original Source",
+				"Current Source",
 				originalDoc,
 				contextStartOffset,
 				beforeContextLength + length + afterContextLength,
