@@ -1344,9 +1344,9 @@ function initMouseUpHandler() {
 					// showContextMenu(e, '#cmenu_main');
 					cmenu.typeName = 'main_multi';
 				}
-                else {
-                    cmenu.typeName = 'main_nothing';
-                }
+				else {
+					cmenu.typeName = 'main_nothing';
+				}
 			}
 			else if (cursorInArea(mouseX, mouseY, global.fileArea)) {
 				var numVisibleFiles = global.getVisibleFiles().length + global.translateY;
@@ -1465,17 +1465,17 @@ function addSelectionsByIds(sids, ids, clearPreviousSelection) {
 }
 
 function removeSelectionsByIds(sids, ids) {
-    for ( var i = 0; i < ids.length; ++i) {
-        var sid = sids[i];
-        var id = ids[i];
-        
-        var index = indexOfSelected(sid, id);
-        if (index !== -1) {
-            global.selected.splice(index, 1);
-        }
-    }
-    
-    updateHighlight();
+	for ( var i = 0; i < ids.length; ++i) {
+		var sid = sids[i];
+		var id = ids[i];
+		
+		var index = indexOfSelected(sid, id);
+		if (index !== -1) {
+			global.selected.splice(index, 1);
+		}
+	}
+	
+	updateHighlight();
 }
 
 function addSelections(x1, y1, x2, y2, toggle) {
