@@ -577,18 +577,8 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current
 			
 			var x = 0;
 			if (rectsInSession.length > 0) {
-				var lastRect = rectsInSession[rectsInSession.length - 1];
-				var bounds = lastRect.getBBox();
-				
-				// see if these rectangles are supposed to be overlapping.
-				var lastRectAbsX = rectDraw.xFunc(lastRect.__data__);
-				var curRectAbsX = rectDraw.xFunc(newOp);
-				if (curRectAbsX - lastRectAbsX < bounds.width) {
-					x = x.bounds.x + curRectAbsX - lastRectAbsX;
-				}
-				else {
-					x = bounds.x + bounds.width;
-				}
+				var bounds = rectsInSession[rectsInSession.length - 1].getBBox();
+				x = bounds.x + bounds.width;
 			}
 			
 			rectToAppend.attr('x', x);
@@ -724,21 +714,9 @@ function layout(newLayout) {
 	var compactXFunc = function (d) {
 		if (!d.isVisible()) { return 0; }
 		
-		var prevTempX = global.tempX;
-		var width = this.getBBox().width;
-		
-		var prevAbsX = global.prevAbsX;
-		global.prevAbsX = rectDraw.xFunc(d);
-		
-		if (global.prevAbsX - prevAbsX < width) {
-			global.prevTempX = global.prevTempX + global.prevAbsX - prevAbsX;
-		}
-		else {
-			global.prevTempX = prevTempX;
-		}
-		global.tempX = global.prevTempX + width;
-		
-		return global.prevTempX;
+		var temp = global.tempX;
+		global.tempX += this.getBBox().width;
+		return temp;
 	};
 	
 	for (i = 0; i < global.sessions.length; ++i) {
@@ -752,8 +730,6 @@ function layout(newLayout) {
 		
 		// Apply different layout function, depending on the mode.
 		global.tempX = 0;
-		global.prevTempX = 0;
-		global.prevAbsX = 0;
 		
 		if (global.layout === LayoutEnum.COMPACT) {
 			d3.selectAll(rects).attr('x', compactXFunc);
