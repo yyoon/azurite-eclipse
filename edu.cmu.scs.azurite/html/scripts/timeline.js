@@ -1180,6 +1180,8 @@ function initMouseDownHandler() {
 					return;
 				}
 			}());
+			
+			return;
 		}
 		// VScroll
 		else if (cursorInArea(mouseX, mouseY, global.vscrollArea)) {
@@ -1206,6 +1208,8 @@ function initMouseDownHandler() {
 					return;
 				}
 			}());
+			
+			return;
 		}
 		// Check if the marker is clicked
 		else {
