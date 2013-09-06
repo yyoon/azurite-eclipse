@@ -259,6 +259,9 @@ public class CodeHistoryDiffViewer extends Composite {
 			
 			// Launch the dialog.
 			InteractiveSelectiveUndoDialog.launch();
+			
+			// close the parent view.
+			closeParentView();
 		}
 	}
 	
@@ -295,6 +298,10 @@ public class CodeHistoryDiffViewer extends Composite {
 		
 		// After this, the view itself will be out of sync.
 		// TODO Keep the view in sync and don't close.
+		closeParentView();
+	}
+
+	public void closeParentView() {
 		IWorkbenchWindow window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
 		if (window != null) {
 			IWorkbenchPage page = window.getActivePage();
