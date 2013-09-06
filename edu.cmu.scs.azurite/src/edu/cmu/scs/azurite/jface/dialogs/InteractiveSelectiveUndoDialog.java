@@ -61,6 +61,7 @@ import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MenuItem;
@@ -123,6 +124,18 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	private static InteractiveSelectiveUndoDialog instance = null;
 	public static InteractiveSelectiveUndoDialog getInstance() {
 		return instance;
+	}
+	
+	public static void launch() {
+		if (getInstance() != null) {
+			getInstance().getShell().forceActive();
+		}
+		else {
+			final Shell parentShell = Display.getDefault().getActiveShell();
+			InteractiveSelectiveUndoDialog isuDialog = new InteractiveSelectiveUndoDialog(parentShell);
+			isuDialog.create();
+			isuDialog.open();
+		}
 	}
 	
 	private class KeepSelectedCodeUnchanged extends Action {

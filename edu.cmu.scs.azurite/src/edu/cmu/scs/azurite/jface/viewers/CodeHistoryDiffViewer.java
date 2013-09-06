@@ -38,7 +38,9 @@ import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.commands.runtime.Segment;
 import edu.cmu.scs.azurite.compare.AzuriteCompareInput;
 import edu.cmu.scs.azurite.compare.SimpleCompareItem;
+import edu.cmu.scs.azurite.jface.dialogs.InteractiveSelectiveUndoDialog;
 import edu.cmu.scs.azurite.model.FileKey;
+import edu.cmu.scs.azurite.model.OperationId;
 import edu.cmu.scs.azurite.model.undo.Chunk;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
 import edu.cmu.scs.azurite.plugin.Activator;
@@ -72,6 +74,8 @@ public class CodeHistoryDiffViewer extends Composite {
 	private ActionContributionItem mRevertAction;
 	private ActionContributionItem mPrevAction;
 	private ActionContributionItem mNextAction;
+	
+	private ActionContributionItem mInteractiveSelectiveUndoAction;
 
 	public CodeHistoryDiffViewer(Composite parent, int style) {
 		super(parent, style);
@@ -149,6 +153,16 @@ public class CodeHistoryDiffViewer extends Composite {
 				});
 		mNextAction.setId("historyDiffNext");
 		mNextAction.setMode(ActionContributionItem.MODE_FORCE_TEXT);
+		
+		mInteractiveSelectiveUndoAction = new ActionContributionItem(
+				new Action("Interactive Selective Undo", Activator.getImageDescriptor("icons/undo_in_region.png")) {
+						@Override
+						public void run() {
+							launchInteractiveSelectiveUndoWithCurrentVersion();
+						}
+				});
+		mInteractiveSelectiveUndoAction.setId("historyDiffLaunchISU");
+		mInteractiveSelectiveUndoAction.setMode(ActionContributionItem.MODE_FORCE_TEXT);
 	}
 
 	private CompareViewerSwitchingPane createCompareView(Composite parent) {
@@ -160,6 +174,7 @@ public class CodeHistoryDiffViewer extends Composite {
 				
 				ToolBarManager tbm = CompareViewerSwitchingPane.getToolBarManager(this);
 				String navGroupId = "historyDiffNav";
+				String commandGroupId = "historyDiffCmd";
 				
 				// Check if the actions are added or not.
 				boolean added = false;
@@ -174,6 +189,9 @@ public class CodeHistoryDiffViewer extends Composite {
 				
 				if (!added) {
 					tbm.removeAll();
+					
+					tbm.add(mInteractiveSelectiveUndoAction);
+					tbm.add(new Separator(commandGroupId));
 					
 					tbm.add(mRevertAction);
 					tbm.add(new Separator(navGroupId));
@@ -224,6 +242,23 @@ public class CodeHistoryDiffViewer extends Composite {
 				TimelineViewPart.getInstance().showMarker(
 						dc.getOriginal().getSessionId() + dc.getOriginal().getTimestamp());
 			}
+		}
+	}
+	
+	private void launchInteractiveSelectiveUndoWithCurrentVersion() {
+		List<RuntimeDC> subList = mInvolvedDCs.subList(getCurrentVersion(), mInvolvedDCs.size());
+		
+		// Select the rectangles with this subList.
+		TimelineViewPart timeline = TimelineViewPart.getInstance();
+		if (timeline != null) {
+			// Extract the ids.
+			List<OperationId> ids = OperationId.getOperationIdsFromRuntimeDCs(subList);
+			
+			// Select.
+			timeline.addSelection(ids, true);
+			
+			// Launch the dialog.
+			InteractiveSelectiveUndoDialog.launch();
 		}
 	}
 	
