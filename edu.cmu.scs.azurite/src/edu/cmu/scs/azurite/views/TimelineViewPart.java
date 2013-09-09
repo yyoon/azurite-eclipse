@@ -125,7 +125,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 
 	private void setupContextMenu() {
 		// Create the actions.
-		Map<String, String> paramMap = new HashMap<String, String>();
+		final Map<String, String> paramMap = new HashMap<String, String>();
 		
 		final Action selectiveUndoAction = new CommandAction(
 				"Selective Undo",
@@ -215,6 +215,30 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 							
 						case "file_out": {
 							manager.add(showAllFilesAction);
+							break;
+						}
+						
+						case "annotation": {
+							long sid = ((Number) browser.evaluate("return global.lastAnnotation.sid;")).longValue();
+							long id = ((Number) browser.evaluate("return global.lastAnnotation.id;")).longValue();
+							String oidString = Long.toString(sid) + "_" + Long.toString(id);
+							
+							paramMap.clear();
+							paramMap.put("edu.cmu.scs.azurite.ui.commands.undoAllFilesToThisPoint.annotationId", oidString);
+							Action undoAllFilesToThisPointAction = new CommandAction(
+									"Undo All Files to This Point",
+									"edu.cmu.scs.azurite.ui.commands.undoAllFilesToThisPoint",
+									paramMap);
+							
+							paramMap.clear();
+							paramMap.put("edu.cmu.scs.azurite.ui.commands.undoCurrentFileToThisPoint.annotationId", oidString);
+							Action undoCurrentFileToThisPointAction = new CommandAction(
+									"Undo Current File to This Point",
+									"edu.cmu.scs.azurite.ui.commands.undoCurrentFileToThisPoint",
+									paramMap);
+							
+							manager.add(undoAllFilesToThisPointAction);
+							manager.add(undoCurrentFileToThisPointAction);
 							break;
 						}
 					}
@@ -612,7 +636,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 			comment = "unnamed";
 		}
 		
-		String executeStr = String.format("addAnnotation(%1$d, %2$d, %3$d, %4$s);",
+		String executeStr = String.format("addAnnotation(%1$d, %2$d, %3$d, \'%4$s\');",
 				annotate.getSessionId(),
 				annotate.getCommandIndex(),
 				annotate.getTimestamp(),

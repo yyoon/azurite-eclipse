@@ -539,6 +539,26 @@
             id="edu.cmu.scs.azurite.ui.commands.interactiveSelectiveUndoCommand"
             name="Interactive Selective Undo">
       </command>
+      <command
+            defaultHandler="edu.cmu.scs.azurite.ui.handlers.UndoAllFilesToThisPointHandler"
+            id="edu.cmu.scs.azurite.ui.commands.undoAllFilesToThisPoint"
+            name="Undo All Files to This Point">
+         <commandParameter
+               id="edu.cmu.scs.azurite.ui.commands.undoAllFilesToThisPoint.annotationId"
+               name="ID of the Annotation"
+               optional="false">
+         </commandParameter>
+      </command>
+      <command
+            defaultHandler="edu.cmu.scs.azurite.ui.handlers.UndoCurrentFileToThisPointHandler"
+            id="edu.cmu.scs.azurite.ui.commands.undoCurrentFileToThisPoint"
+            name="Undo Current File to This Point">
+         <commandParameter
+               id="edu.cmu.scs.azurite.ui.commands.undoCurrentFileToThisPoint.annotationId"
+               name="ID of the Annotation"
+               optional="false">
+         </commandParameter>
+      </command>
    </extension>
    <extension
          point="org.eclipse.ui.bindings">

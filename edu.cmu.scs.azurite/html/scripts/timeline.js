@@ -197,17 +197,24 @@ global.fileArea = {
 };
 
 global.hscrollArea = {
-	left : 0,
-	top : 0,
-	right : 0,
-	bottom : 0
+	left: 0,
+	top: 0,
+	right: 0,
+	bottom: 0
 };
 
 global.vscrollArea = {
-	left : 0,
-	top : 0,
-	right : 0,
-	bottom : 0
+	left: 0,
+	top: 0,
+	right: 0,
+	bottom: 0
+};
+
+global.annotationArea = {
+	left: 0,
+	top: 0,
+	right: 0,
+	bottom: 0
 };
 
 global.draggingHScroll = false;
@@ -1081,6 +1088,11 @@ function updateAreas() {
 	global.vscrollArea.top = SCROLLBAR_WIDTH;
 	global.vscrollArea.right = CHART_MARGINS.left + CHART_MARGINS.right + svgWidth + SCROLLBAR_WIDTH;
 	global.vscrollArea.bottom = CHART_MARGINS.top + CHART_MARGINS.bottom + svgHeight - SCROLLBAR_WIDTH;
+	
+	global.annotationArea.left = CHART_MARGINS.left + svgWidth * FILES_PORTION;
+	global.annotationArea.top = CHART_MARGINS.top - ANNOTATION_SIZE;
+	global.annotationArea.right = CHART_MARGINS.left + svgWidth;
+	global.annotationArea.bottom = CHART_MARGINS.top;
 }
 
 /******************************************************************
@@ -1403,6 +1415,22 @@ function initMouseUpHandler() {
 					// showContextMenu(e, '#cmenu_file_out');
 					cmenu.typeName = 'file_out';
 				}
+			}
+			else if (cursorInArea(mouseX, mouseY, global.annotationArea)) {
+				var rect = svg.main.node().createSVGRect();
+				rect.x = mouseX;
+				rect.y = mouseY;
+				rect.width = 1;
+				rect.height = 1;
+
+				// Get all the intersecting objects in the SVG.
+				var list = svg.main.node().getIntersectionList(rect, null);
+
+				// Filter only the operation rects.
+				d3.selectAll(list).filter('.annotation_tag').each(function(d) {
+					cmenu.typeName = 'annotation';
+					global.lastAnnotation = d;
+				});
 			}
 			
 			return;
