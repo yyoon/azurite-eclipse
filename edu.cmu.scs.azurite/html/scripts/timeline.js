@@ -113,14 +113,11 @@ indicatorDraw.wFunc = function() {
 
 var annotationDraw = {};
 annotationDraw.xFunc = function(d) {
-	return timestampToPixel(d.sid + d.t) / global.scaleX;
+	return timestampToPixel(d.sid + d.t);
 };
 annotationDraw.dFunc = function(d) {
 	var x = annotationDraw.xFunc(d);
-	return 'M ' + x + ' 0 L ' + (x - (ANNOTATION_SIZE / 2) / global.scaleX) + ' ' + (-ANNOTATION_SIZE / 2) + ' ' + (x - (ANNOTATION_SIZE / 2) / global.scaleX) + ' ' + (-ANNOTATION_SIZE) + ' ' + (x + (ANNOTATION_SIZE / 2) / global.scaleX) + ' ' + (-ANNOTATION_SIZE) + ' ' + (x + (ANNOTATION_SIZE / 2) / global.scaleX) + ' ' + (-ANNOTATION_SIZE / 2);
-};
-annotationDraw.wFunc = function(d) {
-	return ANNOTATION_WIDTH / global.scaleX;
+	return 'M ' + x + ' 0 L ' + (x - (ANNOTATION_SIZE / 2)) + ' ' + (-ANNOTATION_SIZE / 2) + ' ' + (x - (ANNOTATION_SIZE / 2)) + ' ' + (-ANNOTATION_SIZE) + ' ' + (x + (ANNOTATION_SIZE / 2)) + ' ' + (-ANNOTATION_SIZE) + ' ' + (x + (ANNOTATION_SIZE / 2)) + ' ' + (-ANNOTATION_SIZE / 2);
 };
 
 /**
@@ -737,7 +734,7 @@ function addAnnotation(sid, id, t, comment) {
 		.attr('x2', annotationDraw.xFunc)
 		.attr('y1', -ANNOTATION_SIZE / 2)
 		.attr('y2', getSvgHeight() - TICKS_HEIGHT + ANNOTATION_SIZE / 2)
-		.attr('stroke-width', annotationDraw.wFunc)
+		.attr('stroke-width', ANNOTATION_WIDTH)
 		.attr('stroke', ANNOTATION_COLOR);
 	
 	// Add the TAG
@@ -1741,7 +1738,6 @@ function scaleX(sx) {
 	}
 	
 	updateMarkerPosition();
-	updateAnnotations();
 }
 
 function scaleY(sy) {
@@ -1832,7 +1828,7 @@ function getMinTranslateY() {
 function updateSubRectsTransform() {
 	svg.subRects.attr('transform', 'translate(' + global.translateX + ' ' + (global.translateY * ROW_HEIGHT * global.scaleY) + ') ' + 'scale(' + global.scaleX + ' ' + global.scaleY + ')');
 	svg.subMarkers.attr('transform', 'translate(' + global.translateX + ' 0)');
-	svg.subAnnotations.attr('transform', 'translate(' + global.translateX + ' 0) ' + 'scale(' + global.scaleX + ' 1)');
+	svg.subAnnotations.attr('transform', 'translate(' + global.translateX + ' 0)');
 }
 
 function showFrom(absTimestamp) {
@@ -2166,7 +2162,6 @@ function showAllFilesEditedTogether() {
 
 function updateAnnotations() {
 	svg.subAnnotations.selectAll('.annotation_line')
-		.attr('stroke-width', annotationDraw.wFunc)
 		.attr('x1', annotationDraw.xFunc)
 		.attr('x2', annotationDraw.xFunc);
 	svg.subAnnotations.selectAll('.annotation_tag')
