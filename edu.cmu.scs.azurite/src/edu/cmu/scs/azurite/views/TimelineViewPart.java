@@ -880,7 +880,10 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	public void commandExecuted(ICommand command) {
 		// Somehow add the annotation.
 		if (command instanceof AnnotateCommand) {
-			addAnnotation((AnnotateCommand)command);
+			AnnotateCommand annotate = (AnnotateCommand) command;
+			if (annotate.getId() != AnnotateCommand.CANCEL) {
+				addAnnotation(annotate);
+			}
 		}
 	}
 	
