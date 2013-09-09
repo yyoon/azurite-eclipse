@@ -294,6 +294,15 @@
             allPopups="false"
             locationURI="toolbar:edu.cmu.scs.azurite.views.TimelineViewPart">
          <command
+               commandId="edu.cmu.scs.fluorite.annotateCommand"
+               style="push"
+               tooltip="Please help the researcher by describing the intent of your recent backtracking / code editing">
+         </command>
+         <separator
+               name="edu.cmu.scs.azurite.separator1"
+               visible="true">
+         </separator>
+         <command
                commandId="edu.cmu.scs.azurite.ui.commands.selectedCode"
                id="edu.cmu.scs.azurite.ui.toolbar.selectedCode"
                style="pulldown">
@@ -304,7 +313,7 @@
                style="pulldown">
          </command>
          <separator
-               name="edu.cmu.scs.azurite.separator1"
+               name="edu.cmu.scs.azurite.separator2"
                visible="true">
          </separator>
          <command
@@ -316,7 +325,7 @@
                style="push">
          </command>
          <separator
-               name="edu.cmu.scs.azurite.separator2"
+               name="edu.cmu.scs.azurite.separator3"
                visible="true">
          </separator>
          <command
@@ -324,7 +333,7 @@
                style="toggle">
          </command>
          <separator
-               name="edu.cmu.scs.azurite.separator3"
+               name="edu.cmu.scs.azurite.separator4"
                visible="true">
          </separator>
          <command
@@ -372,7 +381,7 @@
             </parameter>
          </command>
          <separator
-               name="edu.cmu.scs.azurite.separator4"
+               name="edu.cmu.scs.azurite.separator5"
                visible="true">
          </separator>
          <command
@@ -398,7 +407,7 @@
             </parameter>
          </command>
          <separator
-               name="edu.cmu.scs.azurite.separator5"
+               name="edu.cmu.scs.azurite.separator6"
                visible="true">
          </separator>
          <command
