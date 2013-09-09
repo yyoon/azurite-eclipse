@@ -750,6 +750,15 @@ function addAnnotation(sid, id, t, comment) {
 		.attr('class', 'annotation_tag')
 		.attr('d', annotationDraw.dFunc)
 		.attr('fill', ANNOTATION_COLOR);
+	
+	$(annotationTag.node()).tipsy({
+		gravity: 'n',
+		html: true,
+		title: function() {
+			var d = this.__data__;
+			return d.comment;
+		}
+	});
 }
 
 
