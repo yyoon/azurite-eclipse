@@ -47,17 +47,19 @@ import edu.cmu.scs.azurite.model.RuntimeDCListener;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
 import edu.cmu.scs.azurite.plugin.Activator;
+import edu.cmu.scs.fluorite.commands.AnnotateCommand;
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 import edu.cmu.scs.fluorite.commands.Delete;
 import edu.cmu.scs.fluorite.commands.FileOpenCommand;
 import edu.cmu.scs.fluorite.commands.ICommand;
 import edu.cmu.scs.fluorite.commands.Insert;
 import edu.cmu.scs.fluorite.commands.Replace;
+import edu.cmu.scs.fluorite.model.CommandExecutionListener;
 import edu.cmu.scs.fluorite.model.EventRecorder;
 import edu.cmu.scs.fluorite.model.Events;
 import edu.cmu.scs.fluorite.util.Utilities;
 
-public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
+public class TimelineViewPart extends ViewPart implements RuntimeDCListener, CommandExecutionListener {
 	
 	private static TimelineViewPart me = null;
 	private static String BROWSER_FUNC_PREFIX = "__AZURITE__";
@@ -118,11 +120,12 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 		
 		// Register to the EventRecorder.
 		RuntimeHistoryManager.getInstance().addRuntimeDocumentChangeListener(this);
+		EventRecorder.getInstance().addCommandExecutionListener(this);
 	}
 
 	private void setupContextMenu() {
 		// Create the actions.
-		Map<String, String> paramMap = new HashMap<String, String>();
+		final Map<String, String> paramMap = new HashMap<String, String>();
 		
 		final Action selectiveUndoAction = new CommandAction(
 				"Selective Undo",
@@ -214,6 +217,30 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 							manager.add(showAllFilesAction);
 							break;
 						}
+						
+						case "annotation": {
+							long sid = ((Number) browser.evaluate("return global.lastAnnotation.sid;")).longValue();
+							long id = ((Number) browser.evaluate("return global.lastAnnotation.id;")).longValue();
+							String oidString = Long.toString(sid) + "_" + Long.toString(id);
+							
+							paramMap.clear();
+							paramMap.put("edu.cmu.scs.azurite.ui.commands.undoAllFilesToThisPoint.annotationId", oidString);
+							Action undoAllFilesToThisPointAction = new CommandAction(
+									"Undo All Files to This Point",
+									"edu.cmu.scs.azurite.ui.commands.undoAllFilesToThisPoint",
+									paramMap);
+							
+							paramMap.clear();
+							paramMap.put("edu.cmu.scs.azurite.ui.commands.undoCurrentFileToThisPoint.annotationId", oidString);
+							Action undoCurrentFileToThisPointAction = new CommandAction(
+									"Undo Current File to This Point",
+									"edu.cmu.scs.azurite.ui.commands.undoCurrentFileToThisPoint",
+									paramMap);
+							
+							manager.add(undoAllFilesToThisPointAction);
+							manager.add(undoCurrentFileToThisPointAction);
+							break;
+						}
 					}
 					
 					manager.add(new Separator(IWorkbenchActionConstants.MB_ADDITIONS));
@@ -255,6 +282,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 	@Override
 	public void dispose() {
 		RuntimeHistoryManager.getInstance().removeRuntimeDocumentChangeListener(this);
+		EventRecorder.getInstance().removeCommandExecutionListener(this);
 		
 		me = null;
 		
@@ -596,6 +624,26 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 				filePath == null ? "null" : filePath.replace('\\', '/'));	// avoid escaping..
 		return executeStr;
 	}
+	
+	private void addAnnotation(AnnotateCommand annotate) {
+		String executeStr = getAddAnnotationString(annotate);
+		browser.execute(executeStr);
+	}
+	
+	private String getAddAnnotationString(AnnotateCommand annotate) {
+		String comment = annotate.getComment();
+		if (comment == null) {
+			comment = "unnamed";
+		}
+		
+		String executeStr = String.format("addAnnotation(%1$d, %2$d, %3$d, \'%4$s\');",
+				annotate.getSessionId(),
+				annotate.getCommandIndex(),
+				annotate.getTimestamp(),
+				comment);
+		
+		return executeStr;
+	}
 
 	private void addOperation(BaseDocumentChangeEvent docChange, boolean scroll, boolean current) {
 		String executeStr = getAddOperationString(docChange, scroll, true, current);
@@ -612,6 +660,11 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 		long start = System.currentTimeMillis();
 		
 		for (ICommand command : events.getCommands()) {
+			if (command instanceof AnnotateCommand) {
+				addAnnotation((AnnotateCommand)command);
+				continue;
+			}
+			
 			if (!(command instanceof BaseDocumentChangeEvent)) {
 				continue;
 			}
@@ -821,6 +874,17 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 			}
 		}
 		return ids;
+	}
+
+	@Override
+	public void commandExecuted(ICommand command) {
+		// Somehow add the annotation.
+		if (command instanceof AnnotateCommand) {
+			AnnotateCommand annotate = (AnnotateCommand) command;
+			if (annotate.getId() != AnnotateCommand.CANCEL) {
+				addAnnotation(annotate);
+			}
+		}
 	}
 	
 }
