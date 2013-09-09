@@ -2,7 +2,7 @@
 /*global d3, azurite */
 
 /* Things to be called from Azurite */
-/*exported setStartTimestamp, updateOperation, getRightmostTimestamp, showContextMenu, addSelectionsByIds, removeSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarker, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile */
+/*exported setStartTimestamp, updateOperation, getRightmostTimestamp, showContextMenu, addSelectionsByIds, removeSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarker, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile, addAnnotation */
 
 /* Things to be called manually when debugging */
 /*exported test */
@@ -49,6 +49,10 @@ var SCROLLBAR_DIST_THRESHOLD = 50;
 
 var MARKER_SIZE = 10;
 var MARKER_COLOR = 'red';
+
+var ANNOTATION_WIDTH = 2;
+var ANNOTATION_COLOR = 'orange';
+var ANNOTATION_SIZE = 10;
 
 var CHART_MARGINS = {
 	left : 10,
@@ -107,6 +111,18 @@ indicatorDraw.wFunc = function() {
 	return INDICATOR_WIDTH / global.scaleX;
 };
 
+var annotationDraw = {};
+annotationDraw.xFunc = function(d) {
+	return timestampToPixel(d.sid + d.t) / global.scaleX;
+};
+annotationDraw.dFunc = function(d) {
+	var x = annotationDraw.xFunc(d);
+	return 'M ' + x + ' 0 L ' + (x - (ANNOTATION_SIZE / 2) / global.scaleX) + ' ' + (-ANNOTATION_SIZE / 2) + ' ' + (x - (ANNOTATION_SIZE / 2) / global.scaleX) + ' ' + (-ANNOTATION_SIZE) + ' ' + (x + (ANNOTATION_SIZE / 2) / global.scaleX) + ' ' + (-ANNOTATION_SIZE) + ' ' + (x + (ANNOTATION_SIZE / 2) / global.scaleX) + ' ' + (-ANNOTATION_SIZE / 2);
+};
+annotationDraw.wFunc = function(d) {
+	return ANNOTATION_WIDTH / global.scaleX;
+};
+
 /**
  * Global variables. (Always use a pseudo-namespace.)
  */
@@ -137,6 +153,7 @@ global.files = [];
 global.fileStack = [];
 global.sessions = [];
 global.selected = [];
+global.annotations = [];
 
 global.getVisibleFiles = function () {
 	return global.files.filter(function (e, i, a) {
@@ -238,6 +255,13 @@ function setupSVG() {
 	svg.subRects = svg.subRectsWrap.append('g')
 		.attr('id', 'sub_rects');
 	
+	svg.subAnnotationWrap = svg.main.append('g')
+		.attr('id', 'sub_annotation_wrap')
+		.attr('clip-path', 'url(#clipMarkerWrap)');
+	
+	svg.subAnnotations = svg.subAnnotationWrap.append('g')
+		.attr('id', 'sub_annotations');
+	
 	svg.subMarkerWrap = svg.main.append('g')
 		.attr('id', 'sub_marker_wrap')
 		.attr('clip-path', 'url(#clipMarkerWrap)');
@@ -307,6 +331,10 @@ function recalculateClipPaths() {
 		.attr('y', '-1')
 		.attr('width', (svgWidth * (1.0 - FILES_PORTION)) + 'px')
 		.attr('height', (svgHeight - TICKS_HEIGHT + 2) + 'px');
+	
+	svg.subAnnotationWrap
+		.attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' ' + CHART_MARGINS.top + ')');
+	svg.subAnnotations.select('.annotation_line').attr('y2', svgHeight - TICKS_HEIGHT + ANNOTATION_SIZE / 2);
 	
 	svg.subMarkerWrap
 		.attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' ' + CHART_MARGINS.top + ')');
@@ -452,6 +480,16 @@ function EditOperation(sid, id, t1, t2, y1, y2, type, fileGroup) {
 function OperationId(sid, id) {
 	this.sid = sid;
 	this.id = id;
+}
+
+/**
+ * Annotation object for user annotation.
+ */
+function Annotation(sid, id, t, comment) {
+	this.sid = sid;
+	this.id = id;
+	this.t = t;
+	this.comment = comment;
 }
 
 /**
@@ -682,6 +720,35 @@ function updateOperation(sid, id, t2, y1, y2, scroll) {
 	}
 }
 
+/**
+ * Called by Azurite.
+ */
+function addAnnotation(sid, id, t, comment) {
+	var newAnnotation = new Annotation(sid, id, t, comment);
+	
+	// Add it to the global list
+	global.annotations.push(newAnnotation);
+	
+	// Add the line object
+	var annotationLine = svg.subAnnotations.append('line').datum(newAnnotation);
+	annotationLine
+		.attr('class', 'annotation_line')
+		.attr('x1', annotationDraw.xFunc)
+		.attr('x2', annotationDraw.xFunc)
+		.attr('y1', -ANNOTATION_SIZE / 2)
+		.attr('y2', getSvgHeight() - TICKS_HEIGHT + ANNOTATION_SIZE / 2)
+		.attr('stroke-width', annotationDraw.wFunc)
+		.attr('stroke', ANNOTATION_COLOR);
+	
+	// Add the TAG
+	var annotationTag = svg.subAnnotations.append('path').datum(newAnnotation);
+	annotationTag
+		.attr('class', 'annotation_tag')
+		.attr('d', annotationDraw.dFunc)
+		.attr('fill', ANNOTATION_COLOR);
+}
+
+
 function findSession(sid) {
 	var i;
 	for (i = 0; i < global.sessions.length; ++i) {
@@ -756,6 +823,7 @@ function layout(newLayout) {
 	updateHighlight();
 	updateHScroll();
 	updateMarkerPosition();
+	updateAnnotations();
 	
 	// Restore the scroll position.
 	showFrom(leftmostTimestamp);
@@ -1673,6 +1741,7 @@ function scaleX(sx) {
 	}
 	
 	updateMarkerPosition();
+	updateAnnotations();
 }
 
 function scaleY(sy) {
@@ -1763,6 +1832,7 @@ function getMinTranslateY() {
 function updateSubRectsTransform() {
 	svg.subRects.attr('transform', 'translate(' + global.translateX + ' ' + (global.translateY * ROW_HEIGHT * global.scaleY) + ') ' + 'scale(' + global.scaleX + ' ' + global.scaleY + ')');
 	svg.subMarkers.attr('transform', 'translate(' + global.translateX + ' 0)');
+	svg.subAnnotations.attr('transform', 'translate(' + global.translateX + ' 0) ' + 'scale(' + global.scaleX + ' 1)');
 }
 
 function showFrom(absTimestamp) {
@@ -1849,7 +1919,7 @@ function timestampToPixel(absTimestamp) {
 					return (txOffset + midSession.g.node().getBBox().width) * global.scaleX;
 				}
 				else {
-					return (txOffset + rects[startIndex].getBBox().x) * global.scaleX;
+					return (txOffset + rects[startRectIndex].getBBox().x) * global.scaleX;
 				}
 			}
 			else if (global.layout === LayoutEnum.REALTIME) {
@@ -2092,6 +2162,15 @@ function showAllFilesEditedTogether() {
 	
 	layoutFiles();
 	layout();
+}
+
+function updateAnnotations() {
+	svg.subAnnotations.selectAll('.annotation_line')
+		.attr('stroke-width', annotationDraw.wFunc)
+		.attr('x1', annotationDraw.xFunc)
+		.attr('x2', annotationDraw.xFunc);
+	svg.subAnnotations.selectAll('.annotation_tag')
+		.attr('d', annotationDraw.dFunc);
 }
 
 function showMarker(absTimestamp) {
