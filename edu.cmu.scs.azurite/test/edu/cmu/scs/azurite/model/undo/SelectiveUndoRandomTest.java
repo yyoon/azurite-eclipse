@@ -33,6 +33,72 @@ public class SelectiveUndoRandomTest {
 	public void setUp() {
 		AbstractCommand.resetCommandID();
 	}
+	
+	@Test
+	public void measureRandomOperationsLazy() {
+		for (int i = 0; i < 10; ++i) {
+			measureRandomOperationsLazy(1000);
+		}
+	}
+	
+	private void measureRandomOperationsLazy(int numOperations) {
+		AbstractCommand.resetCommandID();
+		RuntimeHistoryManager manager = new RuntimeHistoryManager();
+		manager.activeFileChanged("dummyProject", "dummyFile", null);
+		
+		Document doc = new Document(
+				randomStringOfLength(1000));
+		
+		for (int i = 0; i < numOperations; ++i) {
+			BaseDocumentChangeEvent operation = applyRandomOperation(doc);
+			manager.documentChangeFinalized(operation);
+		}
+		
+		long startTime = System.currentTimeMillis();
+		manager.calculateDynamicSegments(manager.getCurrentFileKey());
+		long estimatedTime = System.currentTimeMillis() - startTime;
+		
+		System.out.println("estimatedTime: " + estimatedTime);
+	}
+	
+	@Test
+	public void measureRandomOperations() {
+		int[] numOps = { 1, 10, 100, 1000, 10000, 100000, 1000000 };
+		measureRandomOperations(numOps);
+	}
+	
+	private void measureRandomOperations(int[] numOps) {
+		AbstractCommand.resetCommandID();
+		RuntimeHistoryManager manager = new RuntimeHistoryManager();
+		manager.activeFileChanged("dummyProject", "dummyFile", null);
+		
+		Document doc = new Document(
+				randomStringOfLength(1000));
+		
+		int numOperationsSoFar = 0;
+		for (int numOp : numOps) {
+			int remaining = numOp - numOperationsSoFar;
+			for (int i = 0; i < remaining; ++i) {
+				BaseDocumentChangeEvent operation = applyRandomOperation(doc);
+				manager.documentChangeFinalized(operation);
+			}
+			
+			numOperationsSoFar += remaining;
+			assertEquals(numOp, numOperationsSoFar);
+			
+			manager.calculateDynamicSegments(manager.getCurrentFileKey());
+			
+			// add one more, and measure the time for calculation.
+			BaseDocumentChangeEvent operation = applyRandomOperation(doc);
+			manager.documentChangeFinalized(operation);
+			
+			long startTime = System.nanoTime();
+			manager.calculateDynamicSegments(manager.getCurrentFileKey());
+			long estimatedTime = System.nanoTime() - startTime;
+			
+			System.out.println("numOp: " + numOp + "\ttime: " + estimatedTime);
+		}
+	}
 
 	@Test
 	public void testRandom10Operations() {
