@@ -224,10 +224,10 @@ public class CodeHistoryDiffViewer extends Composite {
 			return;
 		}
 		
-		SimpleCompareItem leftItem = getCompareItemOfVersion(version);
+		SimpleCompareItem rightItem = getCompareItemOfVersion(version);
 		
 		mCompareViewerSwitchingPane.setInput(new AzuriteCompareInput(
-				leftItem, mCurrentItem));
+				mCurrentItem, rightItem));
 		
 		mCurrentVersion = version;
 		
