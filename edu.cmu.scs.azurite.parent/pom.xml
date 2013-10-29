@@ -124,5 +124,6 @@
 	<modules>
 		<module>../edu.cmu.scs.azurite</module>
 		<module>../edu.cmu.scs.azurite.tests</module>
+		<module>../edu.cmu.scs.azurite.feature</module>
 	</modules>
 </project>
