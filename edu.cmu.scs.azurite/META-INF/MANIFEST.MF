@@ -17,7 +17,6 @@ Require-Bundle: org.eclipse.ui,
  org.eclipse.ui.editors,
  org.eclipse.jdt.core,
  org.eclipse.jdt.ui,
- org.junit;bundle-version="4.8.0",
  org.eclipse.core.filesystem;bundle-version="1.3.1",
  org.eclipse.core.expressions;bundle-version="3.3.0"
 Bundle-RequiredExecutionEnvironment: JavaSE-1.7
