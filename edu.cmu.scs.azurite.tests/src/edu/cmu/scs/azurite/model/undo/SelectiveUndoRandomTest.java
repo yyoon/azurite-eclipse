@@ -34,7 +34,7 @@ public class SelectiveUndoRandomTest {
 		AbstractCommand.resetCommandID();
 	}
 	
-	@Test
+//	@Test
 	public void measureRandomOperationsLazy() {
 		for (int i = 0; i < 10; ++i) {
 			measureRandomOperationsLazy(1000);
@@ -61,7 +61,7 @@ public class SelectiveUndoRandomTest {
 		System.out.println("estimatedTime: " + estimatedTime);
 	}
 	
-	@Test
+//	@Test
 	public void measureRandomOperations() {
 		int[] numOps = { 1, 10, 100, 1000, 10000, 100000, 1000000 };
 		measureRandomOperations(numOps);
