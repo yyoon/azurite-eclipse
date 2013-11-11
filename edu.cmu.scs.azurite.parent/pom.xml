@@ -21,11 +21,6 @@
 			<layout>p2</layout>
 			<url>http://download.eclipse.org/eclipse/updates/4.2</url>
 		</repository>
-		<repository>
-			<id>GEF Release (old)</id>
-			<layout>p2</layout>
-			<url>http://download.eclipse.org/tools/gef/updates-pre-3_8/releases/</url>
-		</repository>
 	</repositories>
 
 	<build>
