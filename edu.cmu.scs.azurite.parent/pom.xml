@@ -25,7 +25,7 @@
   
   <profiles>
     <profile>
-      <id>codeCoverage></id>
+      <id>codeCoverage</id>
       <properties>
         <!-- Properties to enable jacoco code coverage analysis -->
         <jacoco-version>0.6.3.201306030806</jacoco-version>
