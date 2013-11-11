@@ -10,13 +10,6 @@
       </category>
       <view
             category="edu.cmu.scs.azurite"
-            class="edu.cmu.scs.azurite.views.GraphViewPart"
-            icon="icons/azurite.gif"
-            id="edu.cmu.scs.azurite.views.GraphViewPart"
-            name="Graph View">
-      </view>
-      <view
-            category="edu.cmu.scs.azurite"
             class="edu.cmu.scs.azurite.views.TimelineViewPart"
             icon="icons/timeline_marker.png"
             id="edu.cmu.scs.azurite.views.TimelineViewPart"
