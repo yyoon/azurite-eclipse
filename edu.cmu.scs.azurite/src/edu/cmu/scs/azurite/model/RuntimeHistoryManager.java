@@ -64,8 +64,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 	public void scheduleTask(Runnable runnable) {
 		if (mStarted) {
 			runnable.run();
-		}
-		else {
+		} else {
 			mScheduledTasks.add(runnable);
 		}
 	}
@@ -341,8 +340,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		
 		if (intermediateResult == null || intermediateResult.isEmpty()) {
 			return null;
-		}
-		else {
+		} else {
 			return intermediateResult.get(0);
 		}
 	}
@@ -387,8 +385,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		
 		if (intermediateResult == null || intermediateResult.isEmpty()) {
 			return null;
-		}
-		else {
+		} else {
 			return intermediateResult.get(0);
 		}
 	}
@@ -485,9 +482,8 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 					if (docChange instanceof IDiffDC) {
 						addRuntimeDCFromOriginalDC(docChange,
 								((IDiffDC) docChange).getFileKey());
-					}
+					} else {
 					// Normal Doc Changes.
-					else {
 						addRuntimeDCFromOriginalDC(docChange);
 					}
 				}

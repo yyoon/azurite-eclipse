@@ -223,14 +223,11 @@ public class Chunk extends ArrayList<Segment> {
 				public int compare(Chunk lhs, Chunk rhs) {
 					if (lhs.getStartOffset() < rhs.getStartOffset()) {
 						return -1;
-					}
-					else if (lhs.getStartOffset() > rhs.getStartOffset()) {
+					} else if (lhs.getStartOffset() > rhs.getStartOffset()) {
 						return 1;
-					}
-					else if (lhs.getEndOffset() < rhs.getEndOffset()) {
+					} else if (lhs.getEndOffset() < rhs.getEndOffset()) {
 						return -1;
-					}
-					else if (lhs.getEndOffset() > rhs.getEndOffset()) {
+					} else if (lhs.getEndOffset() > rhs.getEndOffset()) {
 						return 1;
 					}
 					

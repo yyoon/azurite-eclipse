@@ -25,14 +25,11 @@ public abstract class RuntimeDC {
 	public static RuntimeDC createRuntimeDocumentChange(BaseDocumentChangeEvent original) {
 		if (original instanceof Insert) {
 			return new RuntimeInsert((Insert) original);
-		}
-		else if (original instanceof Delete) {
+		} else if (original instanceof Delete) {
 			return new RuntimeDelete((Delete) original);
-		}
-		else if (original instanceof Replace) {
+		} else if (original instanceof Replace) {
 			return new RuntimeReplace((Replace) original);
-		}
-		else {
+		} else {
 			throw new IllegalArgumentException("argument should be one of Insert / Delete / Replace");
 		}
 	}

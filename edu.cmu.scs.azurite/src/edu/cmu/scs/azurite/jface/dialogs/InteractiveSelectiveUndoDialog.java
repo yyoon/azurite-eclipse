@@ -95,9 +95,6 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	private static final int DEFAULT_WIDTH = 800;
 	private static final int DEFAULT_HEIGHT = 600;
 	
-//	private static final int MINIMUM_CHUNKS_HEIGHT = 100;
-//	private static final int MINIMUM_BOTTOM_AREA_HEIGHT = 200;
-	
 	private static final int MARGIN_WIDTH = 10;
 	private static final int MARGIN_HEIGHT = 10;
 	
@@ -129,8 +126,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	public static void launch() {
 		if (getInstance() != null) {
 			getInstance().getShell().forceActive();
-		}
-		else {
+		} else {
 			final Shell parentShell = Display.getDefault().getActiveShell();
 			InteractiveSelectiveUndoDialog isuDialog = new InteractiveSelectiveUndoDialog(parentShell);
 			isuDialog.create();
@@ -175,8 +171,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 				if (timeline != null) {
 					timeline.removeSelection(ids);
 				}
-			}
-			catch (Exception e) {
+			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		}
@@ -411,8 +406,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 					} else {
 						mChosenAlternative = null;
 					}
-				}
-				catch (Exception e) {
+				} catch (Exception e) {
 					e.printStackTrace();
 				}
 			}
@@ -519,12 +513,10 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 					DecorationOverlayIcon decorated = new DecorationOverlayIcon(baseImage, decError, IDecoration.BOTTOM_RIGHT);
 					
 					return getImage(decorated);
-				}
-				else {
+				} else {
 					return baseImage;
 				}
-			}
-			else if (element instanceof ChunkLevelElement) {
+			} else if (element instanceof ChunkLevelElement) {
 				ChunkLevelElement chunkElem = (ChunkLevelElement) element;
 				
 				ImageDescriptor errorImage = PlatformUI.getWorkbench().getSharedImages().getImageDescriptor(ISharedImages.IMG_OBJS_ERROR_TSK);
@@ -532,8 +524,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 				return chunkElem.hasUnresolvedConflict() ? getImage(errorImage)
 						: chunkElem.getChunk().hasConflictOutsideThisChunk() && chunkElem.getUndoAlternatives().size() > 1 ? getImage(resolvedImage)
 						: null;
-			}
-			else {
+			} else {
 				return null;
 			}
 		}
@@ -543,8 +534,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			if (element instanceof TopLevelElement) {
 				TopLevelElement topElem = (TopLevelElement) element;
 				return topElem.getFileKey().getFileNameOnly();
-			}
-			else if (element instanceof ChunkLevelElement) {
+			} else if (element instanceof ChunkLevelElement) {
 				ChunkLevelElement chunkElem = (ChunkLevelElement) element;
 				Chunk chunk = chunkElem.getChunk();
 				IDocument doc = findDocumentForChunk(chunk);
@@ -556,8 +546,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 				}
 				
 				return label;
-			}
-			else {
+			} else {
 				return super.getText(element);
 			}
 		}
@@ -780,8 +769,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 								}
 							}
 						});
-					}
-					else if (selElem instanceof ChunkLevelElement) {
+					} else if (selElem instanceof ChunkLevelElement) {
 						manager.add(new Action("Remove this chunk from the selection (Keep it unchanged)") {
 							@Override
 							public void run() {
@@ -882,8 +870,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 						
 						return lhsFileName.compareTo(rhsFileName);
 					}
-				}
-				else if (e1 instanceof ChunkLevelElement && e2 instanceof ChunkLevelElement) {
+				} else if (e1 instanceof ChunkLevelElement && e2 instanceof ChunkLevelElement) {
 					ChunkLevelElement lhs = (ChunkLevelElement) e1;
 					ChunkLevelElement rhs = (ChunkLevelElement) e2;
 					
@@ -1162,8 +1149,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			
 			// Bring the preview panel to top.
 			showBottomPanel(false, null);
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 			
 			// Display an error message on the screen.
@@ -1249,8 +1235,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			
 			// Bring the preview panel to top.
 			showBottomPanel(false, null);
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 			
 			// Display an error message on the screen.
@@ -1265,12 +1250,10 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			int endLine = doc.getLineOfOffset(chunk.getEndOffset());
 			if (startLine == endLine) {
 				return chunk.getBelongsTo().getFileNameOnly() + ": line " + startLine;
-			}
-			else {
+			} else {
 				return chunk.getBelongsTo().getFileNameOnly() + ": lines " + startLine + "-" + endLine;
 			}
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			return chunk.getBelongsTo().getFileNameOnly();
 		}
 	}
@@ -1298,8 +1281,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 				doc = buffer.getDocument();
 			}
 			return doc;
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 			return null;
 		}
@@ -1328,8 +1310,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 					}
 				}
 			}
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		
@@ -1395,8 +1376,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			}
 			
 			okButton.setEnabled(enabled);
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			if (okButton != null) {
 				okButton.setEnabled(false);
 			}
@@ -1418,8 +1398,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			setPreviewInput(doc, undoResult, expandedChunk.getStartOffset(), expandedChunk.getChunkLength());
 			
 			showBottomPanel(true, null);
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 			
 			// Display an error message on the screen.
@@ -1455,20 +1434,17 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 					// Show a normal preview..
 					showPreviewPanel(chunk);
 				}
-			}
-			else if (firstElement instanceof TopLevelElement) {
+			} else if (firstElement instanceof TopLevelElement) {
 				TopLevelElement topElem = (TopLevelElement) firstElement;
 				
 				if (topElem.hasUnresolvedConflict()) {
 					String msg = "You must resolve all the conflicts under this file to be able to see the entire preview.";
 					showBottomPanel(false, msg);
-				}
-				else {
+				} else {
 					showPreviewPanel(topElem);
 				}
 			}
-		}
-		else {
+		} else {
 			TopLevelElement[] input = (TopLevelElement[]) mChunksTreeViewer.getInput();
 			boolean chunksEmpty = input == null || input.length == 0;
 			

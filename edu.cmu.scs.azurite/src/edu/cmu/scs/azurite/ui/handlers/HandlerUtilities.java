@@ -37,8 +37,7 @@ public class HandlerUtilities {
 					}
 				}
 			}
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		
@@ -74,8 +73,7 @@ public class HandlerUtilities {
 				
 				return dcs;
 			}
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		
@@ -102,8 +100,7 @@ public class HandlerUtilities {
 					}
 				}
 			}
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		

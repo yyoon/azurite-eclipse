@@ -319,8 +319,7 @@ public class PastHistoryManager implements DocumentChangeListener {
 					}
 				}
 			}
-		}
-		finally {
+		} finally {
 			AbstractCommand.setIncrementCommandID(incrementCommandID);
 		}
 	}

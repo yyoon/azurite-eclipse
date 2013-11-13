@@ -59,8 +59,7 @@ public class SelectedCodeHandler extends AbstractHandler {
 				IHandlerService handlerService = (IHandlerService) PlatformUI.getWorkbench().getService(IHandlerService.class);
 				try {
 					handlerService.executeCommand(commandId, null);
-				}
-				catch (Exception e) {
+				} catch (Exception e) {
 					e.printStackTrace();
 				}
 			}

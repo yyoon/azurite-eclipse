@@ -236,8 +236,7 @@ public class CodeHistoryDiffViewer extends Composite {
 				RuntimeDC dc = mInvolvedDCs.get(mInvolvedDCs.size() - 1);
 				TimelineViewPart.getInstance().showMarker(
 						dc.getOriginal().getSessionId() + dc.getOriginal().getTimestamp2() + 1);
-			}
-			else {
+			} else {
 				RuntimeDC dc = mInvolvedDCs.get(version);
 				TimelineViewPart.getInstance().showMarker(
 						dc.getOriginal().getSessionId() + dc.getOriginal().getTimestamp());
@@ -268,8 +267,7 @@ public class CodeHistoryDiffViewer extends Composite {
 	private void revertToCurrentVersion() {
 		if (getCurrentVersion() == mInvolvedDCs.size()) {
 			// Do nothing?
-		}
-		else {
+		} else {
 			File fileToOpen = new File(mFileKey.getFilePath());
 			
 			IEditorPart editor = null;
@@ -332,8 +330,7 @@ public class CodeHistoryDiffViewer extends Composite {
 		
 		if (version == mInvolvedDCs.size()) {
 			return mCurrentItem;
-		}
-		else if (mHistoryItems.containsKey(version)) {
+		} else if (mHistoryItems.containsKey(version)) {
 			return mHistoryItems.get(version);
 		}
 		
@@ -346,8 +343,7 @@ public class CodeHistoryDiffViewer extends Composite {
 					if (mSelectionStart < segment.getOffset() && segment.getOffset() < mSelectionEnd) {
 						chunk.add(segment);
 					}
-				}
-				else {
+				} else {
 					if (segment.getOffset() < mSelectionEnd && segment.getEndOffset() > mSelectionStart) {
 						chunk.add(segment);
 					}

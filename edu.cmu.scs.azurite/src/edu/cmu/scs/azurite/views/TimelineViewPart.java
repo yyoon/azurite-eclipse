@@ -244,8 +244,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 					}
 					
 					manager.add(new Separator(IWorkbenchActionConstants.MB_ADDITIONS));
-				}
-				catch (Exception e) {
+				} catch (Exception e) {
 					// Do nothing.
 				}
 			}
@@ -318,8 +317,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 						.doSelectiveUndoOnMultipleFiles(params);
 				
 				return "ok";
-			}
-			catch (Exception e) {
+			} catch (Exception e) {
 				e.printStackTrace();
 				return "fail";
 			}
@@ -351,8 +349,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 										new OperationId(sid, id)));				
 				
 				return "ok";
-			}
-			catch (Exception e) {
+			} catch (Exception e) {
 				return "fail";
 			}
 		}
@@ -377,7 +374,9 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
             			public void run() {
                     		RuntimeHistoryManager manager = RuntimeHistoryManager.getInstance(); 
                     		for (FileKey key : manager.getFileKeys()) {
-                    			if (key.getProjectName() == null || key.getFilePath() == null) { continue; }
+                    			if (key.getProjectName() == null || key.getFilePath() == null) {
+                    				continue;
+                				}
                     			
                     			addFile(key.getProjectName(), key.getFilePath());
                     			for (RuntimeDC dc : manager.getRuntimeDocumentChanges(key)) {
@@ -471,8 +470,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 				}
 				
 				return "ok";
-			}
-			catch (Exception e) {
+			} catch (Exception e) {
 				return "fail";
 			}
 		}
@@ -515,8 +513,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 				}
 				
 				return "unknown";
-			}
-			catch (Exception e) {
+			} catch (Exception e) {
 				return "unknown";
 			}
 		}
@@ -564,8 +561,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 			IHandlerService handlerService = (IHandlerService) getSite().getService(IHandlerService.class);
 			try {
 				handlerService.executeCommand(eclipseCmdId, null);
-			}
-			catch (Exception e) {
+			} catch (Exception e) {
 				e.printStackTrace();
 			}
 			
@@ -583,8 +579,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		public Object function(Object[] arguments) {
 			try {
 				fireRectSelectionChanged();
-			}
-			catch (Exception e) {
+			} catch (Exception e) {
 				e.printStackTrace();
 			}
 			
@@ -713,14 +708,11 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	private int getTypeIndex(BaseDocumentChangeEvent docChange) {
 		if (docChange instanceof Insert) {
 			return 0;
-		}
-		else if (docChange instanceof Delete) {
+		} else if (docChange instanceof Delete) {
 			return 1;
-		}
-		else if (docChange instanceof Replace) {
+		} else if (docChange instanceof Replace) {
 			return 2;
-		}
-		else {
+		} else {
 			return -1;
 		}
 	}
@@ -842,8 +834,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 			Object result = evaluateJSCode("return global.selected.length;");
 			if (result instanceof Number) {
 				return ((Number) result).intValue();
-			}
-			else {
+			} else {
 				return 0;
 			}
 		} catch (SWTException e) {

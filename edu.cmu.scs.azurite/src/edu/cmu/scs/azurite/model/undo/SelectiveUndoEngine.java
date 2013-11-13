@@ -130,12 +130,10 @@ public class SelectiveUndoEngine {
 					if (alternatives.size() <= 2) {
 						document.replace(initialOffset, initialContent.length(),
 								alternatives.get(0).getResultingCode());
-					}
-					else if (alternativeChoices != null && alternativeChoices.get(chunk) != null) {
+					} else if (alternativeChoices != null && alternativeChoices.get(chunk) != null) {
 						UndoAlternative chosenAlternative = alternativeChoices.get(chunk);
 						document.replace(initialOffset, initialContent.length(), chosenAlternative.getResultingCode());
-					}
-					else {
+					} else {
 						final Shell parentShell = Display.getDefault().getActiveShell();
 						
 						ConflictResolutionDialog conflictDialog = new ConflictResolutionDialog(
@@ -144,17 +142,15 @@ public class SelectiveUndoEngine {
 						conflictDialog.create();
 						conflictDialog.open();
 					}
-				}
+				} else {
 				// No conflicts. just undo them backwards.
-				else {
 					String resultingContent = doSelectiveUndoChunkWithoutConflicts(
 							chunk, initialContent);
 
 					document.replace(initialOffset, initialContent.length(),
 							resultingContent);
 				}
-			}
-			catch (Exception e) {
+			} catch (Exception e) {
 				e.printStackTrace();
 				return;
 			}
@@ -178,8 +174,9 @@ public class SelectiveUndoEngine {
 		
 		// Revert this chunk to the way it was before, including the unselected conflicting operations.
 		for (int i = 1; i <= MAX_EXPANSION_DEPTH; ++i) {
-			if (i == 0)
+			if (i == 0) {
 				continue;
+			}
 			
 			result.add(new UndoAlternative(
 					"Revert this code including the non-selected conflicting operations with depth "
@@ -282,8 +279,7 @@ public class SelectiveUndoEngine {
 							right.setOffset(segmentUnderUndo.getOffset() + segmentUnderUndo.getLength());
 						}
 					}
-				}	// if(segmentUnderUndo.isDeletion())
-				else {
+				} else {
 					// Delete this segment.
 					buffer.replace(
 							segmentUnderUndo.getOffset() - initialOffset,

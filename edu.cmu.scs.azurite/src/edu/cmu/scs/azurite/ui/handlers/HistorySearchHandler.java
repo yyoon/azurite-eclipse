@@ -115,8 +115,7 @@ public class HistorySearchHandler extends AbstractHandler {
 			
 			if (version == dcs.size()) {
 				resultingCode = codeContent;
-			}
-			else {
+			} else {
 				// Get the previous versions by performing undo.
 				List<RuntimeDC> subList = dcs.subList(version, dcs.size());
 				Chunk chunk = new Chunk();
@@ -126,8 +125,7 @@ public class HistorySearchHandler extends AbstractHandler {
 							if (selectionStart < segment.getOffset() && segment.getOffset() < selectionEnd) {
 								chunk.add(segment);
 							}
-						}
-						else {
+						} else {
 							if (segment.getOffset() < selectionEnd && segment.getEndOffset() > selectionStart) {
 								chunk.add(segment);
 							}
@@ -164,8 +162,7 @@ public class HistorySearchHandler extends AbstractHandler {
 				if (resultingCode.contains(searchText)) {
 					resultDCs.add(dcs.get(version - 1));
 				}
-			}
-			else {
+			} else {
 				if (resultingCode.toLowerCase().contains(searchTextLowerCase)) {
 					resultDCs.add(dcs.get(version - 1));
 				}

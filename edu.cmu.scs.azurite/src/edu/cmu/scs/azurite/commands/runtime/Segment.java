@@ -471,26 +471,19 @@ public class Segment {
 				public int compare(Segment lhs, Segment rhs) {
 					if (lhs.getOffset() < rhs.getOffset()) {
 						return -1;
-					}
-					else if (lhs.getOffset() > rhs.getOffset()) {
+					} else if (lhs.getOffset() > rhs.getOffset()) {
 						return 1;
-					}
-					else if (lhs.getEffectiveEndOffset() < rhs.getEffectiveEndOffset()) {
+					} else if (lhs.getEffectiveEndOffset() < rhs.getEffectiveEndOffset()) {
 						return -1;
-					}
-					else if (lhs.getEffectiveEndOffset() > rhs.getEffectiveEndOffset()) {
+					} else if (lhs.getEffectiveEndOffset() > rhs.getEffectiveEndOffset()) {
 						return 1;
-					}
-					else if (lhs.getOwner().getOriginal().getSessionId() < rhs.getOwner().getOriginal().getSessionId()) {
+					} else if (lhs.getOwner().getOriginal().getSessionId() < rhs.getOwner().getOriginal().getSessionId()) {
 						return -1;
-					}
-					else if (lhs.getOwner().getOriginal().getSessionId() > rhs.getOwner().getOriginal().getSessionId()) {
+					} else if (lhs.getOwner().getOriginal().getSessionId() > rhs.getOwner().getOriginal().getSessionId()) {
 						return 1;
-					}
-					else if (lhs.getOwner().getOriginal().getCommandIndex() < rhs.getOwner().getOriginal().getCommandIndex()) {
+					} else if (lhs.getOwner().getOriginal().getCommandIndex() < rhs.getOwner().getOriginal().getCommandIndex()) {
 						return -1;
-					}
-					else if (lhs.getOwner().getOriginal().getCommandIndex() > rhs.getOwner().getOriginal().getCommandIndex()) {
+					} else if (lhs.getOwner().getOriginal().getCommandIndex() > rhs.getOwner().getOriginal().getCommandIndex()) {
 						return 1;
 					}
 					
