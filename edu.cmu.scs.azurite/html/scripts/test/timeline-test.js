@@ -33,3 +33,41 @@ buster.testCase("another test", {
     buster.assert.exception(layoutFiles);
   }
 });
+
+buster.testCase("binarySearch Test", {
+  "binarySearch should return the indices correctly when target found": function() {
+    var testArray = [1, 2, 3, 4, 6, 7, 8];
+
+    var compareFuncGenerator = function(target_value) {
+      return function(cur_value) {
+        if (target_value < cur_value) { return -1; }
+        if (target_value > cur_value) { return 1; }
+        return 0;
+      };
+    };
+
+    buster.assert.same(binarySearch(testArray, compareFuncGenerator(1)), 0);
+    buster.assert.same(binarySearch(testArray, compareFuncGenerator(2)), 1);
+    buster.assert.same(binarySearch(testArray, compareFuncGenerator(3)), 2);
+    buster.assert.same(binarySearch(testArray, compareFuncGenerator(4)), 3);
+    buster.assert.same(binarySearch(testArray, compareFuncGenerator(6)), 4);
+    buster.assert.same(binarySearch(testArray, compareFuncGenerator(7)), 5);
+    buster.assert.same(binarySearch(testArray, compareFuncGenerator(8)), 6);
+  },
+
+  "binarySearch should return the correct complement indices when target not found": function() {
+    var testArray = [1, 2, 3, 4, 6, 7, 8];
+
+    var compareFuncGenerator = function(target_value) {
+      return function(cur_value) {
+        if (target_value < cur_value) { return -1; }
+        if (target_value > cur_value) { return 1; }
+        return 0;
+      };
+    };
+
+    buster.assert.same(binarySearch(testArray, compareFuncGenerator(0)), -1);
+    buster.assert.same(binarySearch(testArray, compareFuncGenerator(5)), -5);
+    buster.assert.same(binarySearch(testArray, compareFuncGenerator(9)), -8);
+  }
+});
