@@ -2263,6 +2263,13 @@ function popCurrentFile() {
 	}
 }
 
+// compareFunc takes one parameter,
+// which is the current(mid) value being investigated by the binary search algorithm.
+// compareFunc should already know about the target value.
+// compareFunc should return:
+//  - a negative number when target_value < current_value
+//  - a positive number when target_value > current_value
+//  - zero when target_value == current_value
 function binarySearch(sortedArray, compareFunc) {
 	var startIndex = 0, endIndex = sortedArray.length - 1, midIndex;
 	while (startIndex <= endIndex) {
