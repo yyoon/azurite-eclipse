@@ -148,7 +148,7 @@ global.rectDistCompareFunc = function (rect) {
 	return 1;
 };
 
-global.filterVisibleFunc = function (d) { return d.isVisible(); }
+global.filterVisibleFunc = function (d) { return d.isVisible(); };
 
 
 // variables to remember the last window size
