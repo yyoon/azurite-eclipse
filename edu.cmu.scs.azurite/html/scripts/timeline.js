@@ -1828,12 +1828,13 @@ function getMinTranslateX() {
 		result += session.g.node().getBBox().width;
 	}
 
+	var scaled = result * global.scaleX;
 	var width = getSvgWidth() * (1.0 - FILES_PORTION);
-	if (result > width) {
-		result -= width;
+	if (scaled > width) {
+		scaled -= width;
 	}
 	
-	return -result * global.scaleX;
+	return -scaled;
 }
 
 function translateY(ty) {
