@@ -1827,6 +1827,11 @@ function getMinTranslateX() {
 		var session = global.sessions[i];
 		result += session.g.node().getBBox().width;
 	}
+
+	var width = getSvgWidth() * (1.0 - FILES_PORTION);
+	if (result > width) {
+		result -= width;
+	}
 	
 	return -result * global.scaleX;
 }
