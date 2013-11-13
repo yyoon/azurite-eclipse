@@ -1,5 +1,4 @@
 // timeline tests
-var testGlobal = {};
 
 buster.testCase("Buster Test", {
   "this should pass if buster is properly set": function() {
@@ -9,13 +8,28 @@ buster.testCase("Buster Test", {
 
 buster.testCase("addFile Test", {
   "addFile must add an item to the global files array": function() {
-    testGlobal.layoutFilesCalled = false;
+    var layoutFilesCalled = false;
+
+    var tempLayoutFilesCalled = layoutFilesCalled;
     layoutFiles = function() {
-      testGlobal.layoutFilesCalled = true;
+      layoutFilesCalled = true;
     };
 
-    addFile("dummyProject", "dummyFile");
+    addFile("dummyProject", "dummy/path/to/the/file.java");
     buster.assert.same(global.files.length, 1);
-    buster.assert.isTrue(testGlobal.layoutFilesCalled);
+    buster.assert.same(global.files[0].project, "dummyProject");
+    buster.assert.same(global.files[0].path, "dummy/path/to/the/file.java");
+    buster.assert.same(global.files[0].fileName, "file.java");
+
+    buster.assert.isTrue(layoutFilesCalled);
+
+    // Restore "layoutFilesCalled" method
+    layoutFilesCalled = tempLayoutFilesCalled;
+  }
+});
+
+buster.testCase("another test", {
+  "layoutFiles() must be restored": function() {
+    buster.assert.exception(layoutFiles);
   }
 });
