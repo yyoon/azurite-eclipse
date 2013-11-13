@@ -141,6 +141,16 @@ global.oidCompareFunc = function (lhs, rhs) {
 	return 0;
 };
 
+global.rectDistCompareFunc = function (rect) {
+	var bounds = rect.getBBox();
+	if (bounds.x <= global.targetDist && global.targetDist <= bounds.x + bounds.width) { return 0; }
+	if (global.targetDist < bounds.x) { return -1; }
+	return 1;
+};
+
+global.filterVisibleFunc = function (d) { return d.isVisible(); }
+
+
 // variables to remember the last window size
 global.lastWindowWidth = null;
 global.lastWindowHeight = null;
@@ -976,41 +986,25 @@ function pixelToTimestamp(pixel) {
 			.filter(function (d) { return d.isVisible(); })[0].slice(0);
 		rects.sort(global.operationCompareFunc);
 		
-		// Binary search through the rects.
-		var startIndex = 0, endIndex = rects.length - 1;
-		var midIndex = Math.floor((startIndex + endIndex) / 2);
-		while (startIndex <= endIndex) {
-			var rect = rects[midIndex];
-			bounds = rect.getBBox();
+		global.targetDist = dist;
+		var resultIndex = binarySearch(rects, global.rectDistCompareFunc);
+		// If found..
+		if (resultIndex >= 0) {
+			var data = rects[resultIndex].__data__;
+			bounds = rects[resultIndex].getBBox();
+			result = Math.floor(session.sid + data.t1 + (data.t2 - data.t1) * (dist - bounds.x) / bounds.width);
 			
-			// The middle rect contains the dist!
-			if (bounds.x <= dist && dist <= bounds.x + bounds.width) {
-				var data = rect.__data__;
-				result = Math.floor(session.sid + data.t1 + (data.t2 - data.t1) * (dist - bounds.x) / bounds.width);
-				
-				return result;
-			}
-			
-			if (dist < bounds.x) {
-				endIndex = midIndex - 1;
-			}
-			else {
-				startIndex = midIndex + 1;
-			}
-			
-			midIndex = Math.floor((startIndex + endIndex) / 2);
+			return result;
 		}
-		
 		// Couldn't find..
-		if (startIndex === 0) {
+		else if (resultIndex === ~0) {
 			return session.startAbsTimestamp;
 		}
-		else if (startIndex === rects.length) {
+		else if (resultIndex === ~rects.length) {
 			return session.endAbsTimestamp;
 		}
 		else {
-			return Math
-					.floor((rects[startIndex - 1].__data__.t2 + rects[startIndex].__data__.t1) / 2) + session.sid;
+			return Math.floor((rects[~resultIndex - 1].__data__.t2 + rects[~resultIndex].__data__.t1) / 2) + session.sid;
 		}
 	}
 	else if (global.layout === LayoutEnum.REALTIME) {
@@ -1889,10 +1883,6 @@ function timestampToPixel(absTimestamp) {
 	var startIndex = 0, endIndex = global.sessions.length - 1;
 	var midIndex = Math.floor((startIndex + endIndex) / 2);
 	
-	var filterVisibleFunc = function (d) {
-		return d.isVisible();
-	};
-	
 	while (startIndex <= endIndex) {
 		var midSession = global.sessions[midIndex];
 		
@@ -1909,7 +1899,7 @@ function timestampToPixel(absTimestamp) {
 			
 			if (global.layout === LayoutEnum.COMPACT) {
 				// again, binary search through the rects.
-				var rects = midSession.g.selectAll('rect.op_rect').filter(filterVisibleFunc)[0].slice();
+				var rects = midSession.g.selectAll('rect.op_rect').filter(global.filterVisibleFunc)[0].slice();
 				rects.sort(global.operationCompareFunc);
 				
 				var startRectIndex = 0, endRectIndex = rects.length - 1;
@@ -2261,4 +2251,20 @@ function popCurrentFile() {
 			global.currentFileIndex = -1;
 		}
 	}
+}
+
+function binarySearch(sortedArray, compareFunc) {
+	var startIndex = 0, endIndex = sortedArray.length - 1, midIndex;
+	while (startIndex <= endIndex) {
+		midIndex = Math.floor( (startIndex + endIndex) / 2 );
+		var obj = sortedArray[midIndex];
+		
+		if (compareFunc(obj) < 0) { endIndex = midIndex - 1; continue; }
+		if (compareFunc(obj) > 0) { startIndex = midIndex + 1; continue; }
+		
+		return midIndex;
+	}
+	
+	// Failed to find one.
+	return ~startIndex;
 }
