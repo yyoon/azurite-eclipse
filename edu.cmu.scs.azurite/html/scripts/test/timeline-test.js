@@ -1,36 +1,27 @@
 // timeline tests
 
+var assert = buster.assert;
+var refute = buster.refute;
+
 buster.testCase("Buster Test", {
   "this should pass if buster is properly set": function() {
-    buster.assert.isTrue(true);
+    assert.isTrue(true);
+    refute.isTrue(false);
   }
 });
 
 buster.testCase("addFile Test", {
   "addFile must add an item to the global files array": function() {
-    var layoutFilesCalled = false;
-
-    var tempLayoutFiles = layoutFiles;
-    layoutFiles = function() {
-      layoutFilesCalled = true;
-    };
+    this.stub(window, "layoutFiles");
 
     addFile("dummyProject", "dummy/path/to/the/file.java");
-    buster.assert.same(global.files.length, 1);
-    buster.assert.same(global.files[0].project, "dummyProject");
-    buster.assert.same(global.files[0].path, "dummy/path/to/the/file.java");
-    buster.assert.same(global.files[0].fileName, "file.java");
 
-    buster.assert.isTrue(layoutFilesCalled);
+    assert.same(global.files.length, 1);
+    assert.same(global.files[0].project, "dummyProject");
+    assert.same(global.files[0].path, "dummy/path/to/the/file.java");
+    assert.same(global.files[0].fileName, "file.java");
 
-    // Restore "layoutFilesCalled" method
-    layoutFiles = tempLayoutFiles;
-  }
-});
-
-buster.testCase("another test", {
-  "layoutFiles() must be restored": function() {
-    buster.assert.exception(layoutFiles);
+    assert.calledOnce(window.layoutFiles);
   }
 });
 
@@ -46,13 +37,13 @@ buster.testCase("binarySearch Test", {
       };
     };
 
-    buster.assert.same(binarySearch(testArray, compareFuncGenerator(1)), 0);
-    buster.assert.same(binarySearch(testArray, compareFuncGenerator(2)), 1);
-    buster.assert.same(binarySearch(testArray, compareFuncGenerator(3)), 2);
-    buster.assert.same(binarySearch(testArray, compareFuncGenerator(4)), 3);
-    buster.assert.same(binarySearch(testArray, compareFuncGenerator(6)), 4);
-    buster.assert.same(binarySearch(testArray, compareFuncGenerator(7)), 5);
-    buster.assert.same(binarySearch(testArray, compareFuncGenerator(8)), 6);
+    assert.same(binarySearch(testArray, compareFuncGenerator(1)), 0);
+    assert.same(binarySearch(testArray, compareFuncGenerator(2)), 1);
+    assert.same(binarySearch(testArray, compareFuncGenerator(3)), 2);
+    assert.same(binarySearch(testArray, compareFuncGenerator(4)), 3);
+    assert.same(binarySearch(testArray, compareFuncGenerator(6)), 4);
+    assert.same(binarySearch(testArray, compareFuncGenerator(7)), 5);
+    assert.same(binarySearch(testArray, compareFuncGenerator(8)), 6);
   },
 
   "binarySearch should return the correct complement indices when target not found": function() {
@@ -66,8 +57,8 @@ buster.testCase("binarySearch Test", {
       };
     };
 
-    buster.assert.same(binarySearch(testArray, compareFuncGenerator(0)), -1);
-    buster.assert.same(binarySearch(testArray, compareFuncGenerator(5)), -5);
-    buster.assert.same(binarySearch(testArray, compareFuncGenerator(9)), -8);
+    assert.same(binarySearch(testArray, compareFuncGenerator(0)), -1);
+    assert.same(binarySearch(testArray, compareFuncGenerator(5)), -5);
+    assert.same(binarySearch(testArray, compareFuncGenerator(9)), -8);
   }
 });
