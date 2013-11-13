@@ -10,7 +10,7 @@ buster.testCase("addFile Test", {
   "addFile must add an item to the global files array": function() {
     var layoutFilesCalled = false;
 
-    var tempLayoutFilesCalled = layoutFilesCalled;
+    var tempLayoutFiles = layoutFiles;
     layoutFiles = function() {
       layoutFilesCalled = true;
     };
@@ -24,7 +24,7 @@ buster.testCase("addFile Test", {
     buster.assert.isTrue(layoutFilesCalled);
 
     // Restore "layoutFilesCalled" method
-    layoutFilesCalled = tempLayoutFilesCalled;
+    layoutFiles = tempLayoutFiles;
   }
 });
 
