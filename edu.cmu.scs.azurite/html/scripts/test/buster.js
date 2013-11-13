@@ -13,4 +13,4 @@ config["My tests"] = {
   tests: [
     "test/*-test.js"
   ]
-}
+};
