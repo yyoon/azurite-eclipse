@@ -31,6 +31,7 @@ var TIMETICK_INTERVAL = 100;
 
 var RECT_RADIUS = 1;
 var MIN_WIDTH = 6;
+var MIN_HEIGHT = MIN_WIDTH;
 var ROW_HEIGHT = 30;
 var TICKS_HEIGHT = 30;
 var DEFAULT_RATIO = 100;
@@ -70,13 +71,17 @@ rectDraw.xFunc = function(d) {
 	return (d.t1 - d.session.startAbsTimestamp + d.sid) / DEFAULT_RATIO;
 };
 rectDraw.yFunc = function(d) {
-	return Math.min(ROW_HEIGHT * d.y1 / 100, ROW_HEIGHT - MIN_WIDTH / global.scaleY);
+	if (ROW_HEIGHT * (d.y2 - d.y1) / 100 <= MIN_HEIGHT) {
+		return (ROW_HEIGHT - MIN_HEIGHT) * d.y1 / (100 - (d.y2 - d.y1));
+	} else {
+		return ROW_HEIGHT * d.y1 / 100;
+	}
 };
 rectDraw.wFunc = function(d) {
 	return Math.max(MIN_WIDTH / global.scaleX, (d.t2 - d.t1) / DEFAULT_RATIO);
 };
 rectDraw.hFunc = function(d) {
-	return Math.max(MIN_WIDTH / global.scaleY, ROW_HEIGHT * (d.y2 - d.y1) / 100);
+	return Math.max(MIN_HEIGHT / global.scaleY, ROW_HEIGHT * (d.y2 - d.y1) / 100);
 };
 
 var fileDraw = {};

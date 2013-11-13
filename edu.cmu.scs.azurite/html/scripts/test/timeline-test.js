@@ -62,3 +62,29 @@ buster.testCase("binarySearch Test", {
     assert.same(binarySearch(testArray, compareFuncGenerator(9)), -8);
   }
 });
+
+buster.testCase("rectDraw.yFunc Test", {
+  "rectangles should be placed correctly when they are no taller than the minimum height": function() {
+    assert.same(ROW_HEIGHT, 30);
+    assert.same(MIN_HEIGHT, 6);
+
+    var op = {};
+
+    op = { y1: 15, y2: 30 };
+    assert.near(rectDraw.yFunc(op), 4.24, 0.01);
+    assert.same(rectDraw.hFunc(op), MIN_HEIGHT);
+
+    op = { y1: 90, y2: 95 };
+    assert.near(rectDraw.yFunc(op), 22.74, 0.01);
+    assert.same(rectDraw.hFunc(op), MIN_HEIGHT);
+  },
+
+  "rectangles should be placed correctly when they are taller than the minimum height": function() {
+    assert.same(ROW_HEIGHT, 30);
+    assert.same(MIN_HEIGHT, 6);
+
+    assert.near(rectDraw.yFunc({ y1: 10, y2: 31 }), 3, 0.01);
+    assert.near(rectDraw.yFunc({ y1: 0, y2: 100}), 0, 0.01);
+    assert.near(rectDraw.yFunc({ y1: 10, y2: 100}), 3, 0.01);
+  }
+});
