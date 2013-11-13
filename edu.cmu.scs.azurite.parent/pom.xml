@@ -32,6 +32,7 @@
         <sonar.core.codeCoveragePlugin>jacoco</sonar.core.codeCoveragePlugin>
         <sonar.dynamicAnalysis>reuseReports</sonar.dynamicAnalysis>
         <sonar.jacoco.reportPath>../edu.cmu.scs.azurite.parent/target/jacoco.exec</sonar.jacoco.reportPath>
+        <sonar.exclusions>**/diff_match_patch.java</sonar.exclusions>
       </properties>
       
       <build>
