@@ -25,8 +25,6 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.SWTException;
 import org.eclipse.swt.browser.Browser;
 import org.eclipse.swt.browser.BrowserFunction;
-import org.eclipse.swt.browser.ProgressEvent;
-import org.eclipse.swt.browser.ProgressListener;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
@@ -61,8 +59,14 @@ import edu.cmu.scs.fluorite.util.Utilities;
 
 public class TimelineViewPart extends ViewPart implements RuntimeDCListener, CommandExecutionListener {
 	
-	private static TimelineViewPart me = null;
+	private static final String RETURN_CODE_OK = "ok";
+	private static final String RETURN_CODE_FAIL = "fail";
+	
+	private static final String EXECUTE_JS_CODE_COMMAND_ID = "edu.cmu.scs.azurite.ui.commands.executeJSCode";
+	private static final String EXECUTE_JS_CODE_COMMAND_PARAM_ID = "edu.cmu.scs.azurite.ui.commands.executeJSCode.codeToExecute";
 	private static String BROWSER_FUNC_PREFIX = "__AZURITE__";
+
+	private static TimelineViewPart me = null;
 	
 	/**
 	 * Not a singleton pattern per se.
@@ -106,15 +110,6 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		addBrowserFunctions();
 		moveToIndexPage();
 		
-		browser.addProgressListener(new ProgressListener() {
-            
-            public void completed(ProgressEvent event) {
-            }
-            
-            public void changed(ProgressEvent event) {
-            }
-        });
-		
 		setupContextMenu();
 
 		
@@ -146,31 +141,31 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 				"edu.cmu.scs.azurite.ui.commands.jumpToTheAffectedCodeCommand");
 
 		paramMap.clear();
-		paramMap.put("edu.cmu.scs.azurite.ui.commands.executeJSCode.codeToExecute", "showAllFilesEditedTogether();");
+		paramMap.put(EXECUTE_JS_CODE_COMMAND_PARAM_ID, "showAllFilesEditedTogether();");
 		final Action showAllFilesEditedTogetherAction = new CommandAction(
 				"Show All Files Edited Together",
-				"edu.cmu.scs.azurite.ui.commands.executeJSCode",
+				EXECUTE_JS_CODE_COMMAND_ID,
 				paramMap);
 		
 		paramMap.clear();
-		paramMap.put("edu.cmu.scs.azurite.ui.commands.executeJSCode.codeToExecute", "showSelectedFile();");
+		paramMap.put(EXECUTE_JS_CODE_COMMAND_PARAM_ID, "showSelectedFile();");
 		final Action showThisFileOnlyAction = new CommandAction(
 				"Show This File Only",
-				"edu.cmu.scs.azurite.ui.commands.executeJSCode",
+				EXECUTE_JS_CODE_COMMAND_ID,
 				paramMap);
 		
 		paramMap.clear();
-		paramMap.put("edu.cmu.scs.azurite.ui.commands.executeJSCode.codeToExecute", "showAllFilesInProject();");
+		paramMap.put(EXECUTE_JS_CODE_COMMAND_PARAM_ID, "showAllFilesInProject();");
 		final Action showAllFilesInTheSameProjectAction = new CommandAction(
 				"Show All Files in the Same Project",
-				"edu.cmu.scs.azurite.ui.commands.executeJSCode",
+				EXECUTE_JS_CODE_COMMAND_ID,
 				paramMap);
 		
 		paramMap.clear();
-		paramMap.put("edu.cmu.scs.azurite.ui.commands.executeJSCode.codeToExecute", "showAllFiles();");
+		paramMap.put(EXECUTE_JS_CODE_COMMAND_PARAM_ID, "showAllFiles();");
 		final Action showAllFilesAction = new CommandAction(
 				"Show All Files",
-				"edu.cmu.scs.azurite.ui.commands.executeJSCode",
+				EXECUTE_JS_CODE_COMMAND_ID,
 				paramMap);
 		
 		// Setup the dynamic context menu
@@ -303,7 +298,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		@Override
 		public Object function(Object[] arguments) {
 			if (arguments == null || arguments.length != 1 || arguments[0] == null) {
-				return "fail";
+				return RETURN_CODE_FAIL;
 			}
 			
 			try {
@@ -316,10 +311,10 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 				SelectiveUndoEngine.getInstance()
 						.doSelectiveUndoOnMultipleFiles(params);
 				
-				return "ok";
+				return RETURN_CODE_OK;
 			} catch (Exception e) {
 				e.printStackTrace();
-				return "fail";
+				return RETURN_CODE_FAIL;
 			}
 		}
 
@@ -336,7 +331,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 			if (arguments == null || arguments.length != 2
 					|| !(arguments[0] instanceof Number)
 					|| !(arguments[1] instanceof Number)) {
-				return "fail";
+				return RETURN_CODE_FAIL;
 			}
 			
 			try {
@@ -348,9 +343,9 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 								.filterDocumentChangesGreaterThanId(
 										new OperationId(sid, id)));				
 				
-				return "ok";
+				return RETURN_CODE_OK;
 			} catch (Exception e) {
-				return "fail";
+				return RETURN_CODE_FAIL;
 			}
 		}
 		
@@ -392,7 +387,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
             
             browser.execute("layout();");
             
-			return "ok";
+			return RETURN_CODE_OK;
 		}
 	}
 	
@@ -406,7 +401,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		public Object function(Object[] arguments) {
 			System.out.println( arguments[0] );
 			
-			return "ok";
+			return RETURN_CODE_OK;
 		}
 	}
 	
@@ -423,7 +418,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 					|| !(arguments[1] instanceof String)
 					|| !(arguments[2] instanceof Number)
 					|| !(arguments[3] instanceof Number)) {
-				return "fail";
+				return RETURN_CODE_FAIL;
 			}
 			
 			try {
@@ -456,7 +451,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 
 				// Cannot retrieve the associated file.
 				if (runtimeDC == null) {
-					return "fail";
+					return RETURN_CODE_FAIL;
 				}
 				
 				int offset = runtimeDC.getAllSegments().get(0).getOffset();
@@ -469,9 +464,9 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 					styledText.setFocus();
 				}
 				
-				return "ok";
+				return RETURN_CODE_OK;
 			} catch (Exception e) {
-				return "fail";
+				return RETURN_CODE_FAIL;
 			}
 		}
 		
@@ -490,7 +485,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 					|| !(arguments[1] instanceof String)
 					|| !(arguments[2] instanceof Number)
 					|| !(arguments[3] instanceof Number)) {
-				return "fail";
+				return RETURN_CODE_FAIL;
 			}
 			
 			try {
@@ -529,7 +524,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		@Override
 		public Object function(Object[] arguments) {
 			if (arguments.length != 1 || !(arguments[0] instanceof Number)) {
-				return "fail";
+				return RETURN_CODE_FAIL;
 			}
 			
 			long absTimestamp = ((Number)arguments[0]).longValue();
@@ -539,7 +534,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 				view.selectVersionWithAbsTimestamp(absTimestamp);
 			}
 			
-			return "ok";
+			return RETURN_CODE_OK;
 		}
 		
 	}
@@ -553,7 +548,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		@Override
 		public Object function(Object[] arguments) {
 			if (arguments.length != 1 || !(arguments[0] instanceof String)) {
-				return "fail";
+				return RETURN_CODE_FAIL;
 			}
 			
 			String eclipseCmdId = (String)arguments[0];
@@ -565,7 +560,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 				e.printStackTrace();
 			}
 			
-			return "ok";
+			return RETURN_CODE_OK;
 		}
 	}
 	
@@ -583,7 +578,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 				e.printStackTrace();
 			}
 			
-			return "ok";
+			return RETURN_CODE_OK;
 		}
 		
 	}
