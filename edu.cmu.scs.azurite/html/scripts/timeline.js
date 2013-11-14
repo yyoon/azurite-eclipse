@@ -1063,6 +1063,7 @@ window.onresize = function(e) {
 		recalculateClipPaths();
 		updateSeparatingLines();
 		updateAreas();
+		updateTicks();
 
 		updateHScroll();
 		updateVScroll();
