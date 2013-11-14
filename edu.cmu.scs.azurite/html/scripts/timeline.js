@@ -1649,7 +1649,7 @@ function scrollRight(pixels) {
 }
 
 function scrollToEnd() {
-	translateX(getMinTranslateX() + getSvgWidth() * (1.0 - FILES_PORTION));
+	translateX(getMinTranslateX());
 }
 
 function fileZoomIn() {
