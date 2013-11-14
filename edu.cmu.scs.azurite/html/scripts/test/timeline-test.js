@@ -25,44 +25,6 @@ buster.testCase("addFile Test", {
   }
 });
 
-buster.testCase("binarySearch Test", {
-  "binarySearch should return the indices correctly when target found": function() {
-    var testArray = [1, 2, 3, 4, 6, 7, 8];
-
-    var compareFuncGenerator = function(target_value) {
-      return function(cur_value) {
-        if (target_value < cur_value) { return -1; }
-        if (target_value > cur_value) { return 1; }
-        return 0;
-      };
-    };
-
-    assert.same(binarySearch(testArray, compareFuncGenerator(1)), 0);
-    assert.same(binarySearch(testArray, compareFuncGenerator(2)), 1);
-    assert.same(binarySearch(testArray, compareFuncGenerator(3)), 2);
-    assert.same(binarySearch(testArray, compareFuncGenerator(4)), 3);
-    assert.same(binarySearch(testArray, compareFuncGenerator(6)), 4);
-    assert.same(binarySearch(testArray, compareFuncGenerator(7)), 5);
-    assert.same(binarySearch(testArray, compareFuncGenerator(8)), 6);
-  },
-
-  "binarySearch should return the correct complement indices when target not found": function() {
-    var testArray = [1, 2, 3, 4, 6, 7, 8];
-
-    var compareFuncGenerator = function(target_value) {
-      return function(cur_value) {
-        if (target_value < cur_value) { return -1; }
-        if (target_value > cur_value) { return 1; }
-        return 0;
-      };
-    };
-
-    assert.same(binarySearch(testArray, compareFuncGenerator(0)), -1);
-    assert.same(binarySearch(testArray, compareFuncGenerator(5)), -5);
-    assert.same(binarySearch(testArray, compareFuncGenerator(9)), -8);
-  }
-});
-
 buster.testCase("rectDraw.yFunc Test", {
   "rectangles should be placed correctly when they are no taller than the minimum height": function() {
     assert.same(ROW_HEIGHT, 30);
