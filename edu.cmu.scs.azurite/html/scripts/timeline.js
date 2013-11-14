@@ -27,8 +27,6 @@ var TYPE_INSERT = 0;
 var TYPE_DELETE = 1;
 var TYPE_REPLACE = 2;
 
-var TIMETICK_INTERVAL = 100;
-
 var RECT_RADIUS = 1;
 var MIN_WIDTH = 6;
 var MIN_HEIGHT = MIN_WIDTH;
@@ -123,6 +121,11 @@ annotationDraw.xFunc = function(d) {
 annotationDraw.dFunc = function(d) {
 	var x = annotationDraw.xFunc(d);
 	return 'M ' + x + ' 0 L ' + (x - (ANNOTATION_SIZE / 2)) + ' ' + (-ANNOTATION_SIZE / 2) + ' ' + (x - (ANNOTATION_SIZE / 2)) + ' ' + (-ANNOTATION_SIZE) + ' ' + (x + (ANNOTATION_SIZE / 2)) + ' ' + (-ANNOTATION_SIZE) + ' ' + (x + (ANNOTATION_SIZE / 2)) + ' ' + (-ANNOTATION_SIZE / 2);
+};
+
+var timeTickDraw = {};
+timeTickDraw.xFunc = function(d) {
+	return timestampToPixel(d);
 };
 
 /**
@@ -317,7 +320,11 @@ function setupSVG() {
 		.attr('d', 'M 0 0 L ' + (-MARKER_SIZE) + ' ' + MARKER_SIZE + ' ' + MARKER_SIZE + ' ' + MARKER_SIZE)
 		.attr('fill', MARKER_COLOR);
 
-	svg.subTicks = svg.main.append('g')
+	svg.subTicksWrap = svg.main.append('g')
+		.attr('id', 'sub_ticks_wrap')
+		.attr('clip-path', 'url(#clipTicksWrap)');
+
+	svg.subTicks = svg.subTicksWrap.append('g')
 		.attr('id', 'sub_ticks');
 
 	svg.main.append('rect')
@@ -334,6 +341,9 @@ function setupSVG() {
 	
 	svg.clipMarkerWrap = svg.main.append('clipPath')
 		.attr('id', 'clipMarkerWrap').append('rect');
+
+	svg.clipTicksWrap = svg.main.append('clipPath')
+		.attr('id', 'clipTicksWrap').append('rect');
 
 	recalculateClipPaths();
 }
@@ -373,8 +383,12 @@ function recalculateClipPaths() {
 		.attr('width', (svgWidth * (1.0 - FILES_PORTION)))
 		.attr('height', (svgHeight - TICKS_HEIGHT + 2 * MARKER_SIZE));
 
-	svg.subTicks
+	svg.subTicksWrap
 		.attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' ' + (CHART_MARGINS.top + svgHeight - TICKS_HEIGHT) + ')');
+
+	svg.clipTicksWrap
+		.attr('width', (svgWidth * (1.0 - FILES_PORTION)))
+		.attr('height', (TICKS_HEIGHT));
 }
 
 /**
@@ -918,6 +932,7 @@ function layout(newLayout) {
 	updateHScroll();
 	updateMarkerPosition();
 	updateAnnotations();
+	updateTicks();
 	
 	// Restore the scroll position.
 	showFrom(leftmostTimestamp);
@@ -1749,7 +1764,6 @@ function scaleX(sx) {
 
 	d3.selectAll('.indicator').attr('stroke-width', indicatorDraw.wFunc);
 
-	updateTicks();
 	updateHScroll();
 	
 	if (global.layout === LayoutEnum.COMPACT) {
@@ -1791,7 +1805,6 @@ function translateX(tx) {
 
 	updateSubRectsTransform();
 
-	updateTicks();
 	updateHScroll();
 	
 	global.diffWhileDraggingMarker -= diff;
@@ -1852,6 +1865,7 @@ function updateSubRectsTransform() {
 	svg.subRects.attr('transform', 'translate(' + global.translateX + ' ' + (global.translateY * ROW_HEIGHT * global.scaleY) + ') ' + 'scale(' + global.scaleX + ' ' + global.scaleY + ')');
 	svg.subMarkers.attr('transform', 'translate(' + global.translateX + ' 0)');
 	svg.subAnnotations.attr('transform', 'translate(' + global.translateX + ' 0)');
+	svg.subTicks.attr('transform', 'translate(' + global.translateX + ' 0)');
 }
 
 function showFrom(absTimestamp) {
@@ -1906,30 +1920,109 @@ function updateTicks() {
 	if (global.sessions === undefined || global.sessions.length === 0) {
 		return;
 	}
-	
-	var totalWidth = getSvgWidth() * (1.0 - FILES_PORTION) - TIMETICK_INTERVAL;
-	var numIntervals = Math.floor(totalWidth / TIMETICK_INTERVAL);
-	var intervalSize = totalWidth / numIntervals;
-	
-	var i;
-	for (i = 0; i <= numIntervals; ++i) {
-		var screenPixel = TIMETICK_INTERVAL / 2 + intervalSize * i;
-		var timestamp = screenPixelToTimestamp(screenPixel);
-		var dateObj = new Date(timestamp);
-		
-		svg.subTicks.append('text')
-			.attr('x', screenPixel)
+
+	var ticks = [];
+	var dates = [];
+
+	var i, text;
+
+	// Iterate all the sessions.
+	for (i = 0; i < global.sessions.length; ++i) {
+		var session = global.sessions[i];
+
+		var start = session.startAbsTimestamp;
+		var end = session.endAbsTimestamp;
+
+		var nextSession = i === global.sessions.length - 1 ? null : global.sessions[i + 1];
+		var nextSessionStart = nextSession === null ? null : nextSession.startAbsTimestamp;
+		var nextSessionStartPixel = nextSession === null ? end : timestampToPixel(nextSessionStart);
+
+		// Always add the start of the session
+		ticks.push(new Date(start));
+		dates.push(new Date(start));
+
+		var startPixel = timestampToPixel(start);
+		var endPixel = timestampToPixel(end);
+		var pixelLength = endPixel - startPixel;
+
+		var scale = d3.time.scale()
+			.domain([start, end])
+			.range([startPixel, endPixel]);
+
+		var minInterval = 200;
+		var maxInterval = getSvgWidth() * (1.0 - FILES_PORTION) / 2;
+
+		// Retrieve the candidate ticks using d3's ticks() function.
+		var candidates = scale.ticks(4 * pixelLength / (minInterval + maxInterval));
+		var lastTickPixel = timestampToPixel(ticks[ticks.length - 1]);
+
+		// See if each candidate tick can be displayed without violating minInterval.
+		for (var j = 0; j < candidates.length; ++j) {
+			var candidate = candidates[j].getTime();
+			var candidatePixel = timestampToPixel(candidate);
+
+			if (candidatePixel - lastTickPixel >= minInterval) {
+				if (nextSession === null || nextSessionStartPixel - candidatePixel >= minInterval) {
+					ticks.push(candidates[j]);
+					lastTickPixel = candidatePixel;
+				}
+			}
+		}
+	}
+
+	// TODO fill in too big gaps
+
+	// Display seconds?
+	var displaySeconds = false;
+	for (i = 0; i < ticks.length - 1; ++i) {
+		if (d3.time.minute(ticks[i]).getTime() === d3.time.minute(ticks[i + 1]).getTime()) {
+			displaySeconds = true;
+			break;
+		}
+	}
+
+	var timeFormat = displaySeconds ? '%I:%M:%S %p' : '%I:%M %p';
+	var timeFormatter = d3.time.format(timeFormat);
+
+	// Now actually create appropriate svg objects to draw the ticks
+	for (i = 0; i < ticks.length; ++i) {
+		text = svg.subTicks.append('text');
+		text.datum(ticks[i]);
+
+		text.attr('x', timeTickDraw.xFunc)
 			.attr('dy', '1em')
 			.attr('fill', 'white')
-			.attr('text-anchor', 'middle')
-			.text(d3.time.format('%I:%M %p')(dateObj));
-		
-		svg.subTicks.append('text')
-			.attr('x', screenPixel)
+			.attr('text-anchor', 'left')
+			.text(timeFormatter(ticks[i]));
+	}
+
+	for (i = 0; i < dates.length; ++i) {
+		text = svg.subTicks.append('text');
+		text.datum(dates[i]);
+
+		text.attr('x', timeTickDraw.xFunc)
 			.attr('dy', '2em')
 			.attr('fill', 'white')
-			.attr('text-anchor', 'middle')
-			.text(d3.time.format('%x')(dateObj));
+			.attr('text-anchor', 'left')
+			.text(dateFormatter(dates[i]));
+	}
+}
+
+function dateFormatter(dateObj) {
+	var today = d3.time.day(new Date());
+	var target = d3.time.day(dateObj);
+	var diffDays = (today.getTime() - target.getTime()) / (24 * 60 * 60 * 1000);
+
+	var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+	if (diffDays === 0) {
+		return 'Today';
+	} else if (diffDays === 1) {
+		return 'Yesterday';
+	} else if (diffDays < 7) {
+		return 'Last ' + days[target.getDay()];
+	} else {
+		return d3.time.format('%x')(target);
 	}
 }
 
