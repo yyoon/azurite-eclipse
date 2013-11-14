@@ -662,7 +662,7 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current
 			rectToAppend.attr('x', rectDraw.xFunc);
 
 			// Assuming this session is the last one...
-			if (global.domainArray.length == 0) {
+			if (global.domainArray.length === 0) {
 				global.domainArray.push(new Date(session.startAbsTimestamp));
 				global.domainArray.push(new Date(session.endAbsTimestamp));
 				global.rangeArray.push(sessionTx + rectDraw.xFunc(newOp));
