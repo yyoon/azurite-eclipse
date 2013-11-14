@@ -2044,11 +2044,16 @@ function dateFormatter(dateObj) {
 	}
 }
 
-function test(count) {
+function test(count, dayoff) {
 	if (count === undefined) { count = 1; }
 	
 	for (var i =0; i < count; ++i) {
-		var sid = new Date().valueOf();
+		var date = new Date();
+		if (dayoff !== undefined) {
+			date.setDate(date.getDate() - dayoff);
+		}
+
+		var sid = date.getTime();
 		// This must be bigger than the last known operation timestamp.
 		if (global.lastOperation !== null && sid < global.lastOperation.getAbsT2()) {
 			sid = global.lastOperation.getAbsT2() + Math.floor(Math.random() * 5000);
