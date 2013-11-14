@@ -175,6 +175,9 @@ global.sessions = [];
 global.selected = [];
 global.annotations = [];
 
+global.ticks = [];
+global.dates = [];
+
 global.getVisibleFiles = function () {
 	return global.files.filter(function (e, i, a) {
 		return e.isVisible();
@@ -695,6 +698,19 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current
 		}
 
 		global.timeScale.domain(global.domainArray).range(global.rangeArray);
+
+		// Time ticks
+		if (global.ticks.length === 0) {
+			updateTicks();
+		} else {
+			var lastTick = global.ticks[global.ticks.length - 1];
+			var currentPixel = global.rangeArray[global.rangeArray.length - 1];
+			var lastTickPixel = timeTickDraw.xFunc(lastTick);
+
+			if (currentPixel - lastTickPixel > getTicksMaxInterval()) {
+				updateTicks();
+			}
+		}
 	}
 	
 	// Add tipsy.
@@ -796,6 +812,15 @@ function updateOperation(sid, id, t2, y1, y2, scroll) {
 		global.rangeArray[global.rangeArray.length - 1] = sessionTx + rectDraw.xFunc(lastOp) + rectDraw.wFunc(lastOp);
 	}
 	global.timeScale.domain(global.domainArray).range(global.rangeArray);
+
+	// Update time ticks if necessary.
+	var lastTick = global.ticks[global.ticks.length - 1];
+	var currentPixel = global.rangeArray[global.rangeArray.length - 1];
+	var lastTickPixel = timeTickDraw.xFunc(lastTick);
+
+	if (currentPixel - lastTickPixel > getTicksMaxInterval()) {
+		updateTicks();
+	}
 	
 	if (scroll === true) {
 		showUntil(lastOp.getAbsT2());
@@ -1932,7 +1957,10 @@ function updateTicks() {
 	var ticks = [];
 	var dates = [];
 
-	var i, text;
+	var i, j, text;
+
+	var minInterval = TICKS_MIN_INTERVAL;
+	var maxInterval = Math.max(getTicksMaxInterval(), TICKS_MIN_INTERVAL * 2);
 
 	// Iterate all the sessions.
 	for (i = 0; i < global.sessions.length; ++i) {
@@ -1957,15 +1985,12 @@ function updateTicks() {
 			.domain([start, end])
 			.range([startPixel, endPixel]);
 
-		var minInterval = TICKS_MIN_INTERVAL;
-		var maxInterval = getSvgWidth() * (1.0 - FILES_PORTION) / 2;
-
 		// Retrieve the candidate ticks using d3's ticks() function.
 		var candidates = scale.ticks(4 * pixelLength / (minInterval + maxInterval));
 		var lastTickPixel = timestampToPixel(ticks[ticks.length - 1]);
 
 		// See if each candidate tick can be displayed without violating minInterval.
-		for (var j = 0; j < candidates.length; ++j) {
+		for (j = 0; j < candidates.length; ++j) {
 			var candidate = candidates[j].getTime();
 			var candidatePixel = timestampToPixel(candidate);
 
@@ -1978,7 +2003,27 @@ function updateTicks() {
 		}
 	}
 
-	// TODO fill in too big gaps
+	// Fill in too big gaps
+	for (i = 0; i < ticks.length - 1; ++i) {
+		var curPixel = timeTickDraw.xFunc(ticks[i]);
+		var nextPixel = timeTickDraw.xFunc(ticks[i + 1]);
+		var diff = nextPixel - curPixel;
+
+		if (diff > maxInterval) {
+			var count = Math.max(Math.floor(diff / ((minInterval + maxInterval) / 2)) - 1, 1);
+			var interval = diff / (count + 1);
+
+			// Insert ticks forcefully.
+			for (j = 1; j <= count; ++j) {
+				var pixelPosition = curPixel + interval * j;
+				var correspondingTimestamp = global.timeScale.invert(pixelPosition);
+
+				ticks.splice(i + j, 0, new Date(correspondingTimestamp));
+			}
+
+			i += count;
+		}
+	}
 
 	// Display seconds?
 	var displaySeconds = false;
@@ -2025,6 +2070,13 @@ function updateTicks() {
 			.attr('text-anchor', 'left')
 			.text(dateFormatter(dates[i]));
 	}
+
+	global.ticks = ticks;
+	global.dates = dates;
+}
+
+function getTicksMaxInterval() {
+	return getSvgWidth() * (1.0 - FILES_PORTION) / 2;
 }
 
 function dateFormatter(dateObj) {
