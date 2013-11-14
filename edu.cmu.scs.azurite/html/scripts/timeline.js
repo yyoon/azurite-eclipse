@@ -1813,9 +1813,7 @@ function getMinTranslateX() {
 
 	var scaled = result * global.scaleX;
 	var width = getSvgWidth() * (1.0 - FILES_PORTION);
-	if (scaled > width) {
-		scaled -= width;
-	}
+	scaled = Math.max(scaled - width, 0);
 	
 	return -scaled;
 }
