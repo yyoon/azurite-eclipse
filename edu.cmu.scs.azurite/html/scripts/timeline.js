@@ -31,12 +31,13 @@ var RECT_RADIUS = 1;
 var MIN_WIDTH = 6;
 var MIN_HEIGHT = MIN_WIDTH;
 var ROW_HEIGHT = 30;
-var TICKS_HEIGHT = 30;
 var DEFAULT_RATIO = 100;
 
+var TICKS_HEIGHT = 30;
 var TICKMARK_SIZE = 6;
 var TICKMARK_WIDTH = 2;
 var TICKMARK_COLOR = 'white';
+var TICKS_MIN_INTERVAL = 200;
 
 var FILE_NAME_OFFSET_X = 5;
 var FILE_NAME_OFFSET_Y = 5;
@@ -1956,7 +1957,7 @@ function updateTicks() {
 			.domain([start, end])
 			.range([startPixel, endPixel]);
 
-		var minInterval = 200;
+		var minInterval = TICKS_MIN_INTERVAL;
 		var maxInterval = getSvgWidth() * (1.0 - FILES_PORTION) / 2;
 
 		// Retrieve the candidate ticks using d3's ticks() function.
