@@ -1905,6 +1905,9 @@ function updateVScroll() {
 
 function updateTicks() {
 	svg.subTicks.selectAll('text').remove();
+	if (global.sessions === undefined || global.sessions.length === 0) {
+		return;
+	}
 	
 	var totalWidth = getSvgWidth() * (1.0 - FILES_PORTION) - TIMETICK_INTERVAL;
 	var numIntervals = Math.floor(totalWidth / TIMETICK_INTERVAL);
