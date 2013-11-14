@@ -254,6 +254,14 @@ cmenu.mousePos = [];
 cmenu.typeName = '';
 global.isCtrlDown = false;
 
+// time scale (initialize with a default scale)
+global.timeScale = d3.time.scale()
+	.domain([new Date(0), new Date()])
+	.range([0, 0]);
+global.domainArray = [];
+global.rangeArray = [];
+global.timeScale.clamp(true);
+
 /**
  * SVG Setup.
  */
@@ -625,6 +633,11 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current
 		.attr('vector-effect', 'non-scaling-stroke');
 	
 	if (autolayout === true) {
+		var sessionTx = session.tx;
+		if (sessionTx === undefined) {
+			sessionTx = 0;
+		}
+
 		if (global.layout === LayoutEnum.COMPACT) {
 			// Find the last visible rect in this session.
 			var rectsInSession = session.g.selectAll('rect.op_rect').filter(function (d) {
@@ -639,10 +652,29 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current
 			}
 			
 			rectToAppend.attr('x', x);
+
+			global.domainArray.push(new Date(sid + t1));
+			global.domainArray.push(new Date(sid + t2));
+			global.rangeArray.push(sessionTx + x);
+			global.rangeArray.push(sessionTx + x + rectDraw.wFunc(newOp));
 		}
 		else if (global.layout === LayoutEnum.REALTIME) {
 			rectToAppend.attr('x', rectDraw.xFunc);
+
+			// Assuming this session is the last one...
+			if (global.domainArray.length == 0) {
+				global.domainArray.push(new Date(session.startAbsTimestamp));
+				global.domainArray.push(new Date(session.endAbsTimestamp));
+				global.rangeArray.push(sessionTx + rectDraw.xFunc(newOp));
+				global.rangeArray.push(sessionTx + rectDraw.xFunc(newOp) + rectDraw.wFunc(newOp));
+			}
+			else {
+				global.domainArray[global.domainArray.length - 1] = new Date(session.endAbsTimestamp);
+				global.rangeArray[global.rangeArray.length - 1] = sessionTx + rectDraw.xFunc(newOp) + rectDraw.wFunc(newOp);
+			}
 		}
+
+		global.timeScale.domain(global.domainArray).range(global.rangeArray);
 	}
 	
 	// Add tipsy.
@@ -721,18 +753,29 @@ function updateOperation(sid, id, t2, y1, y2, scroll) {
 	}
 	
 	var session = lastOp.session;
+	var sessionTx = session.tx;
+	if (sessionTx === undefined) {
+		sessionTx = 0;
+	}
 	
-	// Move the indicator.
+	// Move the indicator / adjust time scale
 	var indicatorX;
 	if (global.layout === LayoutEnum.COMPACT) {
 		var rectBounds = global.lastRect.node().getBBox();
 		indicatorX = rectBounds.x + rectBounds.width;
 		session.indicator.attr('x1', indicatorX).attr('x2', indicatorX);
+
+		global.domainArray[global.domainArray.length - 1] = new Date(lastOp.sid + t2);
+		global.rangeArray[global.rangeArray.length - 1] = sessionTx + rectBounds.x + rectBounds.width;
 	}
 	else {
 		indicatorX = (session.endAbsTimestamp - session.startAbsTimestamp) / DEFAULT_RATIO;
 		session.indicator.attr('x1', indicatorX).attr('x2', indicatorX);
+
+		global.domainArray[global.domainArray.length - 1] = new Date(session.endAbsTimestamp);
+		global.rangeArray[global.rangeArray.length - 1] = sessionTx + rectDraw.xFunc(lastOp) + rectDraw.wFunc(lastOp);
 	}
+	global.timeScale.domain(global.domainArray).range(global.rangeArray);
 	
 	if (scroll === true) {
 		showUntil(lastOp.getAbsT2());
@@ -813,11 +856,22 @@ function layout(newLayout) {
 		global.tempX += this.getBBox().width;
 		return temp;
 	};
+
+	// Domain values / range values for time scale
+	global.domainArray = [];
+	global.rangeArray = [];
+	var addScaleFunc = function (d, i) {
+		global.domainArray.push(new Date(d.sid + d.t1));
+		global.domainArray.push(new Date(d.sid + d.t2));
+		global.rangeArray.push(global.tempSessionTx + this.getBBox().x);
+		global.rangeArray.push(global.tempSessionTx + this.getBBox().x + this.getBBox().width);
+	};
 	
 	for (i = 0; i < global.sessions.length; ++i) {
 		session = global.sessions[i];
 		
 		session.g.attr('transform', 'translate(' + global.tempSessionTx + ' 0)');
+		session.tx = global.tempSessionTx;
 		
 		// Iterate through all the rects.
 		var rects = session.g.selectAll('rect.op_rect')[0].slice();
@@ -839,14 +893,26 @@ function layout(newLayout) {
 		if (global.layout === LayoutEnum.COMPACT) {
 			session.indicator.attr('x1', global.tempX);
 			session.indicator.attr('x2', global.tempX);
+
+			// recalculate the time scales here.
+			d3.selectAll(rects).each(addScaleFunc);
 		}
 		else if (global.layout === LayoutEnum.REALTIME) {
 			session.indicator.attr('x1', (session.endAbsTimestamp - session.startAbsTimestamp) / DEFAULT_RATIO);
 			session.indicator.attr('x2', (session.endAbsTimestamp - session.startAbsTimestamp) / DEFAULT_RATIO);
+
+			global.domainArray.push(new Date(session.startAbsTimestamp));
+			global.domainArray.push(new Date(session.endAbsTimestamp));
+			global.rangeArray.push(session.tx);
+			global.rangeArray.push(session.tx + (session.endAbsTimestamp - session.startAbsTimestamp) / DEFAULT_RATIO);
 		}
 		
 		global.tempSessionTx += session.g.node().getBBox().width;
 	}
+
+	global.timeScale = d3.time.scale()
+		.domain(global.domainArray)
+		.range(global.rangeArray);
 	
 	updateHighlight();
 	updateHScroll();
