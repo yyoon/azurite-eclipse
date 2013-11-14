@@ -34,6 +34,10 @@ var ROW_HEIGHT = 30;
 var TICKS_HEIGHT = 30;
 var DEFAULT_RATIO = 100;
 
+var TICKMARK_SIZE = 6;
+var TICKMARK_WIDTH = 2;
+var TICKMARK_COLOR = 'white';
+
 var FILE_NAME_OFFSET_X = 5;
 var FILE_NAME_OFFSET_Y = 5;
 
@@ -387,8 +391,9 @@ function recalculateClipPaths() {
 		.attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' ' + (CHART_MARGINS.top + svgHeight - TICKS_HEIGHT) + ')');
 
 	svg.clipTicksWrap
+		.attr('y', -TICKMARK_SIZE / 2)
 		.attr('width', (svgWidth * (1.0 - FILES_PORTION)))
-		.attr('height', (TICKS_HEIGHT));
+		.attr('height', TICKS_HEIGHT + TICKMARK_SIZE);
 }
 
 /**
@@ -1918,6 +1923,7 @@ function updateVScroll() {
 
 function updateTicks() {
 	svg.subTicks.selectAll('text').remove();
+	svg.subTicks.selectAll('line').remove();
 	if (global.sessions === undefined || global.sessions.length === 0) {
 		return;
 	}
@@ -1995,6 +2001,17 @@ function updateTicks() {
 			.attr('fill', 'white')
 			.attr('text-anchor', 'left')
 			.text(timeFormatter(ticks[i]));
+
+		var tickMark = svg.subTicks.append('line');
+		tickMark.datum(ticks[i]);
+
+		tickMark
+			.attr('x1', timeTickDraw.xFunc)
+			.attr('x2', timeTickDraw.xFunc)
+			.attr('y1', -TICKMARK_SIZE / 2)
+			.attr('y2', TICKMARK_SIZE / 2)
+			.attr('stroke-width', TICKMARK_WIDTH)
+			.attr('stroke', TICKMARK_COLOR);
 	}
 
 	for (i = 0; i < dates.length; ++i) {
