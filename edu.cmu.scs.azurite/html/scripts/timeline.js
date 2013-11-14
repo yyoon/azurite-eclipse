@@ -254,6 +254,14 @@ cmenu.mousePos = [];
 cmenu.typeName = '';
 global.isCtrlDown = false;
 
+// time scale (initialize with a default scale)
+global.timeScale = d3.time.scale()
+	.domain([new Date(0), new Date()])
+	.range([0, 0]);
+global.domainArray = [];
+global.rangeArray = [];
+global.timeScale.clamp(true);
+
 /**
  * SVG Setup.
  */
@@ -625,6 +633,11 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current
 		.attr('vector-effect', 'non-scaling-stroke');
 	
 	if (autolayout === true) {
+		var sessionTx = session.tx;
+		if (sessionTx === undefined) {
+			sessionTx = 0;
+		}
+
 		if (global.layout === LayoutEnum.COMPACT) {
 			// Find the last visible rect in this session.
 			var rectsInSession = session.g.selectAll('rect.op_rect').filter(function (d) {
@@ -639,10 +652,29 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current
 			}
 			
 			rectToAppend.attr('x', x);
+
+			global.domainArray.push(new Date(sid + t1));
+			global.domainArray.push(new Date(sid + t2));
+			global.rangeArray.push(sessionTx + x);
+			global.rangeArray.push(sessionTx + x + rectDraw.wFunc(newOp));
 		}
 		else if (global.layout === LayoutEnum.REALTIME) {
 			rectToAppend.attr('x', rectDraw.xFunc);
+
+			// Assuming this session is the last one...
+			if (global.domainArray.length === 0) {
+				global.domainArray.push(new Date(session.startAbsTimestamp));
+				global.domainArray.push(new Date(session.endAbsTimestamp));
+				global.rangeArray.push(sessionTx + rectDraw.xFunc(newOp));
+				global.rangeArray.push(sessionTx + rectDraw.xFunc(newOp) + rectDraw.wFunc(newOp));
+			}
+			else {
+				global.domainArray[global.domainArray.length - 1] = new Date(session.endAbsTimestamp);
+				global.rangeArray[global.rangeArray.length - 1] = sessionTx + rectDraw.xFunc(newOp) + rectDraw.wFunc(newOp);
+			}
 		}
+
+		global.timeScale.domain(global.domainArray).range(global.rangeArray);
 	}
 	
 	// Add tipsy.
@@ -721,18 +753,29 @@ function updateOperation(sid, id, t2, y1, y2, scroll) {
 	}
 	
 	var session = lastOp.session;
+	var sessionTx = session.tx;
+	if (sessionTx === undefined) {
+		sessionTx = 0;
+	}
 	
-	// Move the indicator.
+	// Move the indicator / adjust time scale
 	var indicatorX;
 	if (global.layout === LayoutEnum.COMPACT) {
 		var rectBounds = global.lastRect.node().getBBox();
 		indicatorX = rectBounds.x + rectBounds.width;
 		session.indicator.attr('x1', indicatorX).attr('x2', indicatorX);
+
+		global.domainArray[global.domainArray.length - 1] = new Date(lastOp.sid + t2);
+		global.rangeArray[global.rangeArray.length - 1] = sessionTx + rectBounds.x + rectBounds.width;
 	}
 	else {
 		indicatorX = (session.endAbsTimestamp - session.startAbsTimestamp) / DEFAULT_RATIO;
 		session.indicator.attr('x1', indicatorX).attr('x2', indicatorX);
+
+		global.domainArray[global.domainArray.length - 1] = new Date(session.endAbsTimestamp);
+		global.rangeArray[global.rangeArray.length - 1] = sessionTx + rectDraw.xFunc(lastOp) + rectDraw.wFunc(lastOp);
 	}
+	global.timeScale.domain(global.domainArray).range(global.rangeArray);
 	
 	if (scroll === true) {
 		showUntil(lastOp.getAbsT2());
@@ -813,11 +856,22 @@ function layout(newLayout) {
 		global.tempX += this.getBBox().width;
 		return temp;
 	};
+
+	// Domain values / range values for time scale
+	global.domainArray = [];
+	global.rangeArray = [];
+	var addScaleFunc = function (d, i) {
+		global.domainArray.push(new Date(d.sid + d.t1));
+		global.domainArray.push(new Date(d.sid + d.t2));
+		global.rangeArray.push(global.tempSessionTx + this.getBBox().x);
+		global.rangeArray.push(global.tempSessionTx + this.getBBox().x + this.getBBox().width);
+	};
 	
 	for (i = 0; i < global.sessions.length; ++i) {
 		session = global.sessions[i];
 		
 		session.g.attr('transform', 'translate(' + global.tempSessionTx + ' 0)');
+		session.tx = global.tempSessionTx;
 		
 		// Iterate through all the rects.
 		var rects = session.g.selectAll('rect.op_rect')[0].slice();
@@ -839,14 +893,26 @@ function layout(newLayout) {
 		if (global.layout === LayoutEnum.COMPACT) {
 			session.indicator.attr('x1', global.tempX);
 			session.indicator.attr('x2', global.tempX);
+
+			// recalculate the time scales here.
+			d3.selectAll(rects).each(addScaleFunc);
 		}
 		else if (global.layout === LayoutEnum.REALTIME) {
 			session.indicator.attr('x1', (session.endAbsTimestamp - session.startAbsTimestamp) / DEFAULT_RATIO);
 			session.indicator.attr('x2', (session.endAbsTimestamp - session.startAbsTimestamp) / DEFAULT_RATIO);
+
+			global.domainArray.push(new Date(session.startAbsTimestamp));
+			global.domainArray.push(new Date(session.endAbsTimestamp));
+			global.rangeArray.push(session.tx);
+			global.rangeArray.push(session.tx + (session.endAbsTimestamp - session.startAbsTimestamp) / DEFAULT_RATIO);
 		}
 		
 		global.tempSessionTx += session.g.node().getBBox().width;
 	}
+
+	global.timeScale = d3.time.scale()
+		.domain(global.domainArray)
+		.range(global.rangeArray);
 	
 	updateHighlight();
 	updateHScroll();
@@ -956,90 +1022,7 @@ function screenPixelToTimestamp(screenPixel) {
 }
 
 function pixelToTimestamp(pixel) {
-	if (global.sessions.length === 0) {
-		return 0;
-	}
-	
-	// define the variables to be used in both blocks below.
-	var tx = pixel / global.scaleX;
-	var session = null, dist = 0;
-	var i, curWidth = 0, width;
-	var bounds, result;
-	
-	if (global.layout === LayoutEnum.COMPACT) {
-		// Get the session including the point,
-		// and the dist from the starting of the session group.
-		for (i = 0; i < global.sessions.length; ++i) {
-			width = global.sessions[i].g.node().getBBox().width;
-			
-			if (curWidth <= tx && tx < curWidth + width) {
-				session = global.sessions[i];
-				dist = tx - curWidth;
-				break;
-			}
-			
-			curWidth += width;
-		}
-		
-		if (session === null) {
-			session = global.sessions[i - 1];
-			dist = session.g.node().getBBox().width;
-		}
-		
-		// Collect all the visible rects in this session, and assume they are sorted.
-		var rects = session.g.selectAll('rect.op_rect')
-			.filter(function (d) { return d.isVisible(); })[0].slice(0);
-		rects.sort(global.operationCompareFunc);
-		
-		global.targetDist = dist;
-		var resultIndex = binarySearch(rects, global.rectDistCompareFunc);
-		// If found..
-		if (resultIndex >= 0) {
-			var data = rects[resultIndex].__data__;
-			bounds = rects[resultIndex].getBBox();
-			result = Math.floor(session.sid + data.t1 + (data.t2 - data.t1) * (dist - bounds.x) / bounds.width);
-			
-			return result;
-		}
-		// Couldn't find..
-		else if (resultIndex === ~0) {
-			return session.startAbsTimestamp;
-		}
-		else if (resultIndex === ~rects.length) {
-			return session.endAbsTimestamp;
-		}
-		else {
-			return Math.floor((rects[~resultIndex - 1].__data__.t2 + rects[~resultIndex].__data__.t1) / 2) + session.sid;
-		}
-	}
-	else if (global.layout === LayoutEnum.REALTIME) {
-		// Get the session including the point,
-		// and the dist from the starting of the session group.
-		for (i = 0; i < global.sessions.length; ++i) {
-			width = global.sessions[i].g.node().getBBox().width;
-			
-			if (curWidth <= tx < curWidth + width) {
-				session = global.sessions[i];
-				dist = tx - curWidth;
-				break;
-			}
-			
-			curWidth += width;
-		}
-		
-		if (session === null) {
-			session = global.sessions[i];
-			dist = session.g.node().getBBox().width;
-		}
-		
-		bounds = session.g.node().getBBox();
-		
-		// Then just linearly interpolate.
-		result = session.startAbsTimestamp + (session.endAbsTimestamp - session.startAbsTimestamp) * (dist - bounds.x) / bounds.width;
-		return result;
-	}
-	
-	return 0;
+	return global.timeScale.invert(pixel / global.scaleX).getTime();
 }
 
 /*
@@ -1886,103 +1869,7 @@ function showTimestamp(absTimestamp, offsetInPixels) {
 }
 
 function timestampToPixel(absTimestamp) {
-	if (global.sessions.length === 0) {
-		return 0;
-	}
-	
-	// binary search through the sessions.
-	var startIndex = 0, endIndex = global.sessions.length - 1;
-	var midIndex = Math.floor((startIndex + endIndex) / 2);
-	
-	while (startIndex <= endIndex) {
-		var midSession = global.sessions[midIndex];
-		
-		// found it.
-		if (midSession.startAbsTimestamp <= absTimestamp &&
-				absTimestamp <= midSession.endAbsTimestamp) {
-			
-			// Get the tx offset.
-			var txOffset = 0, tx;
-			var i;
-			for (i = 0; i < midIndex; ++i) {
-				txOffset += global.sessions[i].g.node().getBBox().width;
-			}
-			
-			if (global.layout === LayoutEnum.COMPACT) {
-				// again, binary search through the rects.
-				var rects = midSession.g.selectAll('rect.op_rect').filter(global.filterVisibleFunc)[0].slice();
-				rects.sort(global.operationCompareFunc);
-				
-				var startRectIndex = 0, endRectIndex = rects.length - 1;
-				var midRectIndex = Math.floor((startRectIndex + endRectIndex) / 2);
-				
-				while (startRectIndex <= endRectIndex) {
-					var midRect = rects[midRectIndex];
-					var data = midRect.__data__;
-					var absT1 = midSession.sid + data.t1;
-					var absT2 = midSession.sid + data.t2;
-					var rectBounds = midRect.getBBox();
-					
-					// found it.
-					if (absT1 <= absTimestamp && absTimestamp <= absT2) {
-						if (absT2 === absT1) {
-							tx = txOffset + rectBounds.x + rectBounds.width / 2;
-							return tx * global.scaleX;
-						}
-						else {
-							tx = txOffset + rectBounds.x + rectBounds.width * (absTimestamp - absT1) / (absT2 - absT1);
-							return tx * global.scaleX;
-						}
-					}
-					
-					if (absTimestamp < absT1) {
-						endRectIndex = midRectIndex - 1;
-					}
-					else {
-						startRectIndex = midRectIndex + 1;
-					}
-					
-					midRectIndex = Math.floor((startRectIndex + endRectIndex) / 2);
-				}
-				
-				// Not in the middle of a rect.
-				if (startRectIndex === 0) {
-					return txOffset * global.scaleX;
-				}
-				else if (startRectIndex === rects.length) {
-					return (txOffset + midSession.g.node().getBBox().width) * global.scaleX;
-				}
-				else {
-					return (txOffset + rects[startRectIndex].getBBox().x) * global.scaleX;
-				}
-			}
-			else if (global.layout === LayoutEnum.REALTIME) {
-				var sessionBounds = midSession.g.node().getBBox();
-				tx = txOffset + sessionBounds.width * (absTimestamp - midSession.startAbsTimestamp) / (midSession.endAbsTimestamp - midSession.startAbsTimestamp);
-				return tx * global.scaleX;
-			}
-		}
-		
-		if (absTimestamp < midSession.startAbsTimestamp) {
-			endIndex = midIndex - 1;
-		}
-		else {
-			startIndex = midIndex + 1;
-		}
-		
-		midIndex = Math.floor((startIndex + endIndex) / 2);
-	}
-	
-	// Couldn't found. Somewhere in the middle of sessions.
-	if (startIndex === 0) {
-		return 0;
-	}
-	else if (startIndex === global.sessions.length) {
-		return -getMinTranslateX();
-	}
-	else {
-		return global.sessions[startIndex].g.node().getBBox().x * global.scaleX;
-	}
+	return global.timeScale(new Date(absTimestamp)) * global.scaleX;
 }
 
 function updateHScroll() {
@@ -2018,6 +1905,9 @@ function updateVScroll() {
 
 function updateTicks() {
 	svg.subTicks.selectAll('text').remove();
+	if (global.sessions === undefined || global.sessions.length === 0) {
+		return;
+	}
 	
 	var totalWidth = getSvgWidth() * (1.0 - FILES_PORTION) - TIMETICK_INTERVAL;
 	var numIntervals = Math.floor(totalWidth / TIMETICK_INTERVAL);
@@ -2262,27 +2152,4 @@ function popCurrentFile() {
 			global.currentFileIndex = -1;
 		}
 	}
-}
-
-// compareFunc takes one parameter,
-// which is the current(mid) value being investigated by the binary search algorithm.
-// compareFunc should already know about the target value.
-// compareFunc should return:
-//  - a negative number when target_value < current_value
-//  - a positive number when target_value > current_value
-//  - zero when target_value == current_value
-function binarySearch(sortedArray, compareFunc) {
-	var startIndex = 0, endIndex = sortedArray.length - 1, midIndex;
-	while (startIndex <= endIndex) {
-		midIndex = Math.floor( (startIndex + endIndex) / 2 );
-		var obj = sortedArray[midIndex];
-		
-		if (compareFunc(obj) < 0) { endIndex = midIndex - 1; continue; }
-		if (compareFunc(obj) > 0) { startIndex = midIndex + 1; continue; }
-		
-		return midIndex;
-	}
-	
-	// Failed to find one.
-	return ~startIndex;
 }
