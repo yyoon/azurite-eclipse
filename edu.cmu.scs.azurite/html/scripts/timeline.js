@@ -2,7 +2,7 @@
 /*global d3, azurite */
 
 /* Things to be called from Azurite */
-/*exported setStartTimestamp, updateOperation, getRightmostTimestamp, showContextMenu, addSelectionsByIds, removeSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarker, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile, addAnnotation */
+/*exported updateOperation, getRightmostTimestamp, showContextMenu, addSelectionsByIds, removeSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarker, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile, addAnnotation */
 
 /* Things to be called manually when debugging */
 /*exported test */
@@ -596,14 +596,6 @@ function updateSeparatingLines() {
 		.attr('y1', lineDraw.yFunc)
 		.attr('x2', lineDraw.x2Func)
 		.attr('y2', lineDraw.yFunc);
-}
-
-/**
- * Called by Azurite.
- * Sets the start timestamp.
- */
-function setStartTimestamp(timestamp, adjustMaxTimestamp, preservePosition) {
-	// Do nothing.
 }
 
 /**
