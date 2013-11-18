@@ -572,13 +572,10 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	}
 	
 	// Menu
-	private Menu mMenuBar;
 	private MenuManager mLeftSourceViewerMenuMgr;
-	private MenuManager mTreeViewerMenuMgr;
 	// ----------------------------------------
 	
 	// Sash Forms
-	private SashForm mTopSash;
 	private SashForm mBottomSash;
 	// ----------------------------------------
 	
@@ -597,7 +594,6 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	private String mCompareTitle;
 	
 	private SourceViewer mLeftSourceViewer;
-	private SourceViewer mRightSourceViewer;
 	// ----------------------------------------
 	
 	// For Conflict Resolution Panel ----------
@@ -689,16 +685,16 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		Composite composite = createMainArea(parent);
 		
 		// Create the top sash.
-		mTopSash = new SashForm(composite, SWT.VERTICAL);
+		SashForm topSash = new SashForm(composite, SWT.VERTICAL);
 		
 		// Chunks tree on the top.
-		createChunksTreeViewer(mTopSash);
+		createChunksTreeViewer(topSash);
 		
 		// Bottom Area. Use StackLayout to switch between panels.
-		createBottomArea(mTopSash);
+		createBottomArea(topSash);
 		
-		mTopSash.setSashWidth(SPACING);
-		mTopSash.setWeights(new int[] { 1, 3 });
+		topSash.setSashWidth(SPACING);
+		topSash.setWeights(new int[] { 1, 3 });
 		
 		// Setup the menu
 		createMenuBar();
@@ -716,9 +712,9 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	}
 
 	private void createMenuBar() {
-		mMenuBar = new Menu(getShell(), SWT.BAR);
+		Menu menuBar = new Menu(getShell(), SWT.BAR);
 		
-		final MenuItem testMenu = new MenuItem(mMenuBar, SWT.CASCADE);
+		final MenuItem testMenu = new MenuItem(menuBar, SWT.CASCADE);
 		testMenu.setText("Test");
 		
 		// Uncomment the following line to restore the menu bar.
@@ -740,9 +736,9 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		});
 		
 		// Setup the menu manager for the chunks tree viewer.
-		mTreeViewerMenuMgr = new MenuManager();
-		mTreeViewerMenuMgr.setRemoveAllWhenShown(true);
-		mTreeViewerMenuMgr.addMenuListener(new IMenuListener() {
+		MenuManager treeViewerMenuMgr = new MenuManager();
+		treeViewerMenuMgr.setRemoveAllWhenShown(true);
+		treeViewerMenuMgr.addMenuListener(new IMenuListener() {
 			@Override
 			public void menuAboutToShow(IMenuManager manager) {
 				IStructuredSelection treeSel = (IStructuredSelection) mChunksTreeViewer.getSelection();
@@ -792,7 +788,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		});
 		
 		Control treeControl = mChunksTreeViewer.getControl();
-		treeControl.setMenu(mTreeViewerMenuMgr.createContextMenu(treeControl));
+		treeControl.setMenu(treeViewerMenuMgr.createContextMenu(treeControl));
 	}
 
 	private Composite createMainArea(Composite parent) {
@@ -1045,12 +1041,11 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			@SuppressWarnings("restriction")
 			@Override
 			protected Viewer getViewer(Viewer oldViewer, Object input) {
-				// TODO Auto-generated method stub
 				Viewer v = CompareUI.findContentViewer(oldViewer, input, this, mCompareConfiguration);
 				v.getControl().setData(CompareUI.COMPARE_VIEWER_TITLE, mCompareTitle);
 				
 				mLeftSourceViewer = null;
-				mRightSourceViewer = null;
+				SourceViewer rightSourceViewer = null;
 				
 				// HACK HACK access the private field directly from TextMergeViewer, in order to get the SourceViewer instances.
 				try {
@@ -1061,7 +1056,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 					rightField.setAccessible(true);
 					
 					mLeftSourceViewer = ((org.eclipse.compare.internal.MergeSourceViewer) leftField.get(v)).getSourceViewer();
-					mRightSourceViewer = ((org.eclipse.compare.internal.MergeSourceViewer) rightField.get(v)).getSourceViewer();
+					rightSourceViewer = ((org.eclipse.compare.internal.MergeSourceViewer) rightField.get(v)).getSourceViewer();
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -1071,8 +1066,8 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 					te.setMenu(mLeftSourceViewerMenuMgr.createContextMenu(te));
 				}
 				
-				if (mRightSourceViewer != null) {
-					StyledText te = mRightSourceViewer.getTextWidget();
+				if (rightSourceViewer != null) {
+					StyledText te = rightSourceViewer.getTextWidget();
 					te.setMenu(null);
 				}
 				
