@@ -15,7 +15,9 @@
 
 // Disable selection.
 document.unselectable = "on";
-document.onselectstart = function() { return false; };
+document.onselectstart = function() {
+    return false;
+};
 
 /**
  * Constants. (Always use UPPER_CASE.)
@@ -139,29 +141,51 @@ timeTickDraw.xFunc = function(d) {
 var global = {};
 
 global.operationCompareFunc = function (lhs, rhs) {
-	if (lhs.__data__.t1 < rhs.__data__.t1) { return -1; }
-	if (lhs.__data__.t1 > rhs.__data__.t1) { return 1; }
-	if (lhs.__data__.id < rhs.__data__.id) { return -1; }
-	if (lhs.__data__.id > rhs.__data__.id) { return 1; }
+	if (lhs.__data__.t1 < rhs.__data__.t1) {
+		return -1;
+	}
+	if (lhs.__data__.t1 > rhs.__data__.t1) {
+		return 1;
+	}
+	if (lhs.__data__.id < rhs.__data__.id) {
+		return -1;
+	}
+	if (lhs.__data__.id > rhs.__data__.id) {
+		return 1;
+	}
 	return 0;
 };
 
 global.oidCompareFunc = function (lhs, rhs) {
-	if (lhs.sid < rhs.sid) { return -1; }
-	if (lhs.sid > rhs.sid) { return 1; }
-	if (lhs.id < rhs.id) { return -1; }
-	if (lhs.id > rhs.id) { return 1; }
+	if (lhs.sid < rhs.sid) {
+		return -1;
+	}
+	if (lhs.sid > rhs.sid) {
+		return 1;
+	}
+	if (lhs.id < rhs.id) {
+		return -1;
+	}
+	if (lhs.id > rhs.id) {
+		return 1;
+	}
 	return 0;
 };
 
 global.rectDistCompareFunc = function (rect) {
 	var bounds = rect.getBBox();
-	if (bounds.x <= global.targetDist && global.targetDist <= bounds.x + bounds.width) { return 0; }
-	if (global.targetDist < bounds.x) { return -1; }
+	if (bounds.x <= global.targetDist && global.targetDist <= bounds.x + bounds.width) {
+		return 0;
+	}
+	if (global.targetDist < bounds.x) {
+		return -1;
+	}
 	return 1;
 };
 
-global.filterVisibleFunc = function (d) { return d.isVisible(); };
+global.filterVisibleFunc = function (d) {
+	return d.isVisible();
+};
 
 
 // variables to remember the last window size
@@ -645,14 +669,18 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current
 	var rectToAppend = fileGroup.g.append('rect');
 	rectToAppend.datum(newOp);
 	rectToAppend
-		.attr('id', function(d) { return d.sid + '_' + d.id; })
+		.attr('id', function(d) {
+			return d.sid + '_' + d.id;
+		})
 		.attr('class', 'op_rect')
 		.attr('y', rectDraw.yFunc)
 		.attr('width', rectDraw.wFunc)
 		.attr('height', rectDraw.hFunc)
 		.attr('rx', RECT_RADIUS)
 		.attr('ry', RECT_RADIUS)
-		.attr('fill', function(d) { return d.color; })
+		.attr('fill', function(d) {
+			return d.color;
+		})
 		.attr('vector-effect', 'non-scaling-stroke');
 	
 	if (autolayout === true) {
@@ -717,7 +745,9 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current
 	$(rectToAppend.node()).tipsy({
 		gravity: $.fn.tipsy.autoNS,
 		html: true,
-		checkFn: function() { return !global.dragging; },
+		checkFn: function() {
+			return !global.dragging;
+		},
 		title: function() {
 			var d = this.__data__;
 			return d.getInfo();
@@ -895,7 +925,9 @@ function layout(newLayout) {
 	
 	var i, session;
 	var compactXFunc = function (d) {
-		if (!d.isVisible()) { return 0; }
+		if (!d.isVisible()) {
+			return 0;
+		}
 		
 		var temp = global.tempX;
 		global.tempX += this.getBBox().width;
@@ -1032,7 +1064,9 @@ function layoutFiles() {
 		.attr('y', fileDraw.yFunc)
 		.attr('dy', '1em')
 		.attr('fill', 'black')
-		.text(function(d) { return d.fileName; });
+		.text(function(d) {
+			return d.fileName;
+		});
 	
 	// Separating Lines
 	var lines = svg.subRectsWrap.selectAll('line.separating_line')
@@ -1927,7 +1961,9 @@ function translateY(ty) {
 }
 
 function getMinTranslateY() {
-	return 1 - global.files.filter(function (e, i, a) { return e.visible; }).length;
+	return 1 - global.files.filter(function (e, i, a) {
+		return e.visible;
+	}).length;
 }
 
 function updateSubRectsTransform() {
@@ -2236,7 +2272,9 @@ function showAllFilesInProject() {
 }
 
 function jumpToLocation() {
-	if (global.selected.length === 0) { return; }
+	if (global.selected.length === 0) {
+		return;
+	}
 	
 	var selection = global.selected[0];
 	var rect = $('rect#' + selection.sid + '_' + selection.id).get(0);
@@ -2251,14 +2289,24 @@ function jumpToLocation() {
 }
 
 function showAllFilesEditedTogether() {
-	if (global.selected.length <= 1) { return; }
+	if (global.selected.length <= 1) {
+		return;
+	}
 	
 	var sortedSelection = global.selected.slice(0);
 	sortedSelection.sort(function (lhs, rhs) {
-		if (lhs.sid < rhs.sid) { return -1; }
-		if (lhs.sid > rhs.sid) { return 1; }
-		if (lhs.id < rhs.id) { return -1; }
-		if (lhs.id > rhs.id) { return 1; }
+		if (lhs.sid < rhs.sid) {
+			return -1;
+		}
+		if (lhs.sid > rhs.sid) {
+			return 1;
+		}
+		if (lhs.id < rhs.id) {
+			return -1;
+		}
+		if (lhs.id > rhs.id) {
+			return 1;
+		}
 		return 0;
 	});
 	
