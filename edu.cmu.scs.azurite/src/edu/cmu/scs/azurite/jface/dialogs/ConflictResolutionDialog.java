@@ -260,11 +260,6 @@ public class ConflictResolutionDialog extends TitleAreaDialog {
 		StyleRange range = new StyleRange(mOffset, mLength, null, mBackground);
 		mCodePreview.getTextWidget().setStyleRange(range);
 	}
-	
-	@Override
-	protected void cancelPressed() {
-		super.cancelPressed();
-	}
 
 	@Override
 	protected void okPressed() {

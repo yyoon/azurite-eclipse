@@ -5,8 +5,8 @@ package edu.cmu.scs.azurite.commands.runtime;
  *
  */
 public interface EditComponent {
-	public void initialize(Segment initialSegment);
-	public boolean applyInsert(RuntimeInsert insert);
-	public boolean applyDelete(RuntimeDelete delete);
-	public boolean applyReplace(RuntimeReplace replace);
+	void initialize(Segment initialSegment);
+	boolean applyInsert(RuntimeInsert insert);
+	boolean applyDelete(RuntimeDelete delete);
+	boolean applyReplace(RuntimeReplace replace);
 }

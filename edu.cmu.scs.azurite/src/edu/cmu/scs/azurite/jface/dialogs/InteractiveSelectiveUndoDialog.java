@@ -118,6 +118,8 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	private static final String INFORMATION_SELECT_RECTS = "You must select some rectangles to undo.";
 	private static final String INFORMATION_SELECT_CHUNK = "Select a chunk from the list on the top to see the preview.";
 	
+	private static final String GENERATING_PREVIEW_ERROR_MSG = "Error occurred while generating the preview.";
+	
 	private static InteractiveSelectiveUndoDialog instance = null;
 	public static InteractiveSelectiveUndoDialog getInstance() {
 		return instance;
@@ -1148,7 +1150,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			e.printStackTrace();
 			
 			// Display an error message on the screen.
-			String msg = "Error occurred while generating the preview.";
+			String msg = GENERATING_PREVIEW_ERROR_MSG;
 			showBottomPanel(false, msg);
 		}
 	}
@@ -1234,7 +1236,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			e.printStackTrace();
 			
 			// Display an error message on the screen.
-			String msg = "Error occurred while generating the preview.";
+			String msg = GENERATING_PREVIEW_ERROR_MSG;
 			showBottomPanel(false, msg);
 		}
 	}
@@ -1397,7 +1399,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			e.printStackTrace();
 			
 			// Display an error message on the screen.
-			String msg = "Error occurred while generating the preview.";
+			String msg = GENERATING_PREVIEW_ERROR_MSG;
 			showBottomPanel(true, msg);
 		}
 	}

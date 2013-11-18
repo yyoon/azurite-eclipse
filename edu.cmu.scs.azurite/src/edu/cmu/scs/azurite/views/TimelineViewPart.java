@@ -61,6 +61,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	
 	private static final String RETURN_CODE_OK = "ok";
 	private static final String RETURN_CODE_FAIL = "fail";
+	private static final String RETURN_CODE_UNKNOWN = "unknown";
 	
 	private static final String EXECUTE_JS_CODE_COMMAND_ID = "edu.cmu.scs.azurite.ui.commands.executeJSCode";
 	private static final String EXECUTE_JS_CODE_COMMAND_PARAM_ID = "edu.cmu.scs.azurite.ui.commands.executeJSCode.codeToExecute";
@@ -385,7 +386,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
             	}
             });
             
-            browser.execute("layout();");
+            performLayout();
             
 			return RETURN_CODE_OK;
 		}
@@ -507,9 +508,9 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 					}
 				}
 				
-				return "unknown";
+				return RETURN_CODE_UNKNOWN;
 			} catch (Exception e) {
-				return "unknown";
+				return RETURN_CODE_UNKNOWN;
 			}
 		}
 		
@@ -797,7 +798,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		}
 		
 		// Update the data.
-		browser.execute("layout();");
+		performLayout();
 	}
 	
 	private void scrollToEnd() {
@@ -871,6 +872,10 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 				addAnnotation(annotate);
 			}
 		}
+	}
+
+	private void performLayout() {
+		browser.execute("layout();");
 	}
 	
 }

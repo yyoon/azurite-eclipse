@@ -30,6 +30,9 @@ import edu.cmu.scs.fluorite.util.Utilities;
 
 public class HistorySearchHandler extends AbstractHandler {
 
+	private static final String HISTORY_SEARCH = "History Search";
+	private static final String NO_RESULTS_FOUND = "No results found.";
+
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
 		final Shell parentShell = Display.getDefault().getActiveShell();
@@ -68,7 +71,7 @@ public class HistorySearchHandler extends AbstractHandler {
 					}
 				});
 		if (dcs == null || dcs.isEmpty()) {
-			MessageDialog.openInformation(parentShell, "History Search", "No results found.");
+			MessageDialog.openInformation(parentShell, HISTORY_SEARCH, NO_RESULTS_FOUND);
 			return null;
 		}
 		
@@ -86,7 +89,7 @@ public class HistorySearchHandler extends AbstractHandler {
 		
 		// There was no document changes in the selected scope.
 		if (dcs.isEmpty()) {
-			MessageDialog.openInformation(parentShell, "History Search", "No results found.");
+			MessageDialog.openInformation(parentShell, HISTORY_SEARCH, NO_RESULTS_FOUND);
 			return null;
 		}
 
@@ -179,7 +182,7 @@ public class HistorySearchHandler extends AbstractHandler {
 		}
 		
 		if (ids.isEmpty()) {
-			MessageDialog.openInformation(parentShell, "History Search", "No results found.");
+			MessageDialog.openInformation(parentShell, HISTORY_SEARCH, NO_RESULTS_FOUND);
 			return null;
 		}
 		
