@@ -27,14 +27,17 @@ var TYPE_INSERT = 0;
 var TYPE_DELETE = 1;
 var TYPE_REPLACE = 2;
 
-var TIMETICK_INTERVAL = 100;
-
 var RECT_RADIUS = 1;
 var MIN_WIDTH = 6;
 var MIN_HEIGHT = MIN_WIDTH;
 var ROW_HEIGHT = 30;
-var TICKS_HEIGHT = 30;
 var DEFAULT_RATIO = 100;
+
+var TICKS_HEIGHT = 30;
+var TICKMARK_SIZE = 6;
+var TICKMARK_WIDTH = 2;
+var TICKMARK_COLOR = 'white';
+var TICKS_MIN_INTERVAL = 200;
 
 var FILE_NAME_OFFSET_X = 5;
 var FILE_NAME_OFFSET_Y = 5;
@@ -125,6 +128,11 @@ annotationDraw.dFunc = function(d) {
 	return 'M ' + x + ' 0 L ' + (x - (ANNOTATION_SIZE / 2)) + ' ' + (-ANNOTATION_SIZE / 2) + ' ' + (x - (ANNOTATION_SIZE / 2)) + ' ' + (-ANNOTATION_SIZE) + ' ' + (x + (ANNOTATION_SIZE / 2)) + ' ' + (-ANNOTATION_SIZE) + ' ' + (x + (ANNOTATION_SIZE / 2)) + ' ' + (-ANNOTATION_SIZE / 2);
 };
 
+var timeTickDraw = {};
+timeTickDraw.xFunc = function(d) {
+	return timestampToPixel(d);
+};
+
 /**
  * Global variables. (Always use a pseudo-namespace.)
  */
@@ -166,6 +174,9 @@ global.fileStack = [];
 global.sessions = [];
 global.selected = [];
 global.annotations = [];
+
+global.ticks = [];
+global.dates = [];
 
 global.getVisibleFiles = function () {
 	return global.files.filter(function (e, i, a) {
@@ -317,7 +328,11 @@ function setupSVG() {
 		.attr('d', 'M 0 0 L ' + (-MARKER_SIZE) + ' ' + MARKER_SIZE + ' ' + MARKER_SIZE + ' ' + MARKER_SIZE)
 		.attr('fill', MARKER_COLOR);
 
-	svg.subTicks = svg.main.append('g')
+	svg.subTicksWrap = svg.main.append('g')
+		.attr('id', 'sub_ticks_wrap')
+		.attr('clip-path', 'url(#clipTicksWrap)');
+
+	svg.subTicks = svg.subTicksWrap.append('g')
 		.attr('id', 'sub_ticks');
 
 	svg.main.append('rect')
@@ -334,6 +349,9 @@ function setupSVG() {
 	
 	svg.clipMarkerWrap = svg.main.append('clipPath')
 		.attr('id', 'clipMarkerWrap').append('rect');
+
+	svg.clipTicksWrap = svg.main.append('clipPath')
+		.attr('id', 'clipTicksWrap').append('rect');
 
 	recalculateClipPaths();
 }
@@ -373,8 +391,13 @@ function recalculateClipPaths() {
 		.attr('width', (svgWidth * (1.0 - FILES_PORTION)))
 		.attr('height', (svgHeight - TICKS_HEIGHT + 2 * MARKER_SIZE));
 
-	svg.subTicks
+	svg.subTicksWrap
 		.attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' ' + (CHART_MARGINS.top + svgHeight - TICKS_HEIGHT) + ')');
+
+	svg.clipTicksWrap
+		.attr('y', -TICKMARK_SIZE / 2)
+		.attr('width', (svgWidth * (1.0 - FILES_PORTION)))
+		.attr('height', TICKS_HEIGHT + TICKMARK_SIZE);
 }
 
 /**
@@ -675,6 +698,19 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current
 		}
 
 		global.timeScale.domain(global.domainArray).range(global.rangeArray);
+
+		// Time ticks
+		if (global.ticks.length === 0) {
+			updateTicks();
+		} else {
+			var lastTick = global.ticks[global.ticks.length - 1];
+			var currentPixel = timestampToPixel(newOp.t2);
+			var lastTickPixel = timeTickDraw.xFunc(lastTick);
+
+			if (currentPixel - lastTickPixel > getTicksMaxInterval()) {
+				updateTicks();
+			}
+		}
 	}
 	
 	// Add tipsy.
@@ -776,6 +812,15 @@ function updateOperation(sid, id, t2, y1, y2, scroll) {
 		global.rangeArray[global.rangeArray.length - 1] = sessionTx + rectDraw.xFunc(lastOp) + rectDraw.wFunc(lastOp);
 	}
 	global.timeScale.domain(global.domainArray).range(global.rangeArray);
+
+	// Update time ticks if necessary.
+	var lastTick = global.ticks[global.ticks.length - 1];
+	var currentPixel = timestampToPixel(lastOp.t2);
+	var lastTickPixel = timeTickDraw.xFunc(lastTick);
+
+	if (currentPixel - lastTickPixel > getTicksMaxInterval()) {
+		updateTicks();
+	}
 	
 	if (scroll === true) {
 		showUntil(lastOp.getAbsT2());
@@ -918,6 +963,7 @@ function layout(newLayout) {
 	updateHScroll();
 	updateMarkerPosition();
 	updateAnnotations();
+	updateTicks();
 	
 	// Restore the scroll position.
 	showFrom(leftmostTimestamp);
@@ -1048,6 +1094,7 @@ window.onresize = function(e) {
 		recalculateClipPaths();
 		updateSeparatingLines();
 		updateAreas();
+		updateTicks();
 
 		updateHScroll();
 		updateVScroll();
@@ -1749,7 +1796,6 @@ function scaleX(sx) {
 
 	d3.selectAll('.indicator').attr('stroke-width', indicatorDraw.wFunc);
 
-	updateTicks();
 	updateHScroll();
 	
 	if (global.layout === LayoutEnum.COMPACT) {
@@ -1791,7 +1837,6 @@ function translateX(tx) {
 
 	updateSubRectsTransform();
 
-	updateTicks();
 	updateHScroll();
 	
 	global.diffWhileDraggingMarker -= diff;
@@ -1852,6 +1897,7 @@ function updateSubRectsTransform() {
 	svg.subRects.attr('transform', 'translate(' + global.translateX + ' ' + (global.translateY * ROW_HEIGHT * global.scaleY) + ') ' + 'scale(' + global.scaleX + ' ' + global.scaleY + ')');
 	svg.subMarkers.attr('transform', 'translate(' + global.translateX + ' 0)');
 	svg.subAnnotations.attr('transform', 'translate(' + global.translateX + ' 0)');
+	svg.subTicks.attr('transform', 'translate(' + global.translateX + ' 0)');
 }
 
 function showFrom(absTimestamp) {
@@ -1903,41 +1949,164 @@ function updateVScroll() {
 
 function updateTicks() {
 	svg.subTicks.selectAll('text').remove();
+	svg.subTicks.selectAll('line').remove();
 	if (global.sessions === undefined || global.sessions.length === 0) {
 		return;
 	}
-	
-	var totalWidth = getSvgWidth() * (1.0 - FILES_PORTION) - TIMETICK_INTERVAL;
-	var numIntervals = Math.floor(totalWidth / TIMETICK_INTERVAL);
-	var intervalSize = totalWidth / numIntervals;
-	
-	var i;
-	for (i = 0; i <= numIntervals; ++i) {
-		var screenPixel = TIMETICK_INTERVAL / 2 + intervalSize * i;
-		var timestamp = screenPixelToTimestamp(screenPixel);
-		var dateObj = new Date(timestamp);
-		
-		svg.subTicks.append('text')
-			.attr('x', screenPixel)
+
+	var ticks = [];
+	var dates = [];
+
+	var i, j, text;
+
+	var minInterval = TICKS_MIN_INTERVAL;
+	var maxInterval = Math.max(getTicksMaxInterval(), TICKS_MIN_INTERVAL * 2);
+
+	// Iterate all the sessions.
+	for (i = 0; i < global.sessions.length; ++i) {
+		var session = global.sessions[i];
+
+		var start = session.startAbsTimestamp;
+		var end = session.endAbsTimestamp;
+
+		var nextSession = i === global.sessions.length - 1 ? null : global.sessions[i + 1];
+		var nextSessionStart = nextSession === null ? null : nextSession.startAbsTimestamp;
+		var nextSessionStartPixel = nextSession === null ? end : timestampToPixel(nextSessionStart);
+
+		// Always add the start of the session
+		ticks.push(new Date(start));
+		dates.push(new Date(start));
+
+		var startPixel = timestampToPixel(start);
+		var endPixel = timestampToPixel(end);
+		var pixelLength = endPixel - startPixel;
+
+		var scale = d3.time.scale()
+			.domain([start, end])
+			.range([startPixel, endPixel]);
+
+		// Retrieve the candidate ticks using d3's ticks() function.
+		var candidates = scale.ticks(4 * pixelLength / (minInterval + maxInterval));
+		var lastTickPixel = timestampToPixel(ticks[ticks.length - 1]);
+
+		// See if each candidate tick can be displayed without violating minInterval.
+		for (j = 0; j < candidates.length; ++j) {
+			var candidate = candidates[j].getTime();
+			var candidatePixel = timestampToPixel(candidate);
+
+			if (candidatePixel - lastTickPixel >= minInterval) {
+				if (nextSession === null || nextSessionStartPixel - candidatePixel >= minInterval) {
+					ticks.push(candidates[j]);
+					lastTickPixel = candidatePixel;
+				}
+			}
+		}
+	}
+
+	// Fill in too big gaps
+	for (i = 0; i < ticks.length - 1; ++i) {
+		var curPixel = timeTickDraw.xFunc(ticks[i]);
+		var nextPixel = timeTickDraw.xFunc(ticks[i + 1]);
+		var diff = nextPixel - curPixel;
+
+		if (diff > maxInterval) {
+			var count = Math.max(Math.floor(diff / ((minInterval + maxInterval) / 2)) - 1, 1);
+			var interval = diff / (count + 1);
+
+			// Insert ticks forcefully.
+			for (j = 1; j <= count; ++j) {
+				var pixelPosition = curPixel + interval * j;
+				var correspondingTimestamp = pixelToTimestamp(pixelPosition);
+
+				ticks.splice(i + j, 0, new Date(correspondingTimestamp));
+			}
+
+			i += count;
+		}
+	}
+
+	// Display seconds?
+	var displaySeconds = false;
+	for (i = 0; i < ticks.length - 1; ++i) {
+		if (d3.time.minute(ticks[i]).getTime() === d3.time.minute(ticks[i + 1]).getTime()) {
+			displaySeconds = true;
+			break;
+		}
+	}
+
+	var timeFormat = displaySeconds ? '%I:%M:%S %p' : '%I:%M %p';
+	var timeFormatter = d3.time.format(timeFormat);
+
+	// Now actually create appropriate svg objects to draw the ticks
+	for (i = 0; i < ticks.length; ++i) {
+		text = svg.subTicks.append('text');
+		text.datum(ticks[i]);
+
+		text.attr('x', timeTickDraw.xFunc)
 			.attr('dy', '1em')
 			.attr('fill', 'white')
-			.attr('text-anchor', 'middle')
-			.text(d3.time.format('%I:%M %p')(dateObj));
-		
-		svg.subTicks.append('text')
-			.attr('x', screenPixel)
+			.attr('text-anchor', 'left')
+			.text(timeFormatter(ticks[i]));
+
+		var tickMark = svg.subTicks.append('line');
+		tickMark.datum(ticks[i]);
+
+		tickMark
+			.attr('x1', timeTickDraw.xFunc)
+			.attr('x2', timeTickDraw.xFunc)
+			.attr('y1', -TICKMARK_SIZE / 2)
+			.attr('y2', TICKMARK_SIZE / 2)
+			.attr('stroke-width', TICKMARK_WIDTH)
+			.attr('stroke', TICKMARK_COLOR);
+	}
+
+	for (i = 0; i < dates.length; ++i) {
+		text = svg.subTicks.append('text');
+		text.datum(dates[i]);
+
+		text.attr('x', timeTickDraw.xFunc)
 			.attr('dy', '2em')
 			.attr('fill', 'white')
-			.attr('text-anchor', 'middle')
-			.text(d3.time.format('%x')(dateObj));
+			.attr('text-anchor', 'left')
+			.text(dateFormatter(dates[i]));
+	}
+
+	global.ticks = ticks;
+	global.dates = dates;
+}
+
+function getTicksMaxInterval() {
+	return getSvgWidth() * (1.0 - FILES_PORTION) / 2;
+}
+
+function dateFormatter(dateObj) {
+	var today = d3.time.day(new Date());
+	var target = d3.time.day(dateObj);
+	var diffDays = (today.getTime() - target.getTime()) / (24 * 60 * 60 * 1000);
+
+	var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+	if (diffDays === 0) {
+		return 'Today';
+	} else if (diffDays === 1) {
+		return 'Yesterday';
+	} else if (diffDays < 7) {
+		return 'Last ' + days[target.getDay()];
+	} else {
+		return d3.time.format('%x')(target);
 	}
 }
 
-function test(count) {
+function test(count, dayoff) {
 	if (count === undefined) { count = 1; }
 	
 	for (var i =0; i < count; ++i) {
-		var sid = new Date().valueOf();
+		var date = new Date();
+		if (dayoff !== undefined) {
+			date.setDate(date.getDate() - dayoff);
+		}
+
+		var sid = date.getTime();
 		// This must be bigger than the last known operation timestamp.
 		if (global.lastOperation !== null && sid < global.lastOperation.getAbsT2()) {
 			sid = global.lastOperation.getAbsT2() + Math.floor(Math.random() * 5000);
