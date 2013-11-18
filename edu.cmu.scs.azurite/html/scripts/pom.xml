@@ -1,0 +1,23 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <artifactId>edu.cmu.scs.azurite.timeline</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <name>Azurite timeline</name>
+  <parent>
+    <groupId>edu.cmu.scs.azurite</groupId>
+    <artifactId>edu.cmu.scs.azurite.parent</artifactId>
+    <version>0.4.5-SNAPSHOT</version>
+    <relativePath>../../../edu.cmu.scs.azurite.parent</relativePath>
+  </parent>
+  
+  <properties>
+    <sonar.language>js</sonar.language>
+    <sonar.exclusions>**/test/*.js,d3.v3.js,jquery*.js</sonar.exclusions>
+  </properties>
+  
+  <build>
+    <sourceDirectory>.</sourceDirectory>
+  </build>
+  
+</project>
