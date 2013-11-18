@@ -1237,9 +1237,12 @@ function initMouseDownHandler() {
 			global.draggingMarker = false;
 
 			if (!global.isCtrlDown) {
+				global.prevSelected = global.selected.splice(0);
+
 				global.selected = [];
 				svg.subRects.selectAll('rect.highlight_rect').remove();
-				azurite.notifySelectionChanged();
+
+				checkAndNotifySelectionChanged();
 			}
 
 			d3.select('.selection_box').attr('x', mouseX).attr('y', mouseY);
@@ -1562,6 +1565,9 @@ function hideContextMenu() {
 }
 
 function addSelectionsByIds(sids, ids, clearPreviousSelection) {
+	// Keep the previous selection in order to notify selection changed.
+	global.prevSelected = global.selected.splice(0);
+
 	if (clearPreviousSelection) {
 		global.selected = [];
 	}
@@ -1573,10 +1579,13 @@ function addSelectionsByIds(sids, ids, clearPreviousSelection) {
 	}
 
 	updateHighlight();
+	checkAndNotifySelectionChanged();
 }
 
 function removeSelectionsByIds(sids, ids) {
-	for ( var i = 0; i < ids.length; ++i) {
+	global.prevSelected = global.selected.splice(0);
+
+	for (var i = 0; i < ids.length; ++i) {
 		var sid = sids[i];
 		var id = ids[i];
 		
@@ -1587,9 +1596,12 @@ function removeSelectionsByIds(sids, ids) {
 	}
 	
 	updateHighlight();
+	checkAndNotifySelectionChanged();
 }
 
 function addSelections(x1, y1, x2, y2, toggle) {
+	global.prevSelected = global.selected.splice(0);
+
 	var rect = svg.main.node().createSVGRect();
 	rect.x = x1;
 	rect.y = y1;
@@ -1620,6 +1632,33 @@ function addSelections(x1, y1, x2, y2, toggle) {
 	});
 
 	updateHighlight();
+	checkAndNotifySelectionChanged();
+}
+
+function checkAndNotifySelectionChanged() {
+	var notify = true;
+
+	if (global.prevSelected instanceof Array) {
+		if (global.prevSelected.length === global.selected.length) {
+			notify = false;
+			
+			for (var i = 0; i < global.prevSelected.length; ++i) {
+				if (global.prevSelected[i].id !== global.selected[i].id) {
+					notify = true;
+					break;
+				}
+
+				if (global.prevSelected[i].sid !== global.selected[i].sid) {
+					notify = true;
+					break;
+				}
+			}
+		}
+	}
+
+	if (notify === true) {
+		azurite.notifySelectionChanged();
+	}
 }
 
 function isSelected(sid, id) {
@@ -1658,8 +1697,6 @@ function updateHighlight() {
 			.attr('width', refBBox.width + HIGHLIGHT_WIDTH * 2 / global.scaleX)
 			.attr('height', refBBox.height + HIGHLIGHT_WIDTH * 2 / global.scaleY);
 	}
-	
-	azurite.notifySelectionChanged();
 }
 
 /******************************************************************
