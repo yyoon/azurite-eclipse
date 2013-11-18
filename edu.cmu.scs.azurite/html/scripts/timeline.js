@@ -704,7 +704,7 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current
 			updateTicks();
 		} else {
 			var lastTick = global.ticks[global.ticks.length - 1];
-			var currentPixel = global.rangeArray[global.rangeArray.length - 1];
+			var currentPixel = timestampToPixel(newOp.t2);
 			var lastTickPixel = timeTickDraw.xFunc(lastTick);
 
 			if (currentPixel - lastTickPixel > getTicksMaxInterval()) {
@@ -815,7 +815,7 @@ function updateOperation(sid, id, t2, y1, y2, scroll) {
 
 	// Update time ticks if necessary.
 	var lastTick = global.ticks[global.ticks.length - 1];
-	var currentPixel = global.rangeArray[global.rangeArray.length - 1];
+	var currentPixel = timestampToPixel(lastOp.t2);
 	var lastTickPixel = timeTickDraw.xFunc(lastTick);
 
 	if (currentPixel - lastTickPixel > getTicksMaxInterval()) {
@@ -2016,7 +2016,7 @@ function updateTicks() {
 			// Insert ticks forcefully.
 			for (j = 1; j <= count; ++j) {
 				var pixelPosition = curPixel + interval * j;
-				var correspondingTimestamp = global.timeScale.invert(pixelPosition);
+				var correspondingTimestamp = pixelToTimestamp(pixelPosition);
 
 				ticks.splice(i + j, 0, new Date(correspondingTimestamp));
 			}
