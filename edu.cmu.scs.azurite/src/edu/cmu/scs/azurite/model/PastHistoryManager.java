@@ -159,7 +159,7 @@ public class PastHistoryManager implements DocumentChangeListener {
 		
 		LogReader reader = new LogReader();
 		for (File logFile : logFilesToRead) {
-			Events events = reader.readDocumentChanges(logFile.getAbsolutePath());
+			Events events = reader.readAll(logFile.getAbsolutePath());
 			if (events != null) {
 				tempEvents.add(events);
 			}

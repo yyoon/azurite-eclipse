@@ -546,8 +546,8 @@
             id="edu.cmu.scs.azurite.ui.commands.undoAllFilesToThisPoint"
             name="Undo All Files to This Point">
          <commandParameter
-               id="edu.cmu.scs.azurite.ui.commands.undoAllFilesToThisPoint.annotationId"
-               name="ID of the Annotation"
+               id="edu.cmu.scs.azurite.ui.commands.undoAllFilesToThisPoint.absTimestamp"
+               name="Absolute timestamp of the base point"
                optional="false">
          </commandParameter>
       </command>
@@ -556,8 +556,8 @@
             id="edu.cmu.scs.azurite.ui.commands.undoCurrentFileToThisPoint"
             name="Undo Current File to This Point">
          <commandParameter
-               id="edu.cmu.scs.azurite.ui.commands.undoCurrentFileToThisPoint.annotationId"
-               name="ID of the Annotation"
+               id="edu.cmu.scs.azurite.ui.commands.undoCurrentFileToThisPoint.absTimestamp"
+               name="Absolute timestamp of the base point"
                optional="false">
          </commandParameter>
       </command>
