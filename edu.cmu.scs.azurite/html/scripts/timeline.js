@@ -2,7 +2,7 @@
 /*global d3, azurite */
 
 /* Things to be called from Azurite */
-/*exported updateOperation, getRightmostTimestamp, showContextMenu, addSelectionsByIds, removeSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarker, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile, addAnnotation, addEvent */
+/*exported updateOperation, getRightmostTimestamp, showContextMenu, addSelectionsByIds, removeSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarker, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile, addEvent */
 
 /* Things to be called manually when debugging */
 /*exported test */
@@ -55,10 +55,6 @@ var SCROLLBAR_DIST_THRESHOLD = 50;
 
 var MARKER_SIZE = 10;
 var MARKER_COLOR = 'red';
-
-var ANNOTATION_WIDTH = 2;
-var ANNOTATION_COLOR = 'orange';
-var ANNOTATION_SIZE = 10;
 
 var EVENTS_HEIGHT = 20;
 var EVENT_WIDTH = 1;
@@ -126,18 +122,6 @@ indicatorDraw.wFunc = function() {
 	return INDICATOR_WIDTH / global.scaleX;
 };
 
-var annotationDraw = {};
-annotationDraw.xFunc = function(d) {
-	return timestampToPixel(d.sid + d.t);
-};
-annotationDraw.dFunc = function(d) {
-	var x = annotationDraw.xFunc(d);
-	return 'M ' + x + ' 0 L ' + (x - (ANNOTATION_SIZE / 2)) + ' ' + (-ANNOTATION_SIZE / 2) + ' ' + (x - (ANNOTATION_SIZE / 2)) + ' ' + (-ANNOTATION_SIZE) + ' ' + (x + (ANNOTATION_SIZE / 2)) + ' ' + (-ANNOTATION_SIZE) + ' ' + (x + (ANNOTATION_SIZE / 2)) + ' ' + (-ANNOTATION_SIZE / 2);
-};
-annotationDraw.y2Func = function() {
-	return getSvgHeight() - TICKS_HEIGHT + ANNOTATION_SIZE / 2;
-};
-
 var eventDraw = {};
 eventDraw.xFunc = function(d) {
 	return timestampToPixel(d.dt);
@@ -153,7 +137,7 @@ eventDraw.colorFunc = function(d) {
 		case 'RunCommand':
 			return 'green';
 
-		case 'AnnotateCommand':
+		case 'Annotation':
 			return 'blue';
 
 		default:
@@ -168,7 +152,7 @@ eventDraw.iconFunc = function(d) {
 		case 'RunCommand':
 			return 'images/event_icons/run_exc.gif';
 
-		case 'AnnotateCommand':
+		case 'Annotation':
 			return 'images/event_icons/pin.png';
 
 		default:
@@ -246,7 +230,6 @@ global.files = [];
 global.fileStack = [];
 global.sessions = [];
 global.selected = [];
-global.annotations = [];
 global.events = [];
 
 global.ticks = [];
@@ -310,7 +293,7 @@ global.vscrollArea = {
 	bottom: 0
 };
 
-global.annotationArea = {
+global.eventArea = {
 	left: 0,
 	top: 0,
 	right: 0,
@@ -366,13 +349,6 @@ function setupSVG() {
 
 	svg.subRects = svg.subRectsWrap.append('g')
 		.attr('id', 'sub_rects');
-	
-	svg.subAnnotationWrap = svg.main.append('g')
-		.attr('id', 'sub_annotation_wrap')
-		.attr('clip-path', 'url(#clipMarkerWrap)');
-	
-	svg.subAnnotations = svg.subAnnotationWrap.append('g')
-		.attr('id', 'sub_annotations');
 	
 	svg.subMarkerWrap = svg.main.append('g')
 		.attr('id', 'sub_marker_wrap')
@@ -460,10 +436,6 @@ function recalculateClipPaths() {
 		.attr('y', '-1')
 		.attr('width', (svgWidth * (1.0 - FILES_PORTION)) + 'px')
 		.attr('height', (svgHeight - TICKS_HEIGHT - EVENTS_HEIGHT + 2) + 'px');
-	
-	svg.subAnnotationWrap
-		.attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' ' + CHART_MARGINS.top + ')');
-	svg.subAnnotations.selectAll('.annotation_line').attr('y2', annotationDraw.y2Func);
 	
 	svg.subMarkerWrap
 		.attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' ' + CHART_MARGINS.top + ')');
@@ -623,16 +595,6 @@ function EditOperation(sid, id, t1, t2, y1, y2, type, fileGroup) {
 function OperationId(sid, id) {
 	this.sid = sid;
 	this.id = id;
-}
-
-/**
- * Annotation object for user annotation.
- */
-function Annotation(sid, id, t, comment) {
-	this.sid = sid;
-	this.id = id;
-	this.t = t;
-	this.comment = comment;
 }
 
 /**
@@ -931,43 +893,6 @@ function updateOperation(sid, id, t2, y1, y2, scroll) {
 }
 
 /**
- * Called by Azurite.
- */
-function addAnnotation(sid, id, t, comment) {
-	var newAnnotation = new Annotation(sid, id, t, comment);
-	
-	// Add it to the global list
-	global.annotations.push(newAnnotation);
-	
-	// Add the line object
-	var annotationLine = svg.subAnnotations.append('line').datum(newAnnotation);
-	annotationLine
-		.attr('class', 'annotation_line')
-		.attr('x1', annotationDraw.xFunc)
-		.attr('x2', annotationDraw.xFunc)
-		.attr('y1', -ANNOTATION_SIZE / 2)
-		.attr('y2', annotationDraw.y2Func)
-		.attr('stroke-width', ANNOTATION_WIDTH)
-		.attr('stroke', ANNOTATION_COLOR);
-	
-	// Add the TAG
-	var annotationTag = svg.subAnnotations.append('path').datum(newAnnotation);
-	annotationTag
-		.attr('class', 'annotation_tag')
-		.attr('d', annotationDraw.dFunc)
-		.attr('fill', ANNOTATION_COLOR);
-	
-	$(annotationTag.node()).tipsy({
-		gravity: 'n',
-		html: true,
-		title: function() {
-			var d = this.__data__;
-			return d.comment;
-		}
-	});
-}
-
-/**
  * Called by Azurite
  */
 function addEvent(sid, id, t, dt, type, desc) {
@@ -1105,7 +1030,6 @@ function layout(newLayout) {
 	updateHighlight();
 	updateHScroll();
 	updateMarkerPosition();
-	updateAnnotations();
 	updateEvents();
 	updateTicks();
 	
@@ -1256,12 +1180,12 @@ function updateAreas() {
 	global.draggableArea.left = CHART_MARGINS.left + svgWidth * FILES_PORTION;
 	global.draggableArea.top = CHART_MARGINS.top;
 	global.draggableArea.right = CHART_MARGINS.left + svgWidth;
-	global.draggableArea.bottom = CHART_MARGINS.top + svgHeight - TICKS_HEIGHT;
+	global.draggableArea.bottom = CHART_MARGINS.top + svgHeight - TICKS_HEIGHT - EVENTS_HEIGHT;
 	
 	global.fileArea.left = CHART_MARGINS.left;
 	global.fileArea.top = CHART_MARGINS.top;
 	global.fileArea.right = CHART_MARGINS.left + svgWidth * FILES_PORTION;
-	global.fileArea.bottom = CHART_MARGINS.top + svgHeight;
+	global.fileArea.bottom = CHART_MARGINS.top + svgHeight - TICKS_HEIGHT - EVENTS_HEIGHT;
 
 	global.hscrollArea.left = (CHART_MARGINS.left + CHART_MARGINS.right + svgWidth) * FILES_PORTION + SCROLLBAR_WIDTH;
 	global.hscrollArea.top = CHART_MARGINS.top + CHART_MARGINS.bottom + svgHeight;
@@ -1272,11 +1196,11 @@ function updateAreas() {
 	global.vscrollArea.top = SCROLLBAR_WIDTH;
 	global.vscrollArea.right = CHART_MARGINS.left + CHART_MARGINS.right + svgWidth + SCROLLBAR_WIDTH;
 	global.vscrollArea.bottom = CHART_MARGINS.top + CHART_MARGINS.bottom + svgHeight - SCROLLBAR_WIDTH;
-	
-	global.annotationArea.left = CHART_MARGINS.left + svgWidth * FILES_PORTION;
-	global.annotationArea.top = CHART_MARGINS.top - ANNOTATION_SIZE;
-	global.annotationArea.right = CHART_MARGINS.left + svgWidth;
-	global.annotationArea.bottom = CHART_MARGINS.top;
+
+	global.eventArea.left = CHART_MARGINS.left + svgWidth * FILES_PORTION;
+	global.eventArea.top = CHART_MARGINS.top + svgHeight - TICKS_HEIGHT - EVENTS_HEIGHT;
+	global.eventArea.right = CHART_MARGINS.left + svgWidth;
+	global.eventArea.bottom = CHART_MARGINS.top + svgHeight - TICKS_HEIGHT;
 }
 
 /******************************************************************
@@ -1603,7 +1527,7 @@ function initMouseUpHandler() {
 					cmenu.typeName = 'file_out';
 				}
 			}
-			else if (cursorInArea(mouseX, mouseY, global.annotationArea)) {
+			else if (cursorInArea(mouseX, mouseY, global.eventArea)) {
 				var rect = svg.main.node().createSVGRect();
 				rect.x = mouseX;
 				rect.y = mouseY;
@@ -1613,10 +1537,13 @@ function initMouseUpHandler() {
 				// Get all the intersecting objects in the SVG.
 				var list = svg.main.node().getIntersectionList(rect, null);
 
-				// Filter only the operation rects.
-				d3.selectAll(list).filter('.annotation_tag').each(function(d) {
-					cmenu.typeName = 'annotation';
-					global.lastAnnotation = d;
+				// Filter only the icons.
+				d3.selectAll(list).filter('.event_icon').each(function(d) {
+					cmenu.typeName = 'event';
+					// "global.selectedTimestamp" will be evaluated from the plug-in side.
+					// In this case, use the display timeline, rather than the actual timestamp
+					// when this event was occurred.
+					global.selectedTimestamp = d.dt;
 				});
 			}
 			
@@ -2081,7 +2008,6 @@ function getMinTranslateY() {
 function updateSubRectsTransform() {
 	svg.subRects.attr('transform', 'translate(' + global.translateX + ' ' + (global.translateY * ROW_HEIGHT * global.scaleY) + ') ' + 'scale(' + global.scaleX + ' ' + global.scaleY + ')');
 	svg.subMarkers.attr('transform', 'translate(' + global.translateX + ' 0)');
-	svg.subAnnotations.attr('transform', 'translate(' + global.translateX + ' 0)');
 	svg.subEvents.attr('transform', 'translate(' + global.translateX + ' 0)');
 	svg.subTicks.attr('transform', 'translate(' + global.translateX + ' 0)');
 }
@@ -2451,14 +2377,6 @@ function showAllFilesEditedTogether() {
 	
 	layoutFiles();
 	layout();
-}
-
-function updateAnnotations() {
-	svg.subAnnotations.selectAll('.annotation_line')
-		.attr('x1', annotationDraw.xFunc)
-		.attr('x2', annotationDraw.xFunc);
-	svg.subAnnotations.selectAll('.annotation_tag')
-		.attr('d', annotationDraw.dFunc);
 }
 
 function updateEvents() {

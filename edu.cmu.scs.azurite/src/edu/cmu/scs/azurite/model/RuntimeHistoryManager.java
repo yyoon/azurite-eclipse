@@ -378,6 +378,25 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 		});
 	}
 	
+	public List<RuntimeDC> filterDocumentChangesLaterThanTimestamp(final long absTimestamp) {
+		return filterDocumentChangesLaterThanTimestamp(getCurrentFileKey(), absTimestamp);
+	}
+	
+	public List<RuntimeDC> filterDocumentChangesLaterThanTimestamp(FileKey key, final long absTimestamp) {
+		if (key == null) {
+			throw new IllegalArgumentException();
+		}
+		
+		return filterDocumentChanges(key, new IRuntimeDCFilter() {
+			@Override
+			public boolean filter(RuntimeDC runtimeDC) {
+				long timestamp = runtimeDC.getOriginal().getSessionId() + runtimeDC.getOriginal().getTimestamp();
+				
+				return absTimestamp < timestamp;
+			}
+		});
+	}
+	
 	public RuntimeDC filterDocumentChangeByIdWithoutCalculating(FileKey key, final OperationId id) {
 		if (key == null || id == null) {
 			throw new IllegalArgumentException();

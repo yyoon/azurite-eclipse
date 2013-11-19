@@ -45,7 +45,6 @@ import edu.cmu.scs.azurite.model.RuntimeDCListener;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
 import edu.cmu.scs.azurite.plugin.Activator;
-import edu.cmu.scs.fluorite.commands.AnnotateCommand;
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 import edu.cmu.scs.fluorite.commands.Delete;
 import edu.cmu.scs.fluorite.commands.FileOpenCommand;
@@ -215,20 +214,18 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 							break;
 						}
 						
-						case "annotation": {
-							long sid = ((Number) browser.evaluate("return global.lastAnnotation.sid;")).longValue();
-							long id = ((Number) browser.evaluate("return global.lastAnnotation.id;")).longValue();
-							String oidString = Long.toString(sid) + "_" + Long.toString(id);
+						case "event": {
+							long absTimestamp = ((Number) browser.evaluate("return global.selectedTimestamp;")).longValue();
 							
 							paramMap.clear();
-							paramMap.put("edu.cmu.scs.azurite.ui.commands.undoAllFilesToThisPoint.annotationId", oidString);
+							paramMap.put("edu.cmu.scs.azurite.ui.commands.undoAllFilesToThisPoint.absTimestamp", Long.toString(absTimestamp));
 							Action undoAllFilesToThisPointAction = new CommandAction(
 									"Undo All Files to This Point",
 									"edu.cmu.scs.azurite.ui.commands.undoAllFilesToThisPoint",
 									paramMap);
 							
 							paramMap.clear();
-							paramMap.put("edu.cmu.scs.azurite.ui.commands.undoCurrentFileToThisPoint.annotationId", oidString);
+							paramMap.put("edu.cmu.scs.azurite.ui.commands.undoCurrentFileToThisPoint.absTimestamp", Long.toString(absTimestamp));
 							Action undoCurrentFileToThisPointAction = new CommandAction(
 									"Undo Current File to This Point",
 									"edu.cmu.scs.azurite.ui.commands.undoCurrentFileToThisPoint",
@@ -624,11 +621,6 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		return executeStr;
 	}
 	
-	private void addAnnotation(AnnotateCommand annotate) {
-		String executeStr = getAddAnnotationString(annotate);
-		browser.execute(executeStr);
-	}
-	
 	private void addEventToTimeline(ICommand event) {
 		final String executeStr = getAddEventString(event);
 		Display.getDefault().syncExec(new Runnable() {
@@ -655,21 +647,6 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		
 		return executeStr;
 	}
-	
-	private String getAddAnnotationString(AnnotateCommand annotate) {
-		String comment = annotate.getComment();
-		if (comment == null) {
-			comment = "unnamed";
-		}
-		
-		String executeStr = String.format("addAnnotation(%1$d, %2$d, %3$d, \'%4$s\');",
-				annotate.getSessionId(),
-				annotate.getCommandIndex(),
-				annotate.getTimestamp(),
-				comment);
-		
-		return executeStr;
-	}
 
 	private void addOperation(BaseDocumentChangeEvent docChange, boolean scroll, boolean current) {
 		String executeStr = getAddOperationString(docChange, scroll, true, current);
@@ -686,11 +663,6 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		long start = System.currentTimeMillis();
 		
 		for (ICommand command : events.getCommands()) {
-			if (command instanceof AnnotateCommand) {
-				addAnnotation((AnnotateCommand)command);
-				continue;
-			}
-			
 			if (!(command instanceof BaseDocumentChangeEvent)) {
 				continue;
 			}
@@ -913,14 +885,6 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 
 	@Override
 	public void commandExecuted(ICommand command) {
-		// Somehow add the annotation.
-		if (command instanceof AnnotateCommand) {
-			AnnotateCommand annotate = (AnnotateCommand) command;
-			if (annotate.getId() != AnnotateCommand.CANCEL) {
-				addAnnotation(annotate);
-			}
-		}
-		
 		// Some events should be displayed in the timeline
 		if (RuntimeHistoryManager.shouldCommandBeDisplayed(command)) {
 			addEventToTimeline(command);
