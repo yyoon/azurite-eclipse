@@ -320,7 +320,9 @@ cmenu.isContextMenuVisible = false;
 cmenu.isRightButtonDown = false;
 cmenu.mousePos = [];
 cmenu.typeName = '';
+
 global.isCtrlDown = false;
+global.isMac = navigator.appVersion.indexOf("Mac") !== -1;
 
 // time scale (initialize with a default scale)
 global.timeScale = d3.time.scale()
@@ -1247,7 +1249,11 @@ function initMouseWheelHandler() {
 
 function initKeyEventHandlers() {
 	document.addEventListener("keydown", function(e) {
-		if (e.keyCode === 17) {
+		// Consider the cmd key as toggle key on Mac OS X when drag-selecting.
+		if (e.keyCode === 17 && global.isMac === false) {
+			global.isCtrlDown = true;
+		}
+		else if ((e.keyCode === 91 || e.keyCode === 93) && global.isMac === true) {
 			global.isCtrlDown = true;
 		}
 		else if (e.keyCode === 107) {
@@ -1270,7 +1276,11 @@ function initKeyEventHandlers() {
 	}, false);
 
 	document.addEventListener("keyup", function(e) {
-		if (e.keyCode === 17) {
+		// Consider the cmd key as toggle key on Mac OS X when drag-selecting.
+		if (e.keyCode === 17 && global.isMac === false) {
+			global.isCtrlDown = false;
+		}
+		else if ((e.keyCode === 91 || e.keyCode === 93) && global.isMac === true) {
 			global.isCtrlDown = false;
 		}
 	}, false);
@@ -2409,6 +2419,23 @@ function hideMarker() {
 
 function hideFirebugUI() {
 	$('#FirebugUI').css('display', 'none');
+}
+
+function activateFirebugLite() {
+	// Firebug lite 1.3 bookmarklet turned into a function.
+	// For some unknown reason, 1.4 doesn't work on Safari.
+	(function(F,i,r,e,b,u,g,L,I,T,E) {
+		if(F.getElementById(b))
+			return;
+		E=F[i+'NS']&&F.documentElement.namespaceURI;
+		E=E?F[i+'NS'](E,'script'):F[i]('script');
+		E[r]('id',b);
+		E[r]('src',I+g+T);
+		E[r](b,u);
+		(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);
+		E=new Image();
+		E[r]('src',I+L);
+	})(document,'createElement','setAttribute','getElementsByTagName','FirebugLite','3','releases/lite/1.3/firebug-lite.js','releases/lite/latest/skin/xp/sprite.png','https://getfirebug.com/','#startOpened');
 }
 
 function pushCurrentFile() {
