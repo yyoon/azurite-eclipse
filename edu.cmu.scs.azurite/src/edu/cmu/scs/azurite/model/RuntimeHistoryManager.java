@@ -12,6 +12,7 @@ import org.eclipse.core.runtime.ListenerList;
 import edu.cmu.scs.azurite.commands.diff.IDiffDC;
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.commands.runtime.Segment;
+import edu.cmu.scs.fluorite.commands.AnnotateCommand;
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 import edu.cmu.scs.fluorite.commands.FileOpenCommand;
 import edu.cmu.scs.fluorite.commands.ICommand;
@@ -529,6 +530,8 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 		if (command instanceof JUnitCommand) {
 			return true;
 		} else if (command instanceof RunCommand) {
+			return true;
+		} else if (command instanceof AnnotateCommand) {
 			return true;
 		}
 		

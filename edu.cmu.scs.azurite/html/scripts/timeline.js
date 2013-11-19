@@ -153,6 +153,9 @@ eventDraw.colorFunc = function(d) {
 		case 'RunCommand':
 			return 'green';
 
+		case 'AnnotateCommand':
+			return 'blue';
+
 		default:
 			return 'gold';
 	}
@@ -164,6 +167,9 @@ eventDraw.iconFunc = function(d) {
 
 		case 'RunCommand':
 			return 'images/event_icons/run_exc.gif';
+
+		case 'AnnotateCommand':
+			return 'images/event_icons/pin.png';
 
 		default:
 			return 'images/event_icons/error.png';
