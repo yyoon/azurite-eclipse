@@ -1307,7 +1307,7 @@ function initMouseDownHandler() {
 			global.draggingMarker = false;
 
 			if (!global.isCtrlDown) {
-				global.prevSelected = global.selected.splice(0);
+				global.prevSelected = global.selected.slice(0);
 
 				global.selected = [];
 				svg.subRects.selectAll('rect.highlight_rect').remove();
@@ -1639,7 +1639,7 @@ function hideContextMenu() {
 
 function addSelectionsByIds(sids, ids, clearPreviousSelection) {
 	// Keep the previous selection in order to notify selection changed.
-	global.prevSelected = global.selected.splice(0);
+	global.prevSelected = global.selected.slice(0);
 
 	if (clearPreviousSelection) {
 		global.selected = [];
@@ -1656,7 +1656,7 @@ function addSelectionsByIds(sids, ids, clearPreviousSelection) {
 }
 
 function removeSelectionsByIds(sids, ids) {
-	global.prevSelected = global.selected.splice(0);
+	global.prevSelected = global.selected.slice(0);
 
 	for (var i = 0; i < ids.length; ++i) {
 		var sid = sids[i];
@@ -1673,7 +1673,7 @@ function removeSelectionsByIds(sids, ids) {
 }
 
 function addSelections(x1, y1, x2, y2, toggle) {
-	global.prevSelected = global.selected.splice(0);
+	global.prevSelected = global.selected.slice(0);
 
 	var rect = svg.main.node().createSVGRect();
 	rect.x = x1;
