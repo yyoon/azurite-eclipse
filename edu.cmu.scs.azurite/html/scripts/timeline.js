@@ -2421,6 +2421,23 @@ function hideFirebugUI() {
 	$('#FirebugUI').css('display', 'none');
 }
 
+function activateFirebugLite() {
+	// Firebug lite 1.3 bookmarklet turned into a function.
+	// For some unknown reason, 1.4 doesn't work on Safari.
+	(function(F,i,r,e,b,u,g,L,I,T,E) {
+		if(F.getElementById(b))
+			return;
+		E=F[i+'NS']&&F.documentElement.namespaceURI;
+		E=E?F[i+'NS'](E,'script'):F[i]('script');
+		E[r]('id',b);
+		E[r]('src',I+g+T);
+		E[r](b,u);
+		(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);
+		E=new Image();
+		E[r]('src',I+L);
+	})(document,'createElement','setAttribute','getElementsByTagName','FirebugLite','3','releases/lite/1.3/firebug-lite.js','releases/lite/latest/skin/xp/sprite.png','https://getfirebug.com/','#startOpened');
+}
+
 function pushCurrentFile() {
 	if (global.currentFile !== null) {
 		// push the current file to the file stack.
