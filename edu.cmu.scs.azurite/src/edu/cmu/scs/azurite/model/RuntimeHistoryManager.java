@@ -15,17 +15,22 @@ import edu.cmu.scs.azurite.commands.runtime.Segment;
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 import edu.cmu.scs.fluorite.commands.FileOpenCommand;
 import edu.cmu.scs.fluorite.commands.ICommand;
+import edu.cmu.scs.fluorite.commands.JUnitCommand;
+import edu.cmu.scs.fluorite.commands.RunCommand;
+import edu.cmu.scs.fluorite.model.CommandExecutionListener;
 import edu.cmu.scs.fluorite.model.DocumentChangeListener;
 import edu.cmu.scs.fluorite.model.EventRecorder;
 import edu.cmu.scs.fluorite.model.Events;
 
-public class RuntimeHistoryManager implements DocumentChangeListener {
+public class RuntimeHistoryManager implements DocumentChangeListener, CommandExecutionListener {
 	
 	// used for keeping track of the last index of the DC
 	private Map<FileKey, Integer> mNextIndexToApply;
 	
 	private Map<FileKey, List<RuntimeDC>> mDocumentChanges;
 	private FileKey mCurrentFileKey;
+	
+	private List<ICommand> mEventsToBeDisplayed;
 	
 	private ListenerList mRuntimeDocumentChangeListeners;
 
@@ -59,6 +64,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		mDocumentChanges = new HashMap<FileKey, List<RuntimeDC>>();
 		mNextIndexToApply = new HashMap<FileKey, Integer>();
 		mCurrentFileKey = null;
+		mEventsToBeDisplayed = new ArrayList<ICommand>();
 	}
 
 	public void scheduleTask(Runnable runnable) {
@@ -89,6 +95,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 	public void start() {
 		EventRecorder.getInstance().addDocumentChangeListener(this);
 		EventRecorder.getInstance().addDocumentChangeListener(PastHistoryManager.getInstance());
+		EventRecorder.getInstance().addCommandExecutionListener(this);
 		mStarted = true;
 		
 		// Execute all the scheduled tasks.
@@ -205,6 +212,10 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 	
 	private void setCurrentFileKey(FileKey newFileKey) {
 		mCurrentFileKey = newFileKey;
+	}
+	
+	public List<ICommand> getEventsToBeDisplayed() {
+		return Collections.unmodifiableList(mEventsToBeDisplayed);
 	}
 
 	@Override
@@ -470,6 +481,11 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		for (Events events : listAllEvents) {
 			List<ICommand> commands = events.getCommands();
 			for (ICommand command : commands) {
+				if (shouldCommandBeDisplayed(command)) {
+					mEventsToBeDisplayed.add(command);
+					continue;
+				}
+				
 				if (!(command instanceof BaseDocumentChangeEvent)) {
 					continue;
 				}
@@ -507,6 +523,24 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 			params.put(key, filteredIds);
 		}
 		return params;
+	}
+
+	public static boolean shouldCommandBeDisplayed(ICommand command) {
+		if (command instanceof JUnitCommand) {
+			return true;
+		} else if (command instanceof RunCommand) {
+			return true;
+		}
+		
+		return false;
+	}
+
+	@Override
+	public void commandExecuted(ICommand command) {
+		if (shouldCommandBeDisplayed(command)) {
+			mCurrentSessionEvents.addCommand(command);
+			mEventsToBeDisplayed.add(command);
+		}
 	}
 	
 }

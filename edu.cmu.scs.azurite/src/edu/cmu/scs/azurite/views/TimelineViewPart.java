@@ -52,9 +52,7 @@ import edu.cmu.scs.fluorite.commands.FileOpenCommand;
 import edu.cmu.scs.fluorite.commands.ICommand;
 import edu.cmu.scs.fluorite.commands.ITimestampOverridable;
 import edu.cmu.scs.fluorite.commands.Insert;
-import edu.cmu.scs.fluorite.commands.JUnitCommand;
 import edu.cmu.scs.fluorite.commands.Replace;
-import edu.cmu.scs.fluorite.commands.RunCommand;
 import edu.cmu.scs.fluorite.model.CommandExecutionListener;
 import edu.cmu.scs.fluorite.model.EventRecorder;
 import edu.cmu.scs.fluorite.model.Events;
@@ -367,11 +365,11 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 			final long currentTimestamp = EventRecorder.getInstance().getStartTimestamp();
 			
             // Read the existing runtime document changes.
-            RuntimeHistoryManager.getInstance().scheduleTask(new Runnable() {
+			final RuntimeHistoryManager manager = RuntimeHistoryManager.getInstance();
+            manager.scheduleTask(new Runnable() {
             	public void run() {
             		Display.getDefault().asyncExec(new Runnable() {
             			public void run() {
-                    		RuntimeHistoryManager manager = RuntimeHistoryManager.getInstance(); 
                     		for (FileKey key : manager.getFileKeys()) {
                     			if (key.getProjectName() == null || key.getFilePath() == null) {
                     				continue;
@@ -381,6 +379,13 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
                     			for (RuntimeDC dc : manager.getRuntimeDocumentChanges(key)) {
                     				addOperation(dc.getOriginal(), false, dc.getOriginal().getSessionId() == currentTimestamp);
                     			}
+                    		}
+                    		
+                    		// TODO figure out the current file and activate that file in the timeline.
+                    		
+                    		// Add all the events
+                    		for (ICommand eventToBeDisplayed : manager.getEventsToBeDisplayed()) {
+                    			addEventToTimeline(eventToBeDisplayed);
                     		}
                     		
                     		scrollToEnd();
@@ -696,10 +701,8 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 				if (foc.getFilePath() != null) {
 					builder.append(getAddFileString(foc.getProjectName(), foc.getFilePath()));
 				}
-//				activeFileChanged(foc.getProjectName(), foc.getFilePath());
 			} else {
 				builder.append(getAddOperationString(docChange, false, false, false));
-//				addOperation(docChange, false);
 			}
 		}
 		
@@ -729,6 +732,18 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 				Boolean.toString(layout),
 				Boolean.toString(current));
 		return executeStr;
+	}
+	
+	private void addEvents(Events events) {
+		StringBuilder builder = new StringBuilder();
+		
+		for (ICommand command : events.getCommands()) {
+			if (RuntimeHistoryManager.shouldCommandBeDisplayed(command)) {
+				builder.append(getAddEventString(command));
+			}
+		}
+		
+		browser.execute(builder.toString());
 	}
 	
 	private int getTypeIndex(BaseDocumentChangeEvent docChange) {
@@ -822,9 +837,12 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 			return;
 		}
 
-		// Add all the things.
 		for (Events events : listEvents) {
+			// Add all the operations.
 			addOperations(events);
+			
+			// Add all the events, such as Run, unit tests, etc.
+			addEvents(events);
 		}
 		
 		// Update the data.
@@ -904,21 +922,11 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		}
 		
 		// Some events should be displayed in the timeline
-		if (shouldCommandBeDisplayed(command)) {
+		if (RuntimeHistoryManager.shouldCommandBeDisplayed(command)) {
 			addEventToTimeline(command);
 		}
 	}
 	
-	private boolean shouldCommandBeDisplayed(ICommand command) {
-		if (command instanceof JUnitCommand) {
-			return true;
-		} else if (command instanceof RunCommand) {
-			return true;
-		}
-		
-		return false;
-	}
-
 	private void performLayout() {
 		browser.execute("layout();");
 	}
