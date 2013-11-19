@@ -2,7 +2,7 @@
 /*global d3, azurite */
 
 /* Things to be called from Azurite */
-/*exported updateOperation, getRightmostTimestamp, showContextMenu, addSelectionsByIds, removeSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarker, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile, addAnnotation */
+/*exported updateOperation, getRightmostTimestamp, showContextMenu, addSelectionsByIds, removeSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarker, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile, addAnnotation, addEvent */
 
 /* Things to be called manually when debugging */
 /*exported test */
@@ -59,6 +59,11 @@ var MARKER_COLOR = 'red';
 var ANNOTATION_WIDTH = 2;
 var ANNOTATION_COLOR = 'orange';
 var ANNOTATION_SIZE = 10;
+
+var EVENTS_HEIGHT = 20;
+var EVENT_WIDTH = 1;
+var EVENT_ICON_WIDTH = 16;
+var EVENT_ICON_HEIGHT = 16;
 
 var CHART_MARGINS = {
 	left : 10,
@@ -129,6 +134,44 @@ annotationDraw.dFunc = function(d) {
 	var x = annotationDraw.xFunc(d);
 	return 'M ' + x + ' 0 L ' + (x - (ANNOTATION_SIZE / 2)) + ' ' + (-ANNOTATION_SIZE / 2) + ' ' + (x - (ANNOTATION_SIZE / 2)) + ' ' + (-ANNOTATION_SIZE) + ' ' + (x + (ANNOTATION_SIZE / 2)) + ' ' + (-ANNOTATION_SIZE) + ' ' + (x + (ANNOTATION_SIZE / 2)) + ' ' + (-ANNOTATION_SIZE / 2);
 };
+annotationDraw.y2Func = function() {
+	return getSvgHeight() - TICKS_HEIGHT + ANNOTATION_SIZE / 2;
+};
+
+var eventDraw = {};
+eventDraw.xFunc = function(d) {
+	return timestampToPixel(d.dt);
+};
+eventDraw.y1Func = function() {
+	return -(getSvgHeight() - TICKS_HEIGHT - EVENTS_HEIGHT);
+};
+eventDraw.colorFunc = function(d) {
+	switch (d.type) {
+		case 'JUnitCommand':
+			return 'green';
+
+		case 'RunCommand':
+			return 'green';
+
+		default:
+			return 'gold';
+	}
+};
+eventDraw.iconFunc = function(d) {
+	switch (d.type) {
+		case 'JUnitCommand':
+			return 'images/event_icons/junitsucc.gif';
+
+		case 'RunCommand':
+			return 'images/event_icons/run_exc.gif';
+
+		default:
+			return 'images/event_icons/error.png';
+	}
+};
+eventDraw.iconXFunc = function(d) {
+	return timestampToPixel(d.dt) - EVENT_ICON_WIDTH / 2;
+};
 
 var timeTickDraw = {};
 timeTickDraw.xFunc = function(d) {
@@ -198,6 +241,7 @@ global.fileStack = [];
 global.sessions = [];
 global.selected = [];
 global.annotations = [];
+global.events = [];
 
 global.ticks = [];
 global.dates = [];
@@ -359,6 +403,13 @@ function setupSVG() {
 	svg.subTicks = svg.subTicksWrap.append('g')
 		.attr('id', 'sub_ticks');
 
+	svg.subEventsWrap = svg.main.append('g')
+		.attr('id', 'sub_events_wrap')
+		.attr('clip-path', 'url(#clipEventsWrap)');
+
+	svg.subEvents = svg.subEventsWrap.append('g')
+		.attr('id', 'sub_events');
+
 	svg.main.append('rect')
 		.attr('class', 'selection_box')
 		.style('fill', 'yellow')
@@ -376,6 +427,9 @@ function setupSVG() {
 
 	svg.clipTicksWrap = svg.main.append('clipPath')
 		.attr('id', 'clipTicksWrap').append('rect');
+
+	svg.clipEventsWrap = svg.main.append('clipPath')
+		.attr('id', 'clipEventsWrap').append('rect');
 
 	recalculateClipPaths();
 }
@@ -399,21 +453,21 @@ function recalculateClipPaths() {
 	svg.clipRectsWrap
 		.attr('y', '-1')
 		.attr('width', (svgWidth * (1.0 - FILES_PORTION)) + 'px')
-		.attr('height', (svgHeight - TICKS_HEIGHT + 2) + 'px');
+		.attr('height', (svgHeight - TICKS_HEIGHT - EVENTS_HEIGHT + 2) + 'px');
 	
 	svg.subAnnotationWrap
 		.attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' ' + CHART_MARGINS.top + ')');
-	svg.subAnnotations.select('.annotation_line').attr('y2', svgHeight - TICKS_HEIGHT + ANNOTATION_SIZE / 2);
+	svg.subAnnotations.selectAll('.annotation_line').attr('y2', annotationDraw.y2Func);
 	
 	svg.subMarkerWrap
 		.attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' ' + CHART_MARGINS.top + ')');
-	svg.subMarker.select('#marker_line').attr('y2', svgHeight - TICKS_HEIGHT + MARKER_SIZE / 2);
-	svg.subMarker.select('#marker_lower_triangle').attr('transform', 'translate(0, ' + (svgHeight - TICKS_HEIGHT) + ')');
+	svg.subMarker.select('#marker_line').attr('y2', svgHeight - TICKS_HEIGHT - EVENTS_HEIGHT + MARKER_SIZE / 2);
+	svg.subMarker.select('#marker_lower_triangle').attr('transform', 'translate(0, ' + (svgHeight - TICKS_HEIGHT - EVENTS_HEIGHT) + ')');
 	
 	svg.clipMarkerWrap
 		.attr('y', -MARKER_SIZE)
 		.attr('width', (svgWidth * (1.0 - FILES_PORTION)))
-		.attr('height', (svgHeight - TICKS_HEIGHT + 2 * MARKER_SIZE));
+		.attr('height', (svgHeight - TICKS_HEIGHT - EVENTS_HEIGHT + 2 * MARKER_SIZE));
 
 	svg.subTicksWrap
 		.attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' ' + (CHART_MARGINS.top + svgHeight - TICKS_HEIGHT) + ')');
@@ -422,6 +476,15 @@ function recalculateClipPaths() {
 		.attr('y', -TICKMARK_SIZE / 2)
 		.attr('width', (svgWidth * (1.0 - FILES_PORTION)))
 		.attr('height', TICKS_HEIGHT + TICKMARK_SIZE);
+
+	svg.subEventsWrap
+		.attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' ' + (CHART_MARGINS.top + svgHeight - TICKS_HEIGHT - EVENTS_HEIGHT) + ')');
+	svg.subEvents.selectAll('.event_line').attr('y1', eventDraw.y1Func);
+
+	svg.clipEventsWrap
+		.attr('y', -(svgHeight - TICKS_HEIGHT - EVENTS_HEIGHT))
+		.attr('width', (svgWidth * (1.0 - FILES_PORTION)))
+		.attr('height', svgHeight - TICKS_HEIGHT);
 }
 
 /**
@@ -564,6 +627,18 @@ function Annotation(sid, id, t, comment) {
 	this.id = id;
 	this.t = t;
 	this.comment = comment;
+}
+
+/**
+ * Event object for generic events displayed in the timeline.
+ */
+function Event(sid, id, t, dt, type, desc) {
+	this.sid = sid;
+	this.id = id;
+	this.t = t;
+	this.dt = dt;
+	this.type = type;
+	this.desc = desc;
 }
 
 /**
@@ -865,7 +940,7 @@ function addAnnotation(sid, id, t, comment) {
 		.attr('x1', annotationDraw.xFunc)
 		.attr('x2', annotationDraw.xFunc)
 		.attr('y1', -ANNOTATION_SIZE / 2)
-		.attr('y2', getSvgHeight() - TICKS_HEIGHT + ANNOTATION_SIZE / 2)
+		.attr('y2', annotationDraw.y2Func)
 		.attr('stroke-width', ANNOTATION_WIDTH)
 		.attr('stroke', ANNOTATION_COLOR);
 	
@@ -882,6 +957,46 @@ function addAnnotation(sid, id, t, comment) {
 		title: function() {
 			var d = this.__data__;
 			return d.comment;
+		}
+	});
+}
+
+/**
+ * Called by Azurite
+ */
+function addEvent(sid, id, t, dt, type, desc) {
+	var newEvent = new Event(sid, id, t, dt, type, desc);
+
+	// Add it to the global list
+	global.events.push(newEvent);
+
+	// Add the line object
+	var eventLine = svg.subEvents.append('line').datum(newEvent);
+	eventLine
+		.attr('class', 'event_line')
+		.attr('x1', eventDraw.xFunc)
+		.attr('x2', eventDraw.xFunc)
+		.attr('y1', eventDraw.y1Func)
+		.attr('y2', EVENTS_HEIGHT / 2)
+		.attr('stroke-width', EVENT_WIDTH)
+		.attr('stroke', eventDraw.colorFunc);
+
+	// Add icon. The size should be 16x16
+	var eventIcon = svg.subEvents.append('image').datum(newEvent);
+	eventIcon
+		.attr('class', 'event_icon')
+		.attr('xlink:href', eventDraw.iconFunc)
+		.attr('x', eventDraw.iconXFunc)
+		.attr('y', (EVENTS_HEIGHT - EVENT_ICON_HEIGHT) / 2)
+		.attr('width', EVENT_ICON_WIDTH)
+		.attr('height', EVENT_ICON_HEIGHT);
+
+	$(eventIcon.node()).tipsy({
+		gravity: 'n',
+		html: true,
+		title: function() {
+			var d = this.__data__;
+			return d.desc;
 		}
 	});
 }
@@ -979,14 +1094,13 @@ function layout(newLayout) {
 		global.tempSessionTx += session.g.node().getBBox().width;
 	}
 
-	global.timeScale = d3.time.scale()
-		.domain(global.domainArray)
-		.range(global.rangeArray);
+	global.timeScale.domain(global.domainArray).range(global.rangeArray);
 	
 	updateHighlight();
 	updateHScroll();
 	updateMarkerPosition();
 	updateAnnotations();
+	updateEvents();
 	updateTicks();
 	
 	// Restore the scroll position.
@@ -1962,6 +2076,7 @@ function updateSubRectsTransform() {
 	svg.subRects.attr('transform', 'translate(' + global.translateX + ' ' + (global.translateY * ROW_HEIGHT * global.scaleY) + ') ' + 'scale(' + global.scaleX + ' ' + global.scaleY + ')');
 	svg.subMarkers.attr('transform', 'translate(' + global.translateX + ' 0)');
 	svg.subAnnotations.attr('transform', 'translate(' + global.translateX + ' 0)');
+	svg.subEvents.attr('transform', 'translate(' + global.translateX + ' 0)');
 	svg.subTicks.attr('transform', 'translate(' + global.translateX + ' 0)');
 }
 
@@ -2338,6 +2453,14 @@ function updateAnnotations() {
 		.attr('x2', annotationDraw.xFunc);
 	svg.subAnnotations.selectAll('.annotation_tag')
 		.attr('d', annotationDraw.dFunc);
+}
+
+function updateEvents() {
+	svg.subEvents.selectAll('.event_line')
+		.attr('x1', eventDraw.xFunc)
+		.attr('x2', eventDraw.xFunc);
+	svg.subEvents.selectAll('.event_icon')
+		.attr('x', eventDraw.iconXFunc);
 }
 
 function showMarker(absTimestamp) {

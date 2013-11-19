@@ -50,8 +50,11 @@ import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 import edu.cmu.scs.fluorite.commands.Delete;
 import edu.cmu.scs.fluorite.commands.FileOpenCommand;
 import edu.cmu.scs.fluorite.commands.ICommand;
+import edu.cmu.scs.fluorite.commands.ITimestampOverridable;
 import edu.cmu.scs.fluorite.commands.Insert;
+import edu.cmu.scs.fluorite.commands.JUnitCommand;
 import edu.cmu.scs.fluorite.commands.Replace;
+import edu.cmu.scs.fluorite.commands.RunCommand;
 import edu.cmu.scs.fluorite.model.CommandExecutionListener;
 import edu.cmu.scs.fluorite.model.EventRecorder;
 import edu.cmu.scs.fluorite.model.Events;
@@ -621,6 +624,33 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		browser.execute(executeStr);
 	}
 	
+	private void addEventToTimeline(ICommand event) {
+		final String executeStr = getAddEventString(event);
+		Display.getDefault().syncExec(new Runnable() {
+			public void run() {
+				browser.execute(executeStr);
+			}
+		});
+	}
+	
+	private String getAddEventString(ICommand event) {
+		long sessionId = event.getSessionId();
+		long timestamp = event.getTimestamp();
+		long displayTimestamp = event instanceof ITimestampOverridable
+				? ((ITimestampOverridable) event).getTimestampForDisplay()
+				: sessionId + timestamp;
+		
+		String executeStr = String.format("addEvent(%1$d, %2$d, %3$d, %4$d, '%5$s', '%6$s');",
+				sessionId,
+				event.getCommandIndex(),
+				timestamp,
+				displayTimestamp,
+				event.getCommandType(),
+				event.getDescription());
+		
+		return executeStr;
+	}
+	
 	private String getAddAnnotationString(AnnotateCommand annotate) {
 		String comment = annotate.getComment();
 		if (comment == null) {
@@ -872,6 +902,21 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 				addAnnotation(annotate);
 			}
 		}
+		
+		// Some events should be displayed in the timeline
+		if (shouldCommandBeDisplayed(command)) {
+			addEventToTimeline(command);
+		}
+	}
+	
+	private boolean shouldCommandBeDisplayed(ICommand command) {
+		if (command instanceof JUnitCommand) {
+			return true;
+		} else if (command instanceof RunCommand) {
+			return true;
+		}
+		
+		return false;
 	}
 
 	private void performLayout() {
