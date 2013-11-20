@@ -2,7 +2,7 @@
 /*global d3, azurite */
 
 /* Things to be called from Azurite */
-/*exported updateOperation, getRightmostTimestamp, showContextMenu, addSelectionsByIds, removeSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarker, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile, addEvent, activateFirebugLite */
+/*exported updateOperation, getRightmostTimestamp, addSelectionsByIds, removeSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarker, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile, addEvent, activateFirebugLite */
 
 /* Things to be called manually when debugging */
 /*exported test */
@@ -316,7 +316,6 @@ global.profile = false;
 
 // context menu
 var cmenu = {};
-cmenu.isContextMenuVisible = false;
 cmenu.isRightButtonDown = false;
 cmenu.mousePos = [];
 cmenu.typeName = '';
@@ -1294,11 +1293,6 @@ function initMouseDownHandler() {
 			cmenu.isRightButtonDown = e.button === 2;
 		}
 
-		if (cmenu.isContextMenuVisible) {
-			hideContextMenu();
-			return;
-		}
-
 		var mouseX = e.clientX - SVG_WRAPPER_PADDING;
 		var mouseY = e.clientY - MENU_PANEL_HEIGHT - SVG_WRAPPER_PADDING;
 
@@ -1626,25 +1620,6 @@ function cursorInArea(x, y, area) {
 function clampInArea(x, y, area) {
 	return [ clamp(x, area.left, area.right - 1),
 			clamp(y, area.top, area.bottom - 1) ];
-}
-
-function showContextMenu(event, divId) {
-
-	var $contextMenu = $(divId);
-	var w = $contextMenu.outerWidth();
-	var h = $contextMenu.outerHeight();
-	
-	var menu = d3.select(divId);
-	menu.style('left', Math.min(event.clientX, global.lastWindowWidth - w) + 'px');
-	menu.style('top', Math.min(event.clientY, global.lastWindowHeight - h) + 'px');
-	menu.style('display', 'block');
-
-	cmenu.isContextMenuVisible = true;
-}
-
-function hideContextMenu() {
-	d3.selectAll('div.context_menu').style('display', 'none');
-	cmenu.isContextMenuVisible = false;
 }
 
 function addSelectionsByIds(sids, ids, clearPreviousSelection) {
