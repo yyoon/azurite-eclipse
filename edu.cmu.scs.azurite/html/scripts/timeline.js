@@ -2,7 +2,7 @@
 /*global d3, azurite */
 
 /* Things to be called from Azurite */
-/*exported updateOperation, getRightmostTimestamp, showContextMenu, addSelectionsByIds, removeSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarker, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile, addEvent, activateFirebugLite */
+/*exported updateOperation, getRightmostTimestamp, addSelectionsByIds, removeSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarker, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile, addEvent, activateFirebugLite */
 
 /* Things to be called manually when debugging */
 /*exported test */
@@ -316,7 +316,6 @@ global.profile = false;
 
 // context menu
 var cmenu = {};
-cmenu.isContextMenuVisible = false;
 cmenu.isRightButtonDown = false;
 cmenu.mousePos = [];
 cmenu.typeName = '';
@@ -1294,15 +1293,14 @@ function initMouseDownHandler() {
 			cmenu.isRightButtonDown = e.button === 2;
 		}
 
-		if (cmenu.isContextMenuVisible) {
-			hideContextMenu();
-			return;
-		}
-
 		var mouseX = e.clientX - SVG_WRAPPER_PADDING;
 		var mouseY = e.clientY - MENU_PANEL_HEIGHT - SVG_WRAPPER_PADDING;
 
 		if (cmenu.isRightButtonDown) {
+			if (global.isMac) {
+				showContextMenu(e);
+			}
+
 			return;
 		}
 
@@ -1504,59 +1502,11 @@ function initMouseUpHandler() {
 		var mouseX, mouseY;
 		
 		if (cmenu.isRightButtonDown) {
-			mouseX = e.clientX - SVG_WRAPPER_PADDING;
-			mouseY = e.clientY - MENU_PANEL_HEIGHT - SVG_WRAPPER_PADDING;
-			
-			cmenu.mousePos = [mouseX, mouseY];
-			
-			if (cursorInArea(mouseX, mouseY, global.draggableArea)) {
-				if (global.selected.length === 0) {
-					addSelections(mouseX, mouseY, mouseX + 1, mouseY + 1);
-				}
-				
-				if (global.selected.length === 1) {
-					// showContextMenu(e, '#cmenu_main_single');
-					cmenu.typeName = 'main_single';
-				}
-				else if (global.selected.length > 0) {
-					// showContextMenu(e, '#cmenu_main');
-					cmenu.typeName = 'main_multi';
-				}
-				else {
-					cmenu.typeName = 'main_nothing';
-				}
+			// When not on a mac, show context menu on mouse up.
+			if (global.isMac === false) {
+				showContextMenu(e);
 			}
-			else if (cursorInArea(mouseX, mouseY, global.fileArea)) {
-				var numVisibleFiles = global.getVisibleFiles().length + global.translateY;
-				if (mouseY < numVisibleFiles * ROW_HEIGHT * global.scaleY) {
-					// showContextMenu(e, '#cmenu_file_in');
-					cmenu.typeName = 'file_in';
-				}
-				else {
-					// showContextMenu(e, '#cmenu_file_out');
-					cmenu.typeName = 'file_out';
-				}
-			}
-			else if (cursorInArea(mouseX, mouseY, global.eventArea)) {
-				var rect = svg.main.node().createSVGRect();
-				rect.x = mouseX;
-				rect.y = mouseY;
-				rect.width = 1;
-				rect.height = 1;
 
-				// Get all the intersecting objects in the SVG.
-				var list = svg.main.node().getIntersectionList(rect, null);
-
-				// Filter only the icons.
-				d3.selectAll(list).filter('.event_icon').each(function(d) {
-					cmenu.typeName = 'event';
-					// "global.selectedTimestamp" will be evaluated from the plug-in side.
-					// In this case, use the display timeline, rather than the actual timestamp
-					// when this event was occurred.
-					global.selectedTimestamp = d.dt;
-				});
-			}
-			
 			return;
 		}
 
@@ -1628,23 +1578,60 @@ function clampInArea(x, y, area) {
 			clamp(y, area.top, area.bottom - 1) ];
 }
 
-function showContextMenu(event, divId) {
-
-	var $contextMenu = $(divId);
-	var w = $contextMenu.outerWidth();
-	var h = $contextMenu.outerHeight();
+// This functions sets the necessary information for Eclipse plug-in to show a context menu
+function showContextMenu(e) {
+	var mouseX = e.clientX - SVG_WRAPPER_PADDING;
+	var mouseY = e.clientY - MENU_PANEL_HEIGHT - SVG_WRAPPER_PADDING;
 	
-	var menu = d3.select(divId);
-	menu.style('left', Math.min(event.clientX, global.lastWindowWidth - w) + 'px');
-	menu.style('top', Math.min(event.clientY, global.lastWindowHeight - h) + 'px');
-	menu.style('display', 'block');
+	cmenu.mousePos = [mouseX, mouseY];
+	
+	if (cursorInArea(mouseX, mouseY, global.draggableArea)) {
+		if (global.selected.length === 0) {
+			addSelections(mouseX, mouseY, mouseX + 1, mouseY + 1);
+		}
+		
+		if (global.selected.length === 1) {
+			// showContextMenu(e, '#cmenu_main_single');
+			cmenu.typeName = 'main_single';
+		}
+		else if (global.selected.length > 0) {
+			// showContextMenu(e, '#cmenu_main');
+			cmenu.typeName = 'main_multi';
+		}
+		else {
+			cmenu.typeName = 'main_nothing';
+		}
+	}
+	else if (cursorInArea(mouseX, mouseY, global.fileArea)) {
+		var numVisibleFiles = global.getVisibleFiles().length + global.translateY;
+		if (mouseY < numVisibleFiles * ROW_HEIGHT * global.scaleY) {
+			// showContextMenu(e, '#cmenu_file_in');
+			cmenu.typeName = 'file_in';
+		}
+		else {
+			// showContextMenu(e, '#cmenu_file_out');
+			cmenu.typeName = 'file_out';
+		}
+	}
+	else if (cursorInArea(mouseX, mouseY, global.eventArea)) {
+		var rect = svg.main.node().createSVGRect();
+		rect.x = mouseX;
+		rect.y = mouseY;
+		rect.width = 1;
+		rect.height = 1;
 
-	cmenu.isContextMenuVisible = true;
-}
+		// Get all the intersecting objects in the SVG.
+		var list = svg.main.node().getIntersectionList(rect, null);
 
-function hideContextMenu() {
-	d3.selectAll('div.context_menu').style('display', 'none');
-	cmenu.isContextMenuVisible = false;
+		// Filter only the icons.
+		d3.selectAll(list).filter('.event_icon').each(function(d) {
+			cmenu.typeName = 'event';
+			// "global.selectedTimestamp" will be evaluated from the plug-in side.
+			// In this case, use the display timeline, rather than the actual timestamp
+			// when this event was occurred.
+			global.selectedTimestamp = d.dt;
+		});
+	}
 }
 
 function addSelectionsByIds(sids, ids, clearPreviousSelection) {
@@ -1977,7 +1964,8 @@ function getMinTranslateX() {
 	}
 
 	var scaled = result * global.scaleX;
-	var width = getSvgWidth() * (1.0 - FILES_PORTION);
+	var svgWidth = getSvgWidth();
+	var width = svgWidth > 0 ? getSvgWidth() * (1.0 - FILES_PORTION) : 0;
 	scaled = Math.max(scaled - width, 0);
 	
 	return -scaled;
