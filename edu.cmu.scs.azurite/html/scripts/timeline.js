@@ -1964,7 +1964,8 @@ function getMinTranslateX() {
 	}
 
 	var scaled = result * global.scaleX;
-	var width = getSvgWidth() * (1.0 - FILES_PORTION);
+	var svgWidth = getSvgWidth();
+	var width = svgWidth > 0 ? getSvgWidth() * (1.0 - FILES_PORTION) : 0;
 	scaled = Math.max(scaled - width, 0);
 	
 	return -scaled;
