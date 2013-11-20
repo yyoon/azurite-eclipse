@@ -1297,6 +1297,10 @@ function initMouseDownHandler() {
 		var mouseY = e.clientY - MENU_PANEL_HEIGHT - SVG_WRAPPER_PADDING;
 
 		if (cmenu.isRightButtonDown) {
+			if (global.isMac) {
+				showContextMenu(e);
+			}
+
 			return;
 		}
 
@@ -1498,59 +1502,11 @@ function initMouseUpHandler() {
 		var mouseX, mouseY;
 		
 		if (cmenu.isRightButtonDown) {
-			mouseX = e.clientX - SVG_WRAPPER_PADDING;
-			mouseY = e.clientY - MENU_PANEL_HEIGHT - SVG_WRAPPER_PADDING;
-			
-			cmenu.mousePos = [mouseX, mouseY];
-			
-			if (cursorInArea(mouseX, mouseY, global.draggableArea)) {
-				if (global.selected.length === 0) {
-					addSelections(mouseX, mouseY, mouseX + 1, mouseY + 1);
-				}
-				
-				if (global.selected.length === 1) {
-					// showContextMenu(e, '#cmenu_main_single');
-					cmenu.typeName = 'main_single';
-				}
-				else if (global.selected.length > 0) {
-					// showContextMenu(e, '#cmenu_main');
-					cmenu.typeName = 'main_multi';
-				}
-				else {
-					cmenu.typeName = 'main_nothing';
-				}
+			// When not on a mac, show context menu on mouse up.
+			if (global.isMac === false) {
+				showContextMenu(e);
 			}
-			else if (cursorInArea(mouseX, mouseY, global.fileArea)) {
-				var numVisibleFiles = global.getVisibleFiles().length + global.translateY;
-				if (mouseY < numVisibleFiles * ROW_HEIGHT * global.scaleY) {
-					// showContextMenu(e, '#cmenu_file_in');
-					cmenu.typeName = 'file_in';
-				}
-				else {
-					// showContextMenu(e, '#cmenu_file_out');
-					cmenu.typeName = 'file_out';
-				}
-			}
-			else if (cursorInArea(mouseX, mouseY, global.eventArea)) {
-				var rect = svg.main.node().createSVGRect();
-				rect.x = mouseX;
-				rect.y = mouseY;
-				rect.width = 1;
-				rect.height = 1;
 
-				// Get all the intersecting objects in the SVG.
-				var list = svg.main.node().getIntersectionList(rect, null);
-
-				// Filter only the icons.
-				d3.selectAll(list).filter('.event_icon').each(function(d) {
-					cmenu.typeName = 'event';
-					// "global.selectedTimestamp" will be evaluated from the plug-in side.
-					// In this case, use the display timeline, rather than the actual timestamp
-					// when this event was occurred.
-					global.selectedTimestamp = d.dt;
-				});
-			}
-			
 			return;
 		}
 
@@ -1620,6 +1576,62 @@ function cursorInArea(x, y, area) {
 function clampInArea(x, y, area) {
 	return [ clamp(x, area.left, area.right - 1),
 			clamp(y, area.top, area.bottom - 1) ];
+}
+
+// This functions sets the necessary information for Eclipse plug-in to show a context menu
+function showContextMenu(e) {
+	var mouseX = e.clientX - SVG_WRAPPER_PADDING;
+	var mouseY = e.clientY - MENU_PANEL_HEIGHT - SVG_WRAPPER_PADDING;
+	
+	cmenu.mousePos = [mouseX, mouseY];
+	
+	if (cursorInArea(mouseX, mouseY, global.draggableArea)) {
+		if (global.selected.length === 0) {
+			addSelections(mouseX, mouseY, mouseX + 1, mouseY + 1);
+		}
+		
+		if (global.selected.length === 1) {
+			// showContextMenu(e, '#cmenu_main_single');
+			cmenu.typeName = 'main_single';
+		}
+		else if (global.selected.length > 0) {
+			// showContextMenu(e, '#cmenu_main');
+			cmenu.typeName = 'main_multi';
+		}
+		else {
+			cmenu.typeName = 'main_nothing';
+		}
+	}
+	else if (cursorInArea(mouseX, mouseY, global.fileArea)) {
+		var numVisibleFiles = global.getVisibleFiles().length + global.translateY;
+		if (mouseY < numVisibleFiles * ROW_HEIGHT * global.scaleY) {
+			// showContextMenu(e, '#cmenu_file_in');
+			cmenu.typeName = 'file_in';
+		}
+		else {
+			// showContextMenu(e, '#cmenu_file_out');
+			cmenu.typeName = 'file_out';
+		}
+	}
+	else if (cursorInArea(mouseX, mouseY, global.eventArea)) {
+		var rect = svg.main.node().createSVGRect();
+		rect.x = mouseX;
+		rect.y = mouseY;
+		rect.width = 1;
+		rect.height = 1;
+
+		// Get all the intersecting objects in the SVG.
+		var list = svg.main.node().getIntersectionList(rect, null);
+
+		// Filter only the icons.
+		d3.selectAll(list).filter('.event_icon').each(function(d) {
+			cmenu.typeName = 'event';
+			// "global.selectedTimestamp" will be evaluated from the plug-in side.
+			// In this case, use the display timeline, rather than the actual timestamp
+			// when this event was occurred.
+			global.selectedTimestamp = d.dt;
+		});
+	}
 }
 
 function addSelectionsByIds(sids, ids, clearPreviousSelection) {
