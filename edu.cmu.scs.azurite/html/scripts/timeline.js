@@ -555,7 +555,7 @@ function EditOperation(sid, id, t1, t2, y1, y2, type, fileGroup) {
 	this.sid = sid;
 	this.id = id;
 	this.t1 = t1;
-	this.t2 = (t2 === null ? t1 : t2);
+	this.t2 = (t2 === null || t1 === t2 ? t1 + 1 : t2);
 	this.y1 = y1;
 	this.y2 = y2;
 	this.type = type;
@@ -705,8 +705,8 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current
 	fileGroup.operations.push(newOp);
 	global.lastOperation = newOp;
 	
-	session.startAbsTimestamp = Math.min(session.startAbsTimestamp, sid + t1);
-	session.endAbsTimestamp = Math.max(session.endAbsTimestamp, sid + t2);
+	session.startAbsTimestamp = Math.min(session.startAbsTimestamp, sid + newOp.t1);
+	session.endAbsTimestamp = Math.max(session.endAbsTimestamp, sid + newOp.t2);
 
 	var rectToAppend = fileGroup.g.append('rect');
 	rectToAppend.datum(newOp);
@@ -746,8 +746,8 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current
 			
 			rectToAppend.attr('x', x);
 
-			global.domainArray.push(new Date(sid + t1));
-			global.domainArray.push(new Date(sid + t2));
+			global.domainArray.push(new Date(sid + newOp.t1));
+			global.domainArray.push(new Date(sid + newOp.t2));
 			global.rangeArray.push(sessionTx + x);
 			global.rangeArray.push(sessionTx + x + rectDraw.wFunc(newOp));
 		}
