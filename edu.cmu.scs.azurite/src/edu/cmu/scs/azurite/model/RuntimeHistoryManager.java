@@ -14,6 +14,7 @@ import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.commands.runtime.Segment;
 import edu.cmu.scs.fluorite.commands.AnnotateCommand;
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
+import edu.cmu.scs.fluorite.commands.EclipseCommand;
 import edu.cmu.scs.fluorite.commands.FileOpenCommand;
 import edu.cmu.scs.fluorite.commands.ICommand;
 import edu.cmu.scs.fluorite.commands.JUnitCommand;
@@ -552,6 +553,15 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 			return true;
 		} else if (command instanceof AnnotateCommand) {
 			return true;
+		} else if (command instanceof EclipseCommand) {
+			EclipseCommand eclipseCommand = (EclipseCommand) command;
+			switch (eclipseCommand.getCommandID()) {
+				case "org.eclipse.ui.file.save":
+					return true;
+					
+				default:
+					return false;
+			}
 		}
 		
 		return false;
