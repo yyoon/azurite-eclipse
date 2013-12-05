@@ -369,6 +369,19 @@ function setupSVG() {
 
 	svg.subRects = svg.subRectsWrap.append('g')
 		.attr('id', 'sub_rects');
+
+	// The order of ticks / markers are important!
+	// The marker part should appear later than the ticks, so that the marker is fully shown
+	svg.subTicksWrap = svg.main.append('g')
+		.attr('id', 'sub_ticks_wrap')
+		.attr('clip-path', 'url(#clipTicksWrap)');
+	svg.subTicksBackground = svg.subTicksWrap.append('rect');
+	svg.subTicksBackground
+		.attr('id', 'ticks_background')
+		.attr('fill', TICKS_BACKGROUND);
+
+	svg.subTicks = svg.subTicksWrap.append('g')
+		.attr('id', 'sub_ticks');
 	
 	svg.subMarkerWrap = svg.main.append('g')
 		.attr('id', 'sub_marker_wrap')
@@ -397,17 +410,6 @@ function setupSVG() {
 		.attr('class', 'marker')
 		.attr('d', 'M 0 0 L ' + (-MARKER_SIZE / 2) + ' ' + MARKER_SIZE + ' ' + (MARKER_SIZE / 2) + ' ' + MARKER_SIZE)
 		.attr('fill', MARKER_COLOR);*/
-
-	svg.subTicksWrap = svg.main.append('g')
-		.attr('id', 'sub_ticks_wrap')
-		.attr('clip-path', 'url(#clipTicksWrap)');
-	svg.subTicksBackground = svg.subTicksWrap.append('rect');
-	svg.subTicksBackground
-		.attr('id', 'ticks_background')
-		.attr('fill', TICKS_BACKGROUND);
-
-	svg.subTicks = svg.subTicksWrap.append('g')
-		.attr('id', 'sub_ticks');
 
 	svg.subEventsWrap = svg.main.append('g')
 		.attr('id', 'sub_events_wrap')
