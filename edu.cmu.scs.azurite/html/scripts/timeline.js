@@ -2446,14 +2446,16 @@ function updateEvents() {
 		.attr('x', eventDraw.iconXFunc);
 }
 
-function showMarkerAtPosition(position) {
+function showMarkerAtPosition(position, notify) {
 	global.markerPos = position;
 	global.markerTimestamp = pixelToTimestamp(position);
 	
 	svg.subMarker.attr('transform', 'translate(' + position + ' 0)');
-	
-	// Tell Azurite about this marker move!
-	azurite.markerMove(global.markerTimestamp);
+
+	if (notify === true || notify === undefined) {
+		// Tell Azurite about this marker move!
+		azurite.markerMove(global.markerTimestamp);
+	}
 }
 
 function showMarker(absTimestamp) {
@@ -2468,8 +2470,8 @@ function showMarker(absTimestamp) {
 function updateMarkerPosition() {
 	var t = global.markerTimestamp;
 	var tx = timestampToPixel(t);
-	global.markerPos = tx;
-	svg.subMarker.attr('transform', 'translate(' + tx + ' 0)');
+
+	showMarkerAtPosition(tx, false);
 }
 
 function hideMarker() {
