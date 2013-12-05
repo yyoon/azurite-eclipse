@@ -319,11 +319,19 @@ global.eventArea = {
 	bottom: 0
 };
 
+global.timeTickArea = {
+	left: 0,
+	top: 0,
+	right: 0,
+	bottom: 0
+};
+
 global.draggingHScroll = false;
 global.draggingVScroll = false;
 global.dragStartScrollPos = null;
 
 global.draggingMarker = false;
+global.draggingMarkerInTimeTickArea = false;
 global.dragStartMarkerPos = null;
 global.diffWhileDraggingMarker = 0;
 
@@ -1231,6 +1239,11 @@ function updateAreas() {
 	global.eventArea.top = CHART_MARGINS.top + svgHeight - TICKS_HEIGHT - EVENTS_HEIGHT;
 	global.eventArea.right = CHART_MARGINS.left + svgWidth;
 	global.eventArea.bottom = CHART_MARGINS.top + svgHeight - TICKS_HEIGHT;
+
+	global.timeTickArea.left = CHART_MARGINS.left + svgWidth * FILES_PORTION;
+	global.timeTickArea.top = CHART_MARGINS.top + svgHeight - TICKS_HEIGHT;
+	global.timeTickArea.right = CHART_MARGINS.left + svgWidth;
+	global.timeTickArea.bottom = CHART_MARGINS.top + svgHeight;
 }
 
 /******************************************************************
@@ -1342,6 +1355,7 @@ function initMouseDownHandler() {
 			global.draggingHScroll = false;
 			global.draggingVScroll = false;
 			global.draggingMarker = false;
+			global.draggingMarkerInTimeTickArea = false;
 
 			if (!global.isCtrlDown) {
 				global.prevSelected = global.selected.slice(0);
@@ -1376,6 +1390,7 @@ function initMouseDownHandler() {
 					global.draggingHScroll = true;
 					global.draggingVScroll = false;
 					global.draggingMarker = false;
+					global.draggingMarkerInTimeTickArea = false;
 
 					global.dragStartScrollPos = thumbStart;
 					return;
@@ -1404,12 +1419,26 @@ function initMouseDownHandler() {
 					global.draggingHScroll = false;
 					global.draggingVScroll = true;
 					global.draggingMarker = false;
+					global.draggingMarkerInTimeTickArea = false;
 
 					global.dragStartScrollPos = thumbStart;
 					return;
 				}
 			}());
 			
+			return;
+		}
+		else if (cursorInArea(mouseX, mouseY, global.timeTickArea)) {
+			(function () {
+				global.dragging = false;
+				global.draggingHScroll = false;
+				global.draggingVScroll = false;
+				global.draggingMarker = false;
+				global.draggingMarkerInTimeTickArea = true;
+
+				showMarkerAtPosition(-global.translateX + mouseX - global.timeTickArea.left);
+			}());
+
 			return;
 		}
 		// Check if the marker is clicked
@@ -1428,6 +1457,7 @@ function initMouseDownHandler() {
 				global.draggingHScroll = false;
 				global.draggingVScroll = false;
 				global.draggingMarker = true;
+				global.draggingMarkerInTimeTickArea = false;
 				
 				global.dragStartMarkerPos = global.markerPos;
 				global.diffWhileDraggingMarker = 0;
@@ -1439,6 +1469,7 @@ function initMouseDownHandler() {
 		global.draggingHScroll = false;
 		global.draggingVScroll = false;
 		global.draggingMarker = false;
+		global.draggingMarkerInTimeTickArea = false;
 	};
 }
 
@@ -1513,15 +1544,12 @@ function initMouseMoveHandler() {
 				translateY(newTy);
 			}());
 		}
+		else if (global.draggingMarkerInTimeTickArea) {
+			showMarkerAtPosition(-global.translateX + mouseX - global.timeTickArea.left);
+		}
 		else if (global.draggingMarker) {
 			var markerPos = mouseX - global.dragStart[0] + global.dragStartMarkerPos + global.diffWhileDraggingMarker;
-			global.markerPos = markerPos;
-			global.markerTimestamp = pixelToTimestamp(markerPos);
-			
-			svg.subMarker.attr('transform', 'translate(' + markerPos + ' 0)');
-			
-			// Tell Azurite about this marker move!
-			azurite.markerMove(global.markerTimestamp);
+			showMarkerAtPosition(markerPos);
 		}
 	};
 }
@@ -1571,6 +1599,7 @@ function initMouseUpHandler() {
 		global.draggingHScroll = false;
 		global.draggingVScroll = false;
 		global.draggingMarker = false;
+		global.draggingMarkerInTimeTickArea = false;
 	};
 }
 
@@ -2415,6 +2444,16 @@ function updateEvents() {
 		.attr('x2', eventDraw.xFunc);
 	svg.subEvents.selectAll('.event_icon')
 		.attr('x', eventDraw.iconXFunc);
+}
+
+function showMarkerAtPosition(position) {
+	global.markerPos = position;
+	global.markerTimestamp = pixelToTimestamp(position);
+	
+	svg.subMarker.attr('transform', 'translate(' + position + ' 0)');
+	
+	// Tell Azurite about this marker move!
+	azurite.markerMove(global.markerTimestamp);
 }
 
 function showMarker(absTimestamp) {
