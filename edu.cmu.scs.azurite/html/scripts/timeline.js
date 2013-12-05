@@ -385,13 +385,13 @@ function setupSVG() {
 	svg.subMarker.append('path')
 		.attr('id', 'marker_upper_triangle')
 		.attr('class', 'marker')
-		.attr('d', 'M 0 0 L ' + (-MARKER_SIZE) + ' ' + (-MARKER_SIZE) + ' ' + MARKER_SIZE + ' ' + (-MARKER_SIZE))
+		.attr('d', 'M 0 0 L ' + (-MARKER_SIZE / 2) + ' ' + (-MARKER_SIZE) + ' ' + (MARKER_SIZE / 2) + ' ' + (-MARKER_SIZE))
 		.attr('fill', MARKER_COLOR);
-	svg.subMarker.append('path')
+/*	svg.subMarker.append('path')
 		.attr('id', 'marker_lower_triangle')
 		.attr('class', 'marker')
-		.attr('d', 'M 0 0 L ' + (-MARKER_SIZE) + ' ' + MARKER_SIZE + ' ' + MARKER_SIZE + ' ' + MARKER_SIZE)
-		.attr('fill', MARKER_COLOR);
+		.attr('d', 'M 0 0 L ' + (-MARKER_SIZE / 2) + ' ' + MARKER_SIZE + ' ' + (MARKER_SIZE / 2) + ' ' + MARKER_SIZE)
+		.attr('fill', MARKER_COLOR);*/
 
 	svg.subTicksWrap = svg.main.append('g')
 		.attr('id', 'sub_ticks_wrap')
@@ -454,13 +454,13 @@ function recalculateClipPaths() {
 	
 	svg.subMarkerWrap
 		.attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' ' + CHART_MARGINS.top + ')');
-	svg.subMarker.select('#marker_line').attr('y2', svgHeight - TICKS_HEIGHT - EVENTS_HEIGHT + MARKER_SIZE / 2);
-	svg.subMarker.select('#marker_lower_triangle').attr('transform', 'translate(0, ' + (svgHeight - TICKS_HEIGHT - EVENTS_HEIGHT) + ')');
+	svg.subMarker.select('#marker_line').attr('y2', svgHeight - TICKS_HEIGHT + MARKER_SIZE / 2);
+	svg.subMarker.select('#marker_lower_triangle').attr('transform', 'translate(0, ' + (svgHeight - TICKS_HEIGHT) + ')');
 	
 	svg.clipMarkerWrap
 		.attr('y', -MARKER_SIZE)
 		.attr('width', (svgWidth * (1.0 - FILES_PORTION)))
-		.attr('height', (svgHeight - TICKS_HEIGHT - EVENTS_HEIGHT + 2 * MARKER_SIZE));
+		.attr('height', (svgHeight - TICKS_HEIGHT + 2 * MARKER_SIZE));
 
 	svg.subTicksWrap
 		.attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' ' + (CHART_MARGINS.top + svgHeight - TICKS_HEIGHT) + ')');
