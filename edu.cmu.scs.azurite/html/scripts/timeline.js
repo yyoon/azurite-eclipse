@@ -39,6 +39,7 @@ var TICKMARK_SIZE = 6;
 var TICKMARK_WIDTH = 2;
 var TICKMARK_COLOR = 'white';
 var TICKS_MIN_INTERVAL = 200;
+var TICKS_BACKGROUND = 'dimgray';
 
 var FILE_NAME_OFFSET_X = 5;
 var FILE_NAME_OFFSET_Y = 5;
@@ -396,6 +397,10 @@ function setupSVG() {
 	svg.subTicksWrap = svg.main.append('g')
 		.attr('id', 'sub_ticks_wrap')
 		.attr('clip-path', 'url(#clipTicksWrap)');
+	svg.subTicksBackground = svg.subTicksWrap.append('rect');
+	svg.subTicksBackground
+		.attr('id', 'ticks_background')
+		.attr('fill', TICKS_BACKGROUND);
 
 	svg.subTicks = svg.subTicksWrap.append('g')
 		.attr('id', 'sub_ticks');
@@ -466,6 +471,10 @@ function recalculateClipPaths() {
 		.attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' ' + (CHART_MARGINS.top + svgHeight - TICKS_HEIGHT) + ')');
 
 	svg.clipTicksWrap
+		.attr('y', -TICKMARK_SIZE / 2)
+		.attr('width', (svgWidth * (1.0 - FILES_PORTION)))
+		.attr('height', TICKS_HEIGHT + TICKMARK_SIZE);
+	svg.subTicksBackground
 		.attr('y', -TICKMARK_SIZE / 2)
 		.attr('width', (svgWidth * (1.0 - FILES_PORTION)))
 		.attr('height', TICKS_HEIGHT + TICKMARK_SIZE);
