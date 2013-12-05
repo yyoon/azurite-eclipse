@@ -39,6 +39,7 @@ var TICKMARK_SIZE = 6;
 var TICKMARK_WIDTH = 1;
 var TICKMARK_COLOR = 'white';
 var TICK_TEXT_OFFSET = 2;
+var TICK_TEXT_COLOR = 'white';
 var TICKS_MIN_INTERVAL = 200;
 var TICKS_BACKGROUND = 'dimgray';
 
@@ -418,6 +419,16 @@ function setupSVG() {
 		.attr('class', 'marker')
 		.attr('d', 'M 0 0 L ' + (-MARKER_SIZE / 2) + ' ' + MARKER_SIZE + ' ' + (MARKER_SIZE / 2) + ' ' + MARKER_SIZE)
 		.attr('fill', MARKER_COLOR);*/
+	svg.subMarkerText = svg.subMarker.append('text');
+	svg.subMarkerText
+		.attr('id', 'marker_time_text')
+		.attr('class', 'marker')
+		.attr('x', MARKER_SIZE)
+		.attr('y', -MARKER_SIZE / 2)
+		.attr('alignment-baseline', 'central')
+		.attr('fill', TICK_TEXT_COLOR)
+		.attr('font-size', MARKER_SIZE + 'px')
+		.text('This is a test! gq');
 
 	svg.subEventsWrap = svg.main.append('g')
 		.attr('id', 'sub_events_wrap')
@@ -2215,7 +2226,7 @@ function updateTicks() {
 
 		text.attr('x', timeTickDraw.textXFunc)
 			.attr('dy', '1em')
-			.attr('fill', 'white')
+			.attr('fill', TICK_TEXT_COLOR)
 			.attr('text-anchor', 'left')
 			.text(timeFormatter(ticks[i]));
 
@@ -2447,10 +2458,22 @@ function updateEvents() {
 }
 
 function showMarkerAtPosition(position, notify) {
+	if (isNaN(position)) {
+		// Don't show the marker at all.
+		svg.subMarker.style('display', 'none');
+		return;
+	}
+
 	global.markerPos = position;
 	global.markerTimestamp = pixelToTimestamp(position);
+
+	var timeFormat = '%I:%M:%S %p';
+	var timeFormatter = d3.time.format(timeFormat);
 	
 	svg.subMarker.attr('transform', 'translate(' + position + ' 0)');
+	svg.subMarkerText.text(timeFormatter(new Date(global.markerTimestamp)));
+
+	svg.subMarker.style('display', '');
 
 	if (notify === true || notify === undefined) {
 		// Tell Azurite about this marker move!
