@@ -52,8 +52,9 @@ var INDICATOR_WIDTH = 2;
 var SCROLLBAR_WIDTH = 10;
 var SCROLLBAR_DIST_THRESHOLD = 50;
 
+var MARKER_WIDTH = 1;
 var MARKER_SIZE = 10;
-var MARKER_COLOR = 'red';
+var MARKER_COLOR = 'orange';
 
 var EVENT_WIDTH = 1;
 var EVENT_ICON_WIDTH = 16;
@@ -379,7 +380,7 @@ function setupSVG() {
 		.attr('id', 'marker_line')
 		.attr('class', 'marker')
 		.attr('y1', -MARKER_SIZE / 2)
-		.attr('stroke-width', 2)
+		.attr('stroke-width', MARKER_WIDTH)
 		.attr('stroke', MARKER_COLOR);
 	svg.subMarker.append('path')
 		.attr('id', 'marker_upper_triangle')
