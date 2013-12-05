@@ -5,7 +5,7 @@
 /*exported updateOperation, getRightmostTimestamp, addSelectionsByIds, removeSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarker, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile, addEvent, activateFirebugLite */
 
 /* Things to be called manually when debugging */
-/*exported test */
+/*exported test, testMarker */
 
 /**
  * Things should be executed at the beginning.
@@ -2490,4 +2490,10 @@ function popCurrentFile() {
 			global.currentFileIndex = -1;
 		}
 	}
+}
+
+function testMarker() {
+	test();
+	showMarker();
+	translateX(0);
 }
