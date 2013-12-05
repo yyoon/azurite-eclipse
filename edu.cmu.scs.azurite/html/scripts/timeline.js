@@ -35,7 +35,6 @@ var MIN_HEIGHT = MIN_WIDTH;
 var ROW_HEIGHT = 30;
 var DEFAULT_RATIO = 100;
 
-var TICKS_HEIGHT = 30;
 var TICKMARK_SIZE = 6;
 var TICKMARK_WIDTH = 2;
 var TICKMARK_COLOR = 'white';
@@ -56,10 +55,16 @@ var SCROLLBAR_DIST_THRESHOLD = 50;
 var MARKER_SIZE = 10;
 var MARKER_COLOR = 'red';
 
-var EVENTS_HEIGHT = 20;
 var EVENT_WIDTH = 1;
 var EVENT_ICON_WIDTH = 16;
 var EVENT_ICON_HEIGHT = 16;
+
+
+// When changing one of the following heights, be sure to also change the corresponding css.
+// (e.g., vscroll_wrapper's padding values)
+// ----------------------------------------
+var TICKS_HEIGHT = 30;
+var EVENTS_HEIGHT = 20;
 
 var CHART_MARGINS = {
 	left : 10,
@@ -67,6 +72,8 @@ var CHART_MARGINS = {
 	right : 10,
 	bottom : 0
 };
+// ----------------------------------------
+
 
 var MIN_SCROLL_THUMB_SIZE = 30;
 
