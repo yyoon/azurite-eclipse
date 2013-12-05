@@ -36,8 +36,9 @@ var ROW_HEIGHT = 30;
 var DEFAULT_RATIO = 100;
 
 var TICKMARK_SIZE = 6;
-var TICKMARK_WIDTH = 2;
+var TICKMARK_WIDTH = 1;
 var TICKMARK_COLOR = 'white';
+var TICK_TEXT_OFFSET = 2;
 var TICKS_MIN_INTERVAL = 200;
 var TICKS_BACKGROUND = 'dimgray';
 
@@ -181,6 +182,9 @@ eventDraw.iconXFunc = function(d) {
 var timeTickDraw = {};
 timeTickDraw.xFunc = function(d) {
 	return timestampToPixel(d);
+};
+timeTickDraw.textXFunc = function(d) {
+	return timestampToPixel(d) + TICK_TEXT_OFFSET;
 };
 
 /**
@@ -459,13 +463,13 @@ function recalculateClipPaths() {
 	
 	svg.subMarkerWrap
 		.attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' ' + CHART_MARGINS.top + ')');
-	svg.subMarker.select('#marker_line').attr('y2', svgHeight - TICKS_HEIGHT + MARKER_SIZE / 2);
+	svg.subMarker.select('#marker_line').attr('y2', svgHeight);
 	svg.subMarker.select('#marker_lower_triangle').attr('transform', 'translate(0, ' + (svgHeight - TICKS_HEIGHT) + ')');
 	
 	svg.clipMarkerWrap
 		.attr('y', -MARKER_SIZE)
 		.attr('width', (svgWidth * (1.0 - FILES_PORTION)))
-		.attr('height', (svgHeight - TICKS_HEIGHT + 2 * MARKER_SIZE));
+		.attr('height', (svgHeight + 2 * MARKER_SIZE));
 
 	svg.subTicksWrap
 		.attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' ' + (CHART_MARGINS.top + svgHeight - TICKS_HEIGHT) + ')');
@@ -475,9 +479,9 @@ function recalculateClipPaths() {
 		.attr('width', (svgWidth * (1.0 - FILES_PORTION)))
 		.attr('height', TICKS_HEIGHT + TICKMARK_SIZE);
 	svg.subTicksBackground
-		.attr('y', -TICKMARK_SIZE / 2)
+		.attr('y', 0)
 		.attr('width', (svgWidth * (1.0 - FILES_PORTION)))
-		.attr('height', TICKS_HEIGHT + TICKMARK_SIZE);
+		.attr('height', TICKS_HEIGHT);
 
 	svg.subEventsWrap
 		.attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' ' + (CHART_MARGINS.top + svgHeight - TICKS_HEIGHT - EVENTS_HEIGHT) + ')');
@@ -2178,7 +2182,7 @@ function updateTicks() {
 		text = svg.subTicks.append('text');
 		text.datum(ticks[i]);
 
-		text.attr('x', timeTickDraw.xFunc)
+		text.attr('x', timeTickDraw.textXFunc)
 			.attr('dy', '1em')
 			.attr('fill', 'white')
 			.attr('text-anchor', 'left')
@@ -2190,8 +2194,8 @@ function updateTicks() {
 		tickMark
 			.attr('x1', timeTickDraw.xFunc)
 			.attr('x2', timeTickDraw.xFunc)
-			.attr('y1', -TICKMARK_SIZE / 2)
-			.attr('y2', TICKMARK_SIZE / 2)
+			.attr('y1', 0)
+			.attr('y2', TICKMARK_SIZE)
 			.attr('stroke-width', TICKMARK_WIDTH)
 			.attr('stroke', TICKMARK_COLOR);
 	}
