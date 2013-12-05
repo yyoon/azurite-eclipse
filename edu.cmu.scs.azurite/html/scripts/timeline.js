@@ -65,7 +65,7 @@ var CHART_MARGINS = {
 	left : 10,
 	top : 10,
 	right : 10,
-	bottom : 10
+	bottom : 0
 };
 
 var MIN_SCROLL_THUMB_SIZE = 30;
