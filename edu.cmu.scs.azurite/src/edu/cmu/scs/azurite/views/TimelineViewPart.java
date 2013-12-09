@@ -215,7 +215,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 							break;
 						}
 						
-						case "event": {
+						case "marker": {
 							long absTimestamp = ((Number) browser.evaluate("return global.selectedTimestamp;")).longValue();
 							
 							paramMap.clear();

@@ -1471,27 +1471,16 @@ function initMouseDownHandler() {
 			return;
 		}
 		// Check if the marker is clicked
-		else {
-			var rect = svg.main.node().createSVGRect();
-			rect.x = mouseX;
-			rect.y = mouseY;
-			rect.width = 1;
-			rect.height = 1;
-
-			// Get all the intersecting objects in the SVG.
-			var list = svg.main.node().getIntersectionList(rect, null);
-
-			if (d3.selectAll(list).filter('.marker')[0].length > 0) {
-				global.dragging = false;
-				global.draggingHScroll = false;
-				global.draggingVScroll = false;
-				global.draggingMarker = true;
-				global.draggingMarkerInTimeTickArea = false;
-				
-				global.dragStartMarkerPos = global.markerPos;
-				global.diffWhileDraggingMarker = 0;
-				return;
-			}
+		else if (cursorInMarker(mouseX, mouseY)) {
+			global.dragging = false;
+			global.draggingHScroll = false;
+			global.draggingVScroll = false;
+			global.draggingMarker = true;
+			global.draggingMarkerInTimeTickArea = false;
+			
+			global.dragStartMarkerPos = global.markerPos;
+			global.diffWhileDraggingMarker = 0;
+			return;
 		}
 
 		global.dragging = false;
@@ -1656,6 +1645,32 @@ function initDblClickHandler() {
 	};
 }
 
+function cursorInMarker(x, y) {
+	var rect = svg.main.node().createSVGRect();
+	rect.x = x;
+	rect.y = y;
+	rect.width = 1;
+	rect.height = 1;
+
+	// Get all the intersecting objects in the SVG.
+	var list = svg.main.node().getIntersectionList(rect, null);
+
+	return d3.selectAll(list).filter('.marker')[0].length > 0;
+}
+
+function cursorInEvent(x, y) {
+	var rect = svg.main.node().createSVGRect();
+	rect.x = x;
+	rect.y = y;
+	rect.width = 1;
+	rect.height = 1;
+
+	// Get all the intersecting objects in the SVG.
+	var list = svg.main.node().getIntersectionList(rect, null);
+
+	return d3.selectAll(list).filter('.event_icon')[0].length > 0;
+}
+
 function cursorInArea(x, y, area) {
 	return x >= area.left && x < area.right && y >= area.top && y < area.bottom;
 }
@@ -1700,24 +1715,12 @@ function showContextMenu(e) {
 			cmenu.typeName = 'file_out';
 		}
 	}
-	else if (cursorInArea(mouseX, mouseY, global.eventArea)) {
-		var rect = svg.main.node().createSVGRect();
-		rect.x = mouseX;
-		rect.y = mouseY;
-		rect.width = 1;
-		rect.height = 1;
-
-		// Get all the intersecting objects in the SVG.
-		var list = svg.main.node().getIntersectionList(rect, null);
-
-		// Filter only the icons.
-		d3.selectAll(list).filter('.event_icon').each(function(d) {
-			cmenu.typeName = 'event';
-			// "global.selectedTimestamp" will be evaluated from the plug-in side.
-			// In this case, use the display timeline, rather than the actual timestamp
-			// when this event was occurred.
-			global.selectedTimestamp = d.dt;
-		});
+	else if (cursorInEvent(mouseX, mouseY, global.eventArea) || cursorInMarker(mouseX, mouseY)) {
+		cmenu.typeName = 'marker';
+		// "global.selectedTimestamp" will be evaluated from the plug-in side.
+		// In this case, use the display timeline, rather than the actual timestamp
+		// when this event was occurred.
+		global.selectedTimestamp = global.markerTimestamp;
 	}
 	else {
 		cmenu.typeName = 'unknown';
