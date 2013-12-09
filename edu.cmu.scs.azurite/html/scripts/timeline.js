@@ -2,10 +2,10 @@
 /*global d3, azurite */
 
 /* Things to be called from Azurite */
-/*exported updateOperation, getRightmostTimestamp, addSelectionsByIds, removeSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarker, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile, addEvent, activateFirebugLite */
+/*exported updateOperation, getRightmostTimestamp, addSelectionsByIds, removeSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarkerAtTimestamp, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile, addEvent, activateFirebugLite */
 
 /* Things to be called manually when debugging */
-/*exported test */
+/*exported test, testMarker */
 
 /**
  * Things should be executed at the beginning.
@@ -36,9 +36,12 @@ var ROW_HEIGHT = 30;
 var DEFAULT_RATIO = 100;
 
 var TICKMARK_SIZE = 6;
-var TICKMARK_WIDTH = 2;
+var TICKMARK_WIDTH = 1;
 var TICKMARK_COLOR = 'white';
+var TICK_TEXT_OFFSET = 2;
+var TICK_TEXT_COLOR = 'white';
 var TICKS_MIN_INTERVAL = 200;
+var TICKS_BACKGROUND = 'dimgray';
 
 var FILE_NAME_OFFSET_X = 5;
 var FILE_NAME_OFFSET_Y = 5;
@@ -52,8 +55,9 @@ var INDICATOR_WIDTH = 2;
 var SCROLLBAR_WIDTH = 10;
 var SCROLLBAR_DIST_THRESHOLD = 50;
 
+var MARKER_WIDTH = 1;
 var MARKER_SIZE = 10;
-var MARKER_COLOR = 'red';
+var MARKER_COLOR = 'orange';
 
 var EVENT_WIDTH = 1;
 var EVENT_ICON_WIDTH = 16;
@@ -179,6 +183,9 @@ eventDraw.iconXFunc = function(d) {
 var timeTickDraw = {};
 timeTickDraw.xFunc = function(d) {
 	return timestampToPixel(d);
+};
+timeTickDraw.textXFunc = function(d) {
+	return timestampToPixel(d) + TICK_TEXT_OFFSET;
 };
 
 /**
@@ -313,11 +320,19 @@ global.eventArea = {
 	bottom: 0
 };
 
+global.timeTickArea = {
+	left: 0,
+	top: 0,
+	right: 0,
+	bottom: 0
+};
+
 global.draggingHScroll = false;
 global.draggingVScroll = false;
 global.dragStartScrollPos = null;
 
 global.draggingMarker = false;
+global.draggingMarkerInTimeTickArea = false;
 global.dragStartMarkerPos = null;
 global.diffWhileDraggingMarker = 0;
 
@@ -363,6 +378,26 @@ function setupSVG() {
 
 	svg.subRects = svg.subRectsWrap.append('g')
 		.attr('id', 'sub_rects');
+
+	// The order of ticks / events / markers are important!
+	// The marker part should appear later than the ticks / events, so that the marker is fully shown
+	svg.subTicksWrap = svg.main.append('g')
+		.attr('id', 'sub_ticks_wrap')
+		.attr('clip-path', 'url(#clipTicksWrap)');
+	svg.subTicksBackground = svg.subTicksWrap.append('rect');
+	svg.subTicksBackground
+		.attr('id', 'ticks_background')
+		.attr('fill', TICKS_BACKGROUND);
+
+	svg.subTicks = svg.subTicksWrap.append('g')
+		.attr('id', 'sub_ticks');
+
+	svg.subEventsWrap = svg.main.append('g')
+		.attr('id', 'sub_events_wrap')
+		.attr('clip-path', 'url(#clipEventsWrap)');
+
+	svg.subEvents = svg.subEventsWrap.append('g')
+		.attr('id', 'sub_events');
 	
 	svg.subMarkerWrap = svg.main.append('g')
 		.attr('id', 'sub_marker_wrap')
@@ -379,32 +414,28 @@ function setupSVG() {
 		.attr('id', 'marker_line')
 		.attr('class', 'marker')
 		.attr('y1', -MARKER_SIZE / 2)
-		.attr('stroke-width', 2)
+		.attr('stroke-width', MARKER_WIDTH)
 		.attr('stroke', MARKER_COLOR);
 	svg.subMarker.append('path')
 		.attr('id', 'marker_upper_triangle')
 		.attr('class', 'marker')
-		.attr('d', 'M 0 0 L ' + (-MARKER_SIZE) + ' ' + (-MARKER_SIZE) + ' ' + MARKER_SIZE + ' ' + (-MARKER_SIZE))
+		.attr('d', 'M 0 0 L ' + (-MARKER_SIZE / 2) + ' ' + (-MARKER_SIZE) + ' ' + (MARKER_SIZE / 2) + ' ' + (-MARKER_SIZE))
 		.attr('fill', MARKER_COLOR);
-	svg.subMarker.append('path')
+/*	svg.subMarker.append('path')
 		.attr('id', 'marker_lower_triangle')
 		.attr('class', 'marker')
-		.attr('d', 'M 0 0 L ' + (-MARKER_SIZE) + ' ' + MARKER_SIZE + ' ' + MARKER_SIZE + ' ' + MARKER_SIZE)
-		.attr('fill', MARKER_COLOR);
-
-	svg.subTicksWrap = svg.main.append('g')
-		.attr('id', 'sub_ticks_wrap')
-		.attr('clip-path', 'url(#clipTicksWrap)');
-
-	svg.subTicks = svg.subTicksWrap.append('g')
-		.attr('id', 'sub_ticks');
-
-	svg.subEventsWrap = svg.main.append('g')
-		.attr('id', 'sub_events_wrap')
-		.attr('clip-path', 'url(#clipEventsWrap)');
-
-	svg.subEvents = svg.subEventsWrap.append('g')
-		.attr('id', 'sub_events');
+		.attr('d', 'M 0 0 L ' + (-MARKER_SIZE / 2) + ' ' + MARKER_SIZE + ' ' + (MARKER_SIZE / 2) + ' ' + MARKER_SIZE)
+		.attr('fill', MARKER_COLOR);*/
+	svg.subMarkerText = svg.subMarker.append('text');
+	svg.subMarkerText
+		.attr('id', 'marker_time_text')
+		.attr('class', 'marker')
+		.attr('x', MARKER_SIZE)
+		.attr('y', -MARKER_SIZE / 2)
+		.attr('alignment-baseline', 'central')
+		.attr('fill', TICK_TEXT_COLOR)
+		.attr('font-size', MARKER_SIZE + 'px')
+		.text('This is a test! gq');
 
 	svg.main.append('rect')
 		.attr('class', 'selection_box')
@@ -453,13 +484,13 @@ function recalculateClipPaths() {
 	
 	svg.subMarkerWrap
 		.attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' ' + CHART_MARGINS.top + ')');
-	svg.subMarker.select('#marker_line').attr('y2', svgHeight - TICKS_HEIGHT - EVENTS_HEIGHT + MARKER_SIZE / 2);
-	svg.subMarker.select('#marker_lower_triangle').attr('transform', 'translate(0, ' + (svgHeight - TICKS_HEIGHT - EVENTS_HEIGHT) + ')');
+	svg.subMarker.select('#marker_line').attr('y2', svgHeight);
+	svg.subMarker.select('#marker_lower_triangle').attr('transform', 'translate(0, ' + (svgHeight - TICKS_HEIGHT) + ')');
 	
 	svg.clipMarkerWrap
 		.attr('y', -MARKER_SIZE)
 		.attr('width', (svgWidth * (1.0 - FILES_PORTION)))
-		.attr('height', (svgHeight - TICKS_HEIGHT - EVENTS_HEIGHT + 2 * MARKER_SIZE));
+		.attr('height', (svgHeight + 2 * MARKER_SIZE));
 
 	svg.subTicksWrap
 		.attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' ' + (CHART_MARGINS.top + svgHeight - TICKS_HEIGHT) + ')');
@@ -468,6 +499,10 @@ function recalculateClipPaths() {
 		.attr('y', -TICKMARK_SIZE / 2)
 		.attr('width', (svgWidth * (1.0 - FILES_PORTION)))
 		.attr('height', TICKS_HEIGHT + TICKMARK_SIZE);
+	svg.subTicksBackground
+		.attr('y', 0)
+		.attr('width', (svgWidth * (1.0 - FILES_PORTION)))
+		.attr('height', TICKS_HEIGHT);
 
 	svg.subEventsWrap
 		.attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' ' + (CHART_MARGINS.top + svgHeight - TICKS_HEIGHT - EVENTS_HEIGHT) + ')');
@@ -1215,6 +1250,11 @@ function updateAreas() {
 	global.eventArea.top = CHART_MARGINS.top + svgHeight - TICKS_HEIGHT - EVENTS_HEIGHT;
 	global.eventArea.right = CHART_MARGINS.left + svgWidth;
 	global.eventArea.bottom = CHART_MARGINS.top + svgHeight - TICKS_HEIGHT;
+
+	global.timeTickArea.left = CHART_MARGINS.left + svgWidth * FILES_PORTION;
+	global.timeTickArea.top = CHART_MARGINS.top + svgHeight - TICKS_HEIGHT;
+	global.timeTickArea.right = CHART_MARGINS.left + svgWidth;
+	global.timeTickArea.bottom = CHART_MARGINS.top + svgHeight;
 }
 
 /******************************************************************
@@ -1309,6 +1349,24 @@ function initMouseDownHandler() {
 		var mouseX = e.clientX - SVG_WRAPPER_PADDING;
 		var mouseY = e.clientY - MENU_PANEL_HEIGHT - SVG_WRAPPER_PADDING;
 
+		// Check if the mouse was clicked on an event, in which case the marker should move to that place.
+		// (whether or not it was the right button)
+		if (cursorInArea(mouseX, mouseY, global.eventArea)) {
+			var rect = svg.main.node().createSVGRect();
+			rect.x = mouseX;
+			rect.y = mouseY;
+			rect.width = 1;
+			rect.height = 1;
+
+			// Get all the intersecting objects in the SVG.
+			var list = svg.main.node().getIntersectionList(rect, null);
+
+			// Filter only the icons.
+			d3.selectAll(list).filter('.event_icon').each(function(d) {
+				showMarkerAtTimestamp(d.dt);
+			});
+		}
+
 		if (cmenu.isRightButtonDown) {
 			if (global.isMac) {
 				showContextMenu(e);
@@ -1326,6 +1384,7 @@ function initMouseDownHandler() {
 			global.draggingHScroll = false;
 			global.draggingVScroll = false;
 			global.draggingMarker = false;
+			global.draggingMarkerInTimeTickArea = false;
 
 			if (!global.isCtrlDown) {
 				global.prevSelected = global.selected.slice(0);
@@ -1360,6 +1419,7 @@ function initMouseDownHandler() {
 					global.draggingHScroll = true;
 					global.draggingVScroll = false;
 					global.draggingMarker = false;
+					global.draggingMarkerInTimeTickArea = false;
 
 					global.dragStartScrollPos = thumbStart;
 					return;
@@ -1388,6 +1448,7 @@ function initMouseDownHandler() {
 					global.draggingHScroll = false;
 					global.draggingVScroll = true;
 					global.draggingMarker = false;
+					global.draggingMarkerInTimeTickArea = false;
 
 					global.dragStartScrollPos = thumbStart;
 					return;
@@ -1396,33 +1457,37 @@ function initMouseDownHandler() {
 			
 			return;
 		}
-		// Check if the marker is clicked
-		else {
-			var rect = svg.main.node().createSVGRect();
-			rect.x = mouseX;
-			rect.y = mouseY;
-			rect.width = 1;
-			rect.height = 1;
-
-			// Get all the intersecting objects in the SVG.
-			var list = svg.main.node().getIntersectionList(rect, null);
-
-			if (d3.selectAll(list).filter('.marker')[0].length > 0) {
+		else if (cursorInArea(mouseX, mouseY, global.timeTickArea)) {
+			(function () {
 				global.dragging = false;
 				global.draggingHScroll = false;
 				global.draggingVScroll = false;
-				global.draggingMarker = true;
-				
-				global.dragStartMarkerPos = global.markerPos;
-				global.diffWhileDraggingMarker = 0;
-				return;
-			}
+				global.draggingMarker = false;
+				global.draggingMarkerInTimeTickArea = true;
+
+				showMarkerAtPixel(-global.translateX + mouseX - global.timeTickArea.left);
+			}());
+
+			return;
+		}
+		// Check if the marker is clicked
+		else if (cursorInMarker(mouseX, mouseY)) {
+			global.dragging = false;
+			global.draggingHScroll = false;
+			global.draggingVScroll = false;
+			global.draggingMarker = true;
+			global.draggingMarkerInTimeTickArea = false;
+			
+			global.dragStartMarkerPos = global.markerPos;
+			global.diffWhileDraggingMarker = 0;
+			return;
 		}
 
 		global.dragging = false;
 		global.draggingHScroll = false;
 		global.draggingVScroll = false;
 		global.draggingMarker = false;
+		global.draggingMarkerInTimeTickArea = false;
 	};
 }
 
@@ -1497,15 +1562,12 @@ function initMouseMoveHandler() {
 				translateY(newTy);
 			}());
 		}
+		else if (global.draggingMarkerInTimeTickArea) {
+			showMarkerAtPixel(-global.translateX + mouseX - global.timeTickArea.left);
+		}
 		else if (global.draggingMarker) {
 			var markerPos = mouseX - global.dragStart[0] + global.dragStartMarkerPos + global.diffWhileDraggingMarker;
-			global.markerPos = markerPos;
-			global.markerTimestamp = pixelToTimestamp(markerPos);
-			
-			svg.subMarker.attr('transform', 'translate(' + markerPos + ' 0)');
-			
-			// Tell Azurite about this marker move!
-			azurite.markerMove(global.markerTimestamp);
+			showMarkerAtPixel(markerPos);
 		}
 	};
 }
@@ -1555,6 +1617,7 @@ function initMouseUpHandler() {
 		global.draggingHScroll = false;
 		global.draggingVScroll = false;
 		global.draggingMarker = false;
+		global.draggingMarkerInTimeTickArea = false;
 	};
 }
 
@@ -1580,6 +1643,32 @@ function initDblClickHandler() {
 			}
 		}
 	};
+}
+
+function cursorInMarker(x, y) {
+	var rect = svg.main.node().createSVGRect();
+	rect.x = x;
+	rect.y = y;
+	rect.width = 1;
+	rect.height = 1;
+
+	// Get all the intersecting objects in the SVG.
+	var list = svg.main.node().getIntersectionList(rect, null);
+
+	return d3.selectAll(list).filter('.marker')[0].length > 0;
+}
+
+function cursorInEvent(x, y) {
+	var rect = svg.main.node().createSVGRect();
+	rect.x = x;
+	rect.y = y;
+	rect.width = 1;
+	rect.height = 1;
+
+	// Get all the intersecting objects in the SVG.
+	var list = svg.main.node().getIntersectionList(rect, null);
+
+	return d3.selectAll(list).filter('.event_icon')[0].length > 0;
 }
 
 function cursorInArea(x, y, area) {
@@ -1626,24 +1715,12 @@ function showContextMenu(e) {
 			cmenu.typeName = 'file_out';
 		}
 	}
-	else if (cursorInArea(mouseX, mouseY, global.eventArea)) {
-		var rect = svg.main.node().createSVGRect();
-		rect.x = mouseX;
-		rect.y = mouseY;
-		rect.width = 1;
-		rect.height = 1;
-
-		// Get all the intersecting objects in the SVG.
-		var list = svg.main.node().getIntersectionList(rect, null);
-
-		// Filter only the icons.
-		d3.selectAll(list).filter('.event_icon').each(function(d) {
-			cmenu.typeName = 'event';
-			// "global.selectedTimestamp" will be evaluated from the plug-in side.
-			// In this case, use the display timeline, rather than the actual timestamp
-			// when this event was occurred.
-			global.selectedTimestamp = d.dt;
-		});
+	else if (cursorInEvent(mouseX, mouseY, global.eventArea) || cursorInMarker(mouseX, mouseY)) {
+		cmenu.typeName = 'marker';
+		// "global.selectedTimestamp" will be evaluated from the plug-in side.
+		// In this case, use the display timeline, rather than the actual timestamp
+		// when this event was occurred.
+		global.selectedTimestamp = global.markerTimestamp;
 	}
 	else {
 		cmenu.typeName = 'unknown';
@@ -2168,9 +2245,9 @@ function updateTicks() {
 		text = svg.subTicks.append('text');
 		text.datum(ticks[i]);
 
-		text.attr('x', timeTickDraw.xFunc)
+		text.attr('x', timeTickDraw.textXFunc)
 			.attr('dy', '1em')
-			.attr('fill', 'white')
+			.attr('fill', TICK_TEXT_COLOR)
 			.attr('text-anchor', 'left')
 			.text(timeFormatter(ticks[i]));
 
@@ -2180,8 +2257,8 @@ function updateTicks() {
 		tickMark
 			.attr('x1', timeTickDraw.xFunc)
 			.attr('x2', timeTickDraw.xFunc)
-			.attr('y1', -TICKMARK_SIZE / 2)
-			.attr('y2', TICKMARK_SIZE / 2)
+			.attr('y1', 0)
+			.attr('y2', TICKMARK_SIZE)
 			.attr('stroke-width', TICKMARK_WIDTH)
 			.attr('stroke', TICKMARK_COLOR);
 	}
@@ -2401,7 +2478,31 @@ function updateEvents() {
 		.attr('x', eventDraw.iconXFunc);
 }
 
-function showMarker(absTimestamp) {
+function showMarkerAtPixel(position, notify) {
+	if (isNaN(position)) {
+		// Don't show the marker at all.
+		svg.subMarker.style('display', 'none');
+		return;
+	}
+
+	global.markerPos = position;
+	global.markerTimestamp = pixelToTimestamp(position);
+
+	var timeFormat = '%I:%M:%S %p';
+	var timeFormatter = d3.time.format(timeFormat);
+	
+	svg.subMarker.attr('transform', 'translate(' + position + ' 0)');
+	svg.subMarkerText.text(timeFormatter(new Date(global.markerTimestamp)));
+
+	svg.subMarker.style('display', '');
+
+	if (notify === true || notify === undefined) {
+		// Tell Azurite about this marker move!
+		azurite.markerMove(global.markerTimestamp);
+	}
+}
+
+function showMarkerAtTimestamp(absTimestamp) {
 	if (absTimestamp !== undefined) {
 		global.markerTimestamp = absTimestamp;
 	}
@@ -2413,8 +2514,8 @@ function showMarker(absTimestamp) {
 function updateMarkerPosition() {
 	var t = global.markerTimestamp;
 	var tx = timestampToPixel(t);
-	global.markerPos = tx;
-	svg.subMarker.attr('transform', 'translate(' + tx + ' 0)');
+
+	showMarkerAtPixel(tx, false);
 }
 
 function hideMarker() {
@@ -2474,4 +2575,10 @@ function popCurrentFile() {
 			global.currentFileIndex = -1;
 		}
 	}
+}
+
+function testMarker() {
+	test();
+	showMarkerAtTimestamp();
+	translateX(0);
 }

@@ -215,7 +215,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 							break;
 						}
 						
-						case "event": {
+						case "marker": {
 							long absTimestamp = ((Number) browser.evaluate("return global.selectedTimestamp;")).longValue();
 							
 							paramMap.clear();
@@ -841,8 +841,8 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		moveToIndexPage();
 	}
 	
-	public void showMarker(long absTimestamp) {
-		browser.execute("showMarker(" + absTimestamp + ");");
+	public void showMarkerAtTimestamp(long absTimestamp) {
+		browser.execute("showMarkerAtTimestamp(" + absTimestamp + ");");
 	}
 	
 	public void hideMarker() {

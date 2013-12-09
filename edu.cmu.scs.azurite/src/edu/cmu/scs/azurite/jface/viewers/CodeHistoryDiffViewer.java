@@ -234,11 +234,11 @@ public class CodeHistoryDiffViewer extends Composite {
 		if (TimelineViewPart.getInstance() != null) {
 			if (version == mInvolvedDCs.size()) {
 				RuntimeDC dc = mInvolvedDCs.get(mInvolvedDCs.size() - 1);
-				TimelineViewPart.getInstance().showMarker(
+				TimelineViewPart.getInstance().showMarkerAtTimestamp(
 						dc.getOriginal().getSessionId() + dc.getOriginal().getTimestamp2() + 1);
 			} else {
 				RuntimeDC dc = mInvolvedDCs.get(version);
-				TimelineViewPart.getInstance().showMarker(
+				TimelineViewPart.getInstance().showMarkerAtTimestamp(
 						dc.getOriginal().getSessionId() + dc.getOriginal().getTimestamp());
 			}
 		}
