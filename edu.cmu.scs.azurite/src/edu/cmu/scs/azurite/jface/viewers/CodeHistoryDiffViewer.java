@@ -120,7 +120,7 @@ public class CodeHistoryDiffViewer extends Composite {
 		mCompareViewerSwitchingPane = createCompareView(this);
 		
 		// Set the current version to the recent one.
-		selectVersion(mInvolvedDCs.size());
+		selectVersion(mInvolvedDCs.size(), true);
 	}
 	
 	private void createActions() {
@@ -138,7 +138,7 @@ public class CodeHistoryDiffViewer extends Composite {
 				new Action("Prev", Activator.getImageDescriptor("icons/old_go_previous.png")) {
 						@Override
 						public void run() {
-							selectVersion(Math.max(getCurrentVersion() - 1, 0));
+							selectVersion(Math.max(getCurrentVersion() - 1, 0), true);
 						}
 				});
 		mPrevAction.setId("historyDiffPrev");
@@ -148,7 +148,7 @@ public class CodeHistoryDiffViewer extends Composite {
 				new Action("Next", Activator.getImageDescriptor("icons/old_go_next.png")) {
 						@Override
 						public void run() {
-							selectVersion(Math.min(getCurrentVersion() + 1, mInvolvedDCs.size()));
+							selectVersion(Math.min(getCurrentVersion() + 1, mInvolvedDCs.size()), true);
 						}
 				});
 		mNextAction.setId("historyDiffNext");
@@ -215,7 +215,7 @@ public class CodeHistoryDiffViewer extends Composite {
 		return mCurrentVersion;
 	}
 
-	private void selectVersion(int version) {
+	private void selectVersion(int version, boolean moveMarker) {
 		if (mCompareViewerSwitchingPane == null) {
 			throw new IllegalStateException();
 		}
@@ -231,7 +231,7 @@ public class CodeHistoryDiffViewer extends Composite {
 		
 		mCurrentVersion = version;
 		
-		if (TimelineViewPart.getInstance() != null) {
+		if (TimelineViewPart.getInstance() != null && moveMarker) {
 			if (version == mInvolvedDCs.size()) {
 				RuntimeDC dc = mInvolvedDCs.get(mInvolvedDCs.size() - 1);
 				TimelineViewPart.getInstance().showMarkerAtTimestamp(
@@ -315,12 +315,12 @@ public class CodeHistoryDiffViewer extends Composite {
 					+ mInvolvedDCs.get(i).getOriginal().getTimestamp();
 			
 			if (absTimestamp <= t) {
-				selectVersion(i);
+				selectVersion(i, false);
 				return;
 			}
 		}
 		
-		selectVersion(mInvolvedDCs.size());
+		selectVersion(mInvolvedDCs.size(), false);
 	}
 	
 	private SimpleCompareItem getCompareItemOfVersion(int version) {
