@@ -1786,11 +1786,11 @@ function updateHighlight() {
 LISTENER FUNCTIONS
 ******************************************************************/
 function barZoomIn() {
-	scaleX(global.scaleX + 0.5);
+	scaleX(global.scaleX + 0.1);
 }
 
 function barZoomOut() {
-	scaleX(global.scaleX - 0.5);
+	scaleX(global.scaleX - 0.1);
 }
 
 function showBefore() {
