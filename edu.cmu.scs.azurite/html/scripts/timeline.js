@@ -379,8 +379,8 @@ function setupSVG() {
 	svg.subRects = svg.subRectsWrap.append('g')
 		.attr('id', 'sub_rects');
 
-	// The order of ticks / markers are important!
-	// The marker part should appear later than the ticks, so that the marker is fully shown
+	// The order of ticks / events / markers are important!
+	// The marker part should appear later than the ticks / events, so that the marker is fully shown
 	svg.subTicksWrap = svg.main.append('g')
 		.attr('id', 'sub_ticks_wrap')
 		.attr('clip-path', 'url(#clipTicksWrap)');
@@ -391,6 +391,13 @@ function setupSVG() {
 
 	svg.subTicks = svg.subTicksWrap.append('g')
 		.attr('id', 'sub_ticks');
+
+	svg.subEventsWrap = svg.main.append('g')
+		.attr('id', 'sub_events_wrap')
+		.attr('clip-path', 'url(#clipEventsWrap)');
+
+	svg.subEvents = svg.subEventsWrap.append('g')
+		.attr('id', 'sub_events');
 	
 	svg.subMarkerWrap = svg.main.append('g')
 		.attr('id', 'sub_marker_wrap')
@@ -429,13 +436,6 @@ function setupSVG() {
 		.attr('fill', TICK_TEXT_COLOR)
 		.attr('font-size', MARKER_SIZE + 'px')
 		.text('This is a test! gq');
-
-	svg.subEventsWrap = svg.main.append('g')
-		.attr('id', 'sub_events_wrap')
-		.attr('clip-path', 'url(#clipEventsWrap)');
-
-	svg.subEvents = svg.subEventsWrap.append('g')
-		.attr('id', 'sub_events');
 
 	svg.main.append('rect')
 		.attr('class', 'selection_box')
