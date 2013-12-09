@@ -1349,6 +1349,24 @@ function initMouseDownHandler() {
 		var mouseX = e.clientX - SVG_WRAPPER_PADDING;
 		var mouseY = e.clientY - MENU_PANEL_HEIGHT - SVG_WRAPPER_PADDING;
 
+		// Check if the mouse was clicked on an event, in which case the marker should move to that place.
+		// (whether or not it was the right button)
+		if (cursorInArea(mouseX, mouseY, global.eventArea)) {
+			var rect = svg.main.node().createSVGRect();
+			rect.x = mouseX;
+			rect.y = mouseY;
+			rect.width = 1;
+			rect.height = 1;
+
+			// Get all the intersecting objects in the SVG.
+			var list = svg.main.node().getIntersectionList(rect, null);
+
+			// Filter only the icons.
+			d3.selectAll(list).filter('.event_icon').each(function(d) {
+				showMarkerAtTimestamp(d.dt);
+			});
+		}
+
 		if (cmenu.isRightButtonDown) {
 			if (global.isMac) {
 				showContextMenu(e);
