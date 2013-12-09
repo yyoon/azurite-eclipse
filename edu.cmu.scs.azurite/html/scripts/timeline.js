@@ -1645,6 +1645,9 @@ function showContextMenu(e) {
 			global.selectedTimestamp = d.dt;
 		});
 	}
+	else {
+		cmenu.typeName = 'unknown';
+	}
 }
 
 function addSelectionsByIds(sids, ids, clearPreviousSelection) {
