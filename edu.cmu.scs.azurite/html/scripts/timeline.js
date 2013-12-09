@@ -1447,7 +1447,7 @@ function initMouseDownHandler() {
 				global.draggingMarker = false;
 				global.draggingMarkerInTimeTickArea = true;
 
-				showMarkerAtPosition(-global.translateX + mouseX - global.timeTickArea.left);
+				showMarkerAtPixel(-global.translateX + mouseX - global.timeTickArea.left);
 			}());
 
 			return;
@@ -1556,11 +1556,11 @@ function initMouseMoveHandler() {
 			}());
 		}
 		else if (global.draggingMarkerInTimeTickArea) {
-			showMarkerAtPosition(-global.translateX + mouseX - global.timeTickArea.left);
+			showMarkerAtPixel(-global.translateX + mouseX - global.timeTickArea.left);
 		}
 		else if (global.draggingMarker) {
 			var markerPos = mouseX - global.dragStart[0] + global.dragStartMarkerPos + global.diffWhileDraggingMarker;
-			showMarkerAtPosition(markerPos);
+			showMarkerAtPixel(markerPos);
 		}
 	};
 }
@@ -2457,7 +2457,7 @@ function updateEvents() {
 		.attr('x', eventDraw.iconXFunc);
 }
 
-function showMarkerAtPosition(position, notify) {
+function showMarkerAtPixel(position, notify) {
 	if (isNaN(position)) {
 		// Don't show the marker at all.
 		svg.subMarker.style('display', 'none');
@@ -2494,7 +2494,7 @@ function updateMarkerPosition() {
 	var t = global.markerTimestamp;
 	var tx = timestampToPixel(t);
 
-	showMarkerAtPosition(tx, false);
+	showMarkerAtPixel(tx, false);
 }
 
 function hideMarker() {
