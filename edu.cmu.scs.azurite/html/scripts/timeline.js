@@ -2,7 +2,7 @@
 /*global d3, azurite */
 
 /* Things to be called from Azurite */
-/*exported updateOperation, getRightmostTimestamp, addSelectionsByIds, removeSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarker, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile, addEvent, activateFirebugLite */
+/*exported updateOperation, getRightmostTimestamp, addSelectionsByIds, removeSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarkerAtTimestamp, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile, addEvent, activateFirebugLite */
 
 /* Things to be called manually when debugging */
 /*exported test, testMarker */
@@ -2481,7 +2481,7 @@ function showMarkerAtPixel(position, notify) {
 	}
 }
 
-function showMarker(absTimestamp) {
+function showMarkerAtTimestamp(absTimestamp) {
 	if (absTimestamp !== undefined) {
 		global.markerTimestamp = absTimestamp;
 	}
@@ -2558,6 +2558,6 @@ function popCurrentFile() {
 
 function testMarker() {
 	test();
-	showMarker();
+	showMarkerAtTimestamp();
 	translateX(0);
 }
