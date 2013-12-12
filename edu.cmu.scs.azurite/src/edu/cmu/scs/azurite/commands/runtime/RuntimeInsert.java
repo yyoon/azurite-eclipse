@@ -99,5 +99,15 @@ public class RuntimeInsert extends RuntimeDC {
 		
 		return builder.toString().replace("\n", "<br>");
 	}
+
+	@Override
+	public String getTypeString() {
+		return "insert";
+	}
+	
+	@Override
+	public String getMarkerMessage() {
+		return "Inserted code";
+	}
 	
 }

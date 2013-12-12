@@ -118,4 +118,8 @@ public abstract class RuntimeDC {
 	protected String transformToHtmlString(String originalCode) {
 		return originalCode.replace("\r\n", "\n").replace("\r", "\n").replace("\n", "&crarr;<br>");
 	}
+	
+	public abstract String getTypeString();
+	
+	public abstract String getMarkerMessage();
 }
