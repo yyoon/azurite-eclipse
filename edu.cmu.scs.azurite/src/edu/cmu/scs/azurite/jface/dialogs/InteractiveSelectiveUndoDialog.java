@@ -13,16 +13,6 @@ import org.eclipse.compare.CompareConfiguration;
 import org.eclipse.compare.CompareUI;
 import org.eclipse.compare.CompareViewerSwitchingPane;
 import org.eclipse.compare.contentmergeviewer.TextMergeViewer;
-import org.eclipse.core.filebuffers.FileBuffers;
-import org.eclipse.core.filebuffers.ITextFileBuffer;
-import org.eclipse.core.filebuffers.ITextFileBufferManager;
-import org.eclipse.core.filebuffers.LocationKind;
-import org.eclipse.core.resources.IFile;
-import org.eclipse.core.resources.IWorkspace;
-import org.eclipse.core.resources.IWorkspaceRoot;
-import org.eclipse.core.resources.ResourcesPlugin;
-import org.eclipse.core.runtime.IPath;
-import org.eclipse.core.runtime.Path;
 import org.eclipse.jdt.ui.text.IJavaPartitions;
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IMenuListener;
@@ -67,9 +57,6 @@ import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MenuItem;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Tree;
-import org.eclipse.ui.IEditorInput;
-import org.eclipse.ui.IEditorReference;
-import org.eclipse.ui.IFileEditorInput;
 import org.eclipse.ui.ISharedImages;
 import org.eclipse.ui.PlatformUI;
 
@@ -88,7 +75,6 @@ import edu.cmu.scs.azurite.model.undo.UndoAlternative;
 import edu.cmu.scs.azurite.plugin.Activator;
 import edu.cmu.scs.azurite.views.RectSelectionListener;
 import edu.cmu.scs.azurite.views.TimelineViewPart;
-import edu.cmu.scs.fluorite.util.Utilities;
 
 public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements RectSelectionListener {
 	
@@ -360,7 +346,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		}
 		
 		public SelectiveUndoParams getSelectiveUndoParams() {
-			return new SelectiveUndoParams(getChunks(), findDocumentForKey(getFileKey()), getAlternativeChoiceMap());
+			return new SelectiveUndoParams(getChunks(), edu.cmu.scs.azurite.util.Utilities.findDocumentForKey(getFileKey()), getAlternativeChoiceMap());
 		}
 		
 		public boolean hasUnresolvedConflict() {
@@ -1215,7 +1201,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		
 		try {
 			FileKey fileKey = topElem.getFileKey();
-			IDocument doc = findDocumentForKey(fileKey);
+			IDocument doc = edu.cmu.scs.azurite.util.Utilities.findDocumentForKey(fileKey);
 			
 			// Original source
 			String originalContents = doc.get();
@@ -1256,64 +1242,9 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	}
 
 	public IDocument findDocumentForChunk(Chunk chunk) {
-		return findDocumentForKey(chunk.getBelongsTo());
+		return edu.cmu.scs.azurite.util.Utilities.findDocumentForKey(chunk.getBelongsTo());
 	}
 	
-	public IDocument findDocumentForKey(FileKey fileKey) {
-		try {
-			// Retrieve the IDocument, using the file information.
-			IDocument doc = findDocumentFromOpenEditors(fileKey);
-			// If this file is not open, then just connect it with the relative path.
-			if (doc == null) {
-				IWorkspace workspace = ResourcesPlugin.getWorkspace();
-				IWorkspaceRoot root = workspace.getRoot();
-				
-				IPath absPath = new Path(fileKey.getFilePath());
-				IPath relPath = absPath.makeRelativeTo(root.getLocation());
-				
-				ITextFileBufferManager manager = FileBuffers.getTextFileBufferManager();
-				manager.connect(relPath, LocationKind.IFILE, null);
-				ITextFileBuffer buffer = manager.getTextFileBuffer(relPath, LocationKind.IFILE);
-				
-				doc = buffer.getDocument();
-			}
-			return doc;
-		} catch (Exception e) {
-			e.printStackTrace();
-			return null;
-		}
-	}
-	
-	private IDocument findDocumentFromOpenEditors(FileKey fileKey) {
-		try {
-			IEditorReference[] editorRefs = PlatformUI.getWorkbench()
-					.getActiveWorkbenchWindow().getActivePage()
-					.getEditorReferences();
-			
-			for (IEditorReference editorRef : editorRefs) {
-				IEditorInput input = editorRef.getEditorInput();
-				if (input instanceof IFileEditorInput) {
-					IFileEditorInput fileInput = (IFileEditorInput) input;
-					IFile file = fileInput.getFile();
-					
-					FileKey key = new FileKey(
-							file.getProject().getName(),
-							file.getLocation().toOSString());
-					
-					// This is the same file!
-					// Get the IDocument object from this editor.
-					if (fileKey.equals(key)) {
-						return Utilities.getDocument(editorRef.getEditor(false));
-					}
-				}
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		
-		return null;
-	}
-
 	private void showConflictResolutionPanel(final ChunkLevelElement chunkElem) {
 		// Delete the conflict resolution area if there was previously.
 		clearConflictResolutionArea();
