@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
-import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 
 public class OperationId implements Comparable<OperationId> {
 
@@ -54,10 +53,14 @@ public class OperationId implements Comparable<OperationId> {
 	public static List<OperationId> getOperationIdsFromRuntimeDCs(List<RuntimeDC> dcs) {
 		List<OperationId> ids = new ArrayList<OperationId>();
 		for (RuntimeDC dc : dcs) {
-			BaseDocumentChangeEvent original = dc.getOriginal();
-			ids.add(new OperationId(original.getSessionId(), original.getCommandIndex()));
+			ids.add(dc.getOperationId());
 		}
 		return ids;
+	}
+
+	@Override
+	public String toString() {
+		return Long.toString(this.sid) + "_" + Long.toString(this.id);
 	}
 	
 }

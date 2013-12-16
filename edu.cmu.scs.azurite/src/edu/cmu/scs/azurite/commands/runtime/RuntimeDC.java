@@ -5,6 +5,7 @@ import java.util.Comparator;
 import java.util.List;
 
 import edu.cmu.scs.azurite.model.FileKey;
+import edu.cmu.scs.azurite.model.OperationId;
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 import edu.cmu.scs.fluorite.commands.Delete;
 import edu.cmu.scs.fluorite.commands.Insert;
@@ -122,4 +123,13 @@ public abstract class RuntimeDC {
 	public abstract String getTypeString();
 	
 	public abstract String getMarkerMessage();
+	
+	private OperationId mOperationId;
+	public OperationId getOperationId() {
+		if (mOperationId == null) {
+			mOperationId = new OperationId(getOriginal().getSessionId(), getOriginal().getCommandIndex());
+		}
+		
+		return mOperationId;
+	}
 }

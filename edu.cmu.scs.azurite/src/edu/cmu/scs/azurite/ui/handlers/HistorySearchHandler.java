@@ -24,7 +24,6 @@ import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.azurite.model.undo.Chunk;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
 import edu.cmu.scs.azurite.views.TimelineViewPart;
-import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 import edu.cmu.scs.fluorite.model.EventRecorder;
 import edu.cmu.scs.fluorite.util.Utilities;
 
@@ -177,8 +176,7 @@ public class HistorySearchHandler extends AbstractHandler {
 		// Extract the ids.
 		List<OperationId> ids = new ArrayList<OperationId>();
 		for (RuntimeDC dc : resultDCs) {
-			BaseDocumentChangeEvent original = dc.getOriginal();
-			ids.add(new OperationId(original.getSessionId(), original.getCommandIndex()));
+			ids.add(dc.getOperationId());
 		}
 		
 		if (ids.isEmpty()) {
