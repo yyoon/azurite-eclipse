@@ -107,7 +107,7 @@ public class RuntimeInsert extends RuntimeDC {
 	
 	@Override
 	public String getMarkerMessage() {
-		return "Inserted code";
+		return "Inserted code: \"" + getOriginal().getText() + "\"";
 	}
 	
 }

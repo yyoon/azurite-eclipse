@@ -130,7 +130,7 @@ public class RuntimeReplace extends RuntimeDC {
 	
 	@Override
 	public String getMarkerMessage() {
-		return "Replaced code";
+		return "Replaced code: \"" + getOriginal().getDeletedText() + "\" -> \"" + getOriginal().getInsertedText() + "\"";
 	}
 
 }

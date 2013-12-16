@@ -110,7 +110,7 @@ public class RuntimeDelete extends RuntimeDC {
 	
 	@Override
 	public String getMarkerMessage() {
-		return "Deleted code";
+		return "Deleted code: \"" + getOriginal().getText() + "\"";
 	}
 	
 }
