@@ -102,5 +102,15 @@ public class RuntimeDelete extends RuntimeDC {
 		
 		return builder.toString().replace("\n", "<br>");
 	}
+
+	@Override
+	public String getTypeString() {
+		return "delete";
+	}
+	
+	@Override
+	public String getMarkerMessage() {
+		return "Deleted code: \"" + getOriginal().getText() + "\"";
+	}
 	
 }

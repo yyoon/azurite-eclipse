@@ -83,10 +83,14 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	private Browser browser;
 	private ListenerList rectSelectionListenerList;
 	
+	private RectMarkerManager rectMarkerManager;
+	
 	public TimelineViewPart() {
 		super();
 		
 		this.rectSelectionListenerList = new ListenerList();
+		this.rectMarkerManager = new RectMarkerManager();
+		addRectSelectionListener(this.rectMarkerManager);
 	}
 	
 	public void addRectSelectionListener(RectSelectionListener listener) {
@@ -277,6 +281,8 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	public void dispose() {
 		RuntimeHistoryManager.getInstance().removeRuntimeDocumentChangeListener(this);
 		EventRecorder.getInstance().removeCommandExecutionListener(this);
+		this.rectMarkerManager.removeAllMarkers();
+		removeRectSelectionListener(this.rectMarkerManager);
 		
 		me = null;
 		

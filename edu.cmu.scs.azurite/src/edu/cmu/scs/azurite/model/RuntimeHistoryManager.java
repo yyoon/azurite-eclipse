@@ -321,11 +321,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 		return filterDocumentChanges(key, new IRuntimeDCFilter() {
 			@Override
 			public boolean filter(RuntimeDC runtimeDC) {
-				OperationId oid = new OperationId(
-						runtimeDC.getOriginal().getSessionId(),
-						runtimeDC.getOriginal().getCommandIndex());
-				
-				return ids.contains(oid);
+				return ids.contains(runtimeDC.getOperationId());
 			}
 		});
 	}
@@ -343,11 +339,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 				new IRuntimeDCFilter() {
 			@Override
 			public boolean filter(RuntimeDC runtimeDC) {
-				OperationId oid = new OperationId(
-						runtimeDC.getOriginal().getSessionId(),
-						runtimeDC.getOriginal().getCommandIndex());
-
-				return id.equals(oid);
+				return id.equals(runtimeDC.getOperationId());
 			}
 		});
 		
@@ -370,11 +362,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 		return filterDocumentChanges(key, new IRuntimeDCFilter() {
 			@Override
 			public boolean filter(RuntimeDC runtimeDC) {
-				OperationId oid = new OperationId(
-						runtimeDC.getOriginal().getSessionId(),
-						runtimeDC.getOriginal().getCommandIndex());
-				
-				return id.compareTo(oid) < 0;
+				return id.compareTo(runtimeDC.getOperationId()) < 0;
 			}
 		});
 	}
@@ -407,11 +395,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 				new IRuntimeDCFilter() {
 			@Override
 			public boolean filter(RuntimeDC runtimeDC) {
-				OperationId oid = new OperationId(
-						runtimeDC.getOriginal().getSessionId(),
-						runtimeDC.getOriginal().getCommandIndex());
-
-				return id.equals(oid);
+				return id.equals(runtimeDC.getOperationId());
 			}
 		}, false);
 		
