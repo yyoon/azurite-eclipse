@@ -250,6 +250,12 @@ global.files = [];
 global.fileStack = [];
 global.sessions = [];
 global.selectedRects = [];
+
+// should either be null (no selection) or [startPixel, endPixel)
+global.selectedPixelRange = null;
+// should either be null (no selection) or [startAbsTimestamp, endAbsTimestamp)
+global.selectedTimestampRange = null;
+
 global.events = [];
 
 global.ticks = [];
@@ -334,6 +340,7 @@ global.dragStartScrollPos = null;
 global.draggingMarker = false;
 global.draggingMarkerInTimeTickArea = false;
 global.dragStartMarkerPos = null;
+global.draggingMarkerShift = false;
 global.diffWhileDraggingMarker = 0;
 
 global.markerTimestamp = 0;
@@ -1465,7 +1472,30 @@ function initMouseDownHandler() {
 				global.draggingMarker = false;
 				global.draggingMarkerInTimeTickArea = true;
 
-				showMarkerAtPixel(-global.translateX + mouseX - global.timeTickArea.left);
+				var pixelPosition = -global.translateX + mouseX - global.timeTickArea.left;
+
+				// Handle shift key and range selection ---------------------------------
+				if (event.shiftKey) {
+					global.draggingMarkerShift = true;
+
+					if (global.selectedPixelRange !== null) {
+						// If there is already a selected range, just update the end pixel
+						updateEndPixelRange(pixelPosition);
+					}
+					else if (global.markerPos !== null) {
+						// If there is no range selection, make a new one.
+						selectPixelRange(global.markerPos, pixelPosition);
+					}
+				}
+				else {
+					global.draggingMarkerShift = false;
+
+					deselectRange();
+				}
+				// ----------------------------------------------------------------------
+
+				// Move the marker
+				showMarkerAtPixel(pixelPosition);
 			}());
 
 			return;
@@ -1478,6 +1508,10 @@ function initMouseDownHandler() {
 			global.draggingMarker = true;
 			global.draggingMarkerInTimeTickArea = false;
 			
+			// Handle shift key only on mouse move
+			// For now, just check if shift key is down right now
+			global.draggingMarkerShift = event.shiftKey;
+
 			global.dragStartMarkerPos = global.markerPos;
 			global.diffWhileDraggingMarker = 0;
 			return;
@@ -1563,10 +1597,28 @@ function initMouseMoveHandler() {
 			}());
 		}
 		else if (global.draggingMarkerInTimeTickArea) {
-			showMarkerAtPixel(-global.translateX + mouseX - global.timeTickArea.left);
+			var pixelPosition = -global.translateX + mouseX - global.timeTickArea.left;
+
+			// Handle shift key and range selection ---------------------------------
+			if (global.draggingMarkerShift) {
+				// Assume there is a time range selection.
+				updateEndPixelRange(pixelPosition);
+			}
+			// ----------------------------------------------------------------------
+
+			// Move the marker
+			showMarkerAtPixel(pixelPosition);
 		}
 		else if (global.draggingMarker) {
 			var markerPos = mouseX - global.dragStart[0] + global.dragStartMarkerPos + global.diffWhileDraggingMarker;
+
+			// Handle shift key and range selection ---------------------------------
+			if (global.draggingMarkerShift) {
+				// Assume there is a time range selection.
+				updateEndPixelRange(markerPos);
+			}
+			// ----------------------------------------------------------------------
+
 			showMarkerAtPixel(markerPos);
 		}
 	};
@@ -2478,20 +2530,20 @@ function updateEvents() {
 		.attr('x', eventDraw.iconXFunc);
 }
 
-function showMarkerAtPixel(position, notify) {
-	if (isNaN(position)) {
+function showMarkerAtPixel(pixel, notify) {
+	if (isNaN(pixel)) {
 		// Don't show the marker at all.
 		svg.subMarker.style('display', 'none');
 		return;
 	}
 
-	global.markerPos = position;
-	global.markerTimestamp = pixelToTimestamp(position);
+	global.markerPos = pixel;
+	global.markerTimestamp = pixelToTimestamp(pixel);
 
 	var timeFormat = '%I:%M:%S %p';
 	var timeFormatter = d3.time.format(timeFormat);
 	
-	svg.subMarker.attr('transform', 'translate(' + position + ' 0)');
+	svg.subMarker.attr('transform', 'translate(' + pixel + ' 0)');
 	svg.subMarkerText.text(timeFormatter(new Date(global.markerTimestamp)));
 
 	svg.subMarker.style('display', '');
@@ -2520,6 +2572,32 @@ function updateMarkerPosition() {
 
 function hideMarker() {
 	svg.subMarker.style('display', 'none');
+}
+
+function selectPixelRange(startPixel, endPixel) {
+	global.selectedPixelRange = [startPixel, endPixel];
+	global.selectedTimestampRange = [pixelToTimestamp(startPixel), pixelToTimestamp(endPixel)];
+
+	updateRangeSelectionBox();
+}
+
+function updateEndPixelRange(endPixel) {
+	if (global.selectedPixelRange !== null) {
+		selectPixelRange(global.selectedPixelRange[0], endPixel);
+	}
+}
+
+function deselectRange() {
+	global.selectedPixelRange = null;
+	global.selectedTimestampRange = null;
+
+	updateRangeSelectionBox();
+}
+
+function updateRangeSelectionBox() {
+	// TODO implement this function
+	console.log(global.selectedPixelRange);
+	console.log(global.selectedTimestampRange);
 }
 
 function hideFirebugUI() {
