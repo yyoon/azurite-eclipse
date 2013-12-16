@@ -344,10 +344,10 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 				long sid = ((Number)arguments[0]).longValue();
 				long id = ((Number)arguments[1]).longValue();
 				
+				RuntimeHistoryManager rhm = RuntimeHistoryManager.getInstance();
+				
 				SelectiveUndoEngine.getInstance().doSelectiveUndo(
-						RuntimeHistoryManager.getInstance()
-								.filterDocumentChangesGreaterThanId(
-										new OperationId(sid, id)));				
+						rhm.filterDocumentChangesGreaterThanId(new OperationId(sid, id)));				
 				
 				return RETURN_CODE_OK;
 			} catch (Exception e) {
