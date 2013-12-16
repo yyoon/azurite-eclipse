@@ -249,7 +249,7 @@ global.lastWindowHeight = null;
 global.files = [];
 global.fileStack = [];
 global.sessions = [];
-global.selected = [];
+global.selectedRects = [];
 global.events = [];
 
 global.ticks = [];
@@ -1387,9 +1387,9 @@ function initMouseDownHandler() {
 			global.draggingMarkerInTimeTickArea = false;
 
 			if (!global.isCtrlDown) {
-				global.prevSelected = global.selected.slice(0);
+				global.prevSelectedRects = global.selectedRects.slice(0);
 
-				global.selected = [];
+				global.selectedRects = [];
 				svg.subRects.selectAll('rect.highlight_rect').remove();
 
 				checkAndNotifySelectionChanged();
@@ -1688,15 +1688,15 @@ function showContextMenu(e) {
 	cmenu.mousePos = [mouseX, mouseY];
 	
 	if (cursorInArea(mouseX, mouseY, global.draggableArea)) {
-		if (global.selected.length === 0) {
+		if (global.selectedRects.length === 0) {
 			addSelections(mouseX, mouseY, mouseX + 1, mouseY + 1);
 		}
 		
-		if (global.selected.length === 1) {
+		if (global.selectedRects.length === 1) {
 			// showContextMenu(e, '#cmenu_main_single');
 			cmenu.typeName = 'main_single';
 		}
-		else if (global.selected.length > 0) {
+		else if (global.selectedRects.length > 0) {
 			// showContextMenu(e, '#cmenu_main');
 			cmenu.typeName = 'main_multi';
 		}
@@ -1729,16 +1729,16 @@ function showContextMenu(e) {
 
 function addSelectionsByIds(sids, ids, clearPreviousSelection) {
 	// Keep the previous selection in order to notify selection changed.
-	global.prevSelected = global.selected.slice(0);
+	global.prevSelectedRects = global.selectedRects.slice(0);
 
 	if (clearPreviousSelection) {
-		global.selected = [];
+		global.selectedRects = [];
 	}
 
 	for ( var i = 0; i < ids.length; ++i) {
 		var sid = sids[i];
 		var id = ids[i];
-		global.selected.push(new OperationId(sid, id));
+		global.selectedRects.push(new OperationId(sid, id));
 	}
 
 	updateHighlight();
@@ -1746,7 +1746,7 @@ function addSelectionsByIds(sids, ids, clearPreviousSelection) {
 }
 
 function removeSelectionsByIds(sids, ids) {
-	global.prevSelected = global.selected.slice(0);
+	global.prevSelectedRects = global.selectedRects.slice(0);
 
 	for (var i = 0; i < ids.length; ++i) {
 		var sid = sids[i];
@@ -1754,7 +1754,7 @@ function removeSelectionsByIds(sids, ids) {
 		
 		var index = indexOfSelected(sid, id);
 		if (index !== -1) {
-			global.selected.splice(index, 1);
+			global.selectedRects.splice(index, 1);
 		}
 	}
 	
@@ -1763,7 +1763,7 @@ function removeSelectionsByIds(sids, ids) {
 }
 
 function addSelections(x1, y1, x2, y2, toggle) {
-	global.prevSelected = global.selected.slice(0);
+	global.prevSelectedRects = global.selectedRects.slice(0);
 
 	var rect = svg.main.node().createSVGRect();
 	rect.x = x1;
@@ -1783,14 +1783,14 @@ function addSelections(x1, y1, x2, y2, toggle) {
 
 		if (toggle === true) {
 			if (index !== -1) {
-				global.selected.splice(index, 1);
+				global.selectedRects.splice(index, 1);
 			}
 			else {
-				global.selected.push(new OperationId(sid, id));
+				global.selectedRects.push(new OperationId(sid, id));
 			}
 		}
 		else if (!isSelected(sid, id)) {
-			global.selected.push(new OperationId(sid, id));
+			global.selectedRects.push(new OperationId(sid, id));
 		}
 	});
 
@@ -1801,17 +1801,17 @@ function addSelections(x1, y1, x2, y2, toggle) {
 function checkAndNotifySelectionChanged() {
 	var notify = true;
 
-	if (global.prevSelected instanceof Array) {
-		if (global.prevSelected.length === global.selected.length) {
+	if (global.prevSelectedRects instanceof Array) {
+		if (global.prevSelectedRects.length === global.selectedRects.length) {
 			notify = false;
 			
-			for (var i = 0; i < global.prevSelected.length; ++i) {
-				if (global.prevSelected[i].id !== global.selected[i].id) {
+			for (var i = 0; i < global.prevSelectedRects.length; ++i) {
+				if (global.prevSelectedRects[i].id !== global.selectedRects[i].id) {
 					notify = true;
 					break;
 				}
 
-				if (global.prevSelected[i].sid !== global.selected[i].sid) {
+				if (global.prevSelectedRects[i].sid !== global.selectedRects[i].sid) {
 					notify = true;
 					break;
 				}
@@ -1830,8 +1830,8 @@ function isSelected(sid, id) {
 
 function indexOfSelected(sid, id) {
 	var i;
-	for (i = 0; i < global.selected.length; ++i) {
-		if (global.selected[i].sid === sid && global.selected[i].id === id) {
+	for (i = 0; i < global.selectedRects.length; ++i) {
+		if (global.selectedRects[i].sid === sid && global.selectedRects[i].id === id) {
 			return i;
 		}
 	}
@@ -1842,8 +1842,8 @@ function indexOfSelected(sid, id) {
 function updateHighlight() {
 	svg.subRects.selectAll('rect.highlight_rect').remove();
 
-	for ( var i = 0; i < global.selected.length; ++i) {
-		var idString = '#' + global.selected[i].sid + '_' + global.selected[i].id;
+	for ( var i = 0; i < global.selectedRects.length; ++i) {
+		var idString = '#' + global.selectedRects[i].sid + '_' + global.selectedRects[i].id;
 
 		var $ref = $(idString);
 		if ($ref.length === 0) {
@@ -1938,8 +1938,8 @@ function undo() {
 function getStandardRectSelection() {
 	var result = [];
 
-	for ( var i = 0; i < global.selected.length; ++i) {
-		result.push([ global.selected[i].sid, global.selected[i].id ]);
+	for ( var i = 0; i < global.selectedRects.length; ++i) {
+		result.push([ global.selectedRects[i].sid, global.selectedRects[i].id ]);
 	}
 	
 	return result;
@@ -1950,12 +1950,12 @@ function undoEverythingAfterSelection() {
 	// hideContextMenu();
 	
 	// Do nothing if there is no selection.
-	if (global.selected.length === 0) {
+	if (global.selectedRects.length === 0) {
 		return;
 	}
 	
 	// find the last selected item.
-	var selectedCopy = global.selected.slice(0);
+	var selectedCopy = global.selectedRects.slice(0);
 	selectedCopy.sort(global.oidCompareFunc);
 
 	// Call the function in the plug-in side.
@@ -2402,11 +2402,11 @@ function showAllFilesInProject() {
 }
 
 function jumpToLocation() {
-	if (global.selected.length === 0) {
+	if (global.selectedRects.length === 0) {
 		return;
 	}
 	
-	var selection = global.selected[0];
+	var selection = global.selectedRects[0];
 	var rect = $('rect#' + selection.sid + '_' + selection.id).get(0);
 	
 	if (rect !== null) {
@@ -2419,11 +2419,11 @@ function jumpToLocation() {
 }
 
 function showAllFilesEditedTogether() {
-	if (global.selected.length <= 1) {
+	if (global.selectedRects.length <= 1) {
 		return;
 	}
 	
-	var sortedSelection = global.selected.slice(0);
+	var sortedSelection = global.selectedRects.slice(0);
 	sortedSelection.sort(function (lhs, rhs) {
 		if (lhs.sid < rhs.sid) {
 			return -1;
@@ -2440,8 +2440,8 @@ function showAllFilesEditedTogether() {
 		return 0;
 	});
 	
-	var start = global.selected[0];
-	var end = global.selected[global.selected.length - 1];
+	var start = global.selectedRects[0];
+	var end = global.selectedRects[global.selectedRects.length - 1];
 	
 	var startRect = $('rect#' + start.sid + '_' + start.id).get(0);
 	var endRect = $('rect#' + end.sid + '_' + end.id).get(0);
