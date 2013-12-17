@@ -59,6 +59,13 @@ var MARKER_WIDTH = 1;
 var MARKER_SIZE = 10;
 var MARKER_COLOR = 'orange';
 
+var RANGE_BOX_FILL_OPACITY = 0.3;
+var RANGE_BOX_COLOR = 'royalblue';
+
+var RANGE_START_LINE_COLOR = 'white';
+var RANGE_START_LINE_WIDTH = MARKER_WIDTH;
+var RANGE_START_LINE_DASH_ARRAY = '5,5';
+
 var EVENT_WIDTH = 1;
 var EVENT_ICON_WIDTH = 16;
 var EVENT_ICON_HEIGHT = 16;
@@ -412,7 +419,20 @@ function setupSVG() {
 	
 	svg.subMarkers = svg.subMarkerWrap.append('g')
 		.attr('id', 'sub_markers');
-	
+
+	svg.subRangeBox = svg.subMarkers.append('rect')
+		.attr('id', 'range_selection_box')
+		.attr('fill', RANGE_BOX_COLOR)
+		.attr('fill-opacity', RANGE_BOX_FILL_OPACITY)
+		.style('display', 'none');
+
+	svg.subRangeStartLine = svg.subMarkers.append('line')
+		.attr('id', 'range_start_line')
+		.attr('stroke-width', RANGE_START_LINE_WIDTH)
+		.attr('stroke-dasharray', RANGE_START_LINE_DASH_ARRAY)
+		.attr('stroke', RANGE_START_LINE_COLOR)
+		.style('display', 'none');
+
 	svg.subMarker = svg.subMarkers.append('g')
 		.attr('id', 'sub_marker')
 		.style('display', 'none');	// hidden initially.
@@ -493,6 +513,9 @@ function recalculateClipPaths() {
 		.attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' ' + CHART_MARGINS.top + ')');
 	svg.subMarker.select('#marker_line').attr('y2', svgHeight);
 	svg.subMarker.select('#marker_lower_triangle').attr('transform', 'translate(0, ' + (svgHeight - TICKS_HEIGHT) + ')');
+
+	svg.subRangeBox.attr('height', svgHeight);
+	svg.subRangeStartLine.attr('y2', svgHeight);
 	
 	svg.clipMarkerWrap
 		.attr('y', -MARKER_SIZE)
@@ -1509,8 +1532,14 @@ function initMouseDownHandler() {
 			global.draggingMarkerInTimeTickArea = false;
 			
 			// Handle shift key only on mouse move
-			// For now, just check if shift key is down right now
-			global.draggingMarkerShift = event.shiftKey;
+			if (event.shiftKey) {
+				global.draggingMarkerShift = true;
+			}
+			else {
+				global.draggingMarkerShift = false;
+
+				deselectRange();
+			}
 
 			global.dragStartMarkerPos = global.markerPos;
 			global.diffWhileDraggingMarker = 0;
@@ -1614,8 +1643,12 @@ function initMouseMoveHandler() {
 
 			// Handle shift key and range selection ---------------------------------
 			if (global.draggingMarkerShift) {
-				// Assume there is a time range selection.
-				updateEndPixelRange(markerPos);
+				if (global.selectedPixelRange !== null) {
+					updateEndPixelRange(markerPos);
+				}
+				else {
+					selectPixelRange(global.dragStartMarkerPos, markerPos);
+				}
 			}
 			// ----------------------------------------------------------------------
 
@@ -2595,9 +2628,22 @@ function deselectRange() {
 }
 
 function updateRangeSelectionBox() {
-	// TODO implement this function
-	console.log(global.selectedPixelRange);
-	console.log(global.selectedTimestampRange);
+	if (global.selectedPixelRange !== null) {
+		svg.subRangeBox
+			.attr('x', (Math.min(global.selectedPixelRange[0], global.selectedPixelRange[1])))
+			.attr('width', (Math.abs(global.selectedPixelRange[1] - global.selectedPixelRange[0])))
+			.style('display', '');
+		svg.subRangeStartLine
+			.attr('x1', global.selectedPixelRange[0])
+			.attr('x2', global.selectedPixelRange[0])
+			.style('display', '');
+	}
+	else {
+		svg.subRangeBox
+			.style('display', 'none');
+		svg.subRangeStartLine
+			.style('display', 'none');
+	}
 }
 
 function hideFirebugUI() {
