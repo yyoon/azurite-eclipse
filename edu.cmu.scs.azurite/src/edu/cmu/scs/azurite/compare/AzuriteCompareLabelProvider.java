@@ -11,10 +11,12 @@ public class AzuriteCompareLabelProvider implements
 
 	@Override
 	public void addListener(ILabelProviderListener listener) {
+		// Do nothing
 	}
 
 	@Override
 	public void removeListener(ILabelProviderListener listener) {
+		// Do nothing
 	}
 
 	@Override
@@ -29,6 +31,7 @@ public class AzuriteCompareLabelProvider implements
 
 	@Override
 	public void dispose() {
+		// Do nothing, as this class doesn't allocate any resource.
 	}
 
 	@Override

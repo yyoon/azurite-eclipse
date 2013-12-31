@@ -122,6 +122,55 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		}
 	}
 	
+	private final class TreeViewerMenuListener implements IMenuListener {
+		@Override
+		public void menuAboutToShow(IMenuManager manager) {
+			IStructuredSelection treeSel = (IStructuredSelection) mChunksTreeViewer.getSelection();
+			if (treeSel != null && treeSel.size() > 0) {
+				final Object selElem = treeSel.getFirstElement();
+				if (selElem instanceof TopLevelElement) {
+					manager.add(new Action("Remove this file from the selection (Keep it unchanged)") {
+						@Override
+						public void run() {
+							TopLevelElement topElem = (TopLevelElement) selElem;
+							List<RuntimeDC> runtimeDCs = new ArrayList<RuntimeDC>();
+							
+							for (Chunk chunk : topElem.getChunks()) {
+								runtimeDCs.addAll(chunk.getInvolvedChanges());
+							}
+							
+							// Get the operation ids.
+							List<OperationId> ids = OperationId.getOperationIdsFromRuntimeDCs(runtimeDCs);
+							
+							// Tell the timeline to REMOVE these from the selection.
+							TimelineViewPart timeline = TimelineViewPart.getInstance();
+							if (timeline != null) {
+								timeline.removeSelection(ids);
+							}
+						}
+					});
+				} else if (selElem instanceof ChunkLevelElement) {
+					manager.add(new Action("Remove this chunk from the selection (Keep it unchanged)") {
+						@Override
+						public void run() {
+							ChunkLevelElement chunkElem = (ChunkLevelElement) selElem;
+							List<RuntimeDC> runtimeDCs = chunkElem.getChunk().getInvolvedChanges();
+							
+							// Get the operation ids.
+							List<OperationId> ids = OperationId.getOperationIdsFromRuntimeDCs(runtimeDCs);
+							
+							// Tell the timeline to REMOVE these from the selection.
+							TimelineViewPart timeline = TimelineViewPart.getInstance();
+							if (timeline != null) {
+								timeline.removeSelection(ids);
+							}
+						}
+					});
+				}
+			}
+		}
+	}
+
 	private class KeepSelectedCodeUnchanged extends Action {
 		private final ITextSelection sel;
 
@@ -206,47 +255,11 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			}
 			
 			if (current instanceof TopLevelElement) {
-				TopLevelElement topElem = (TopLevelElement) current;
-				int curIndex = Arrays.asList(topElements).indexOf(topElem);
-				
-				if (next) {
-					// There must be some children here.
-					candidate = topElem.getChunkElements().get(0);
-				} else {
-					// Find the last chunk of the previous top level element.
-					if (curIndex > 0) {
-						TopLevelElement prevTopElem = topElements[curIndex - 1];
-						candidate = prevTopElem.getChunkElements().get(prevTopElem.getChunkElements().size() - 1);
-					} else {
-						candidate = null;
-					}
-				}
+				candidate = getCandidateFromTopLevelElement(
+						(TopLevelElement) current, next, topElements);
 			} else if (current instanceof ChunkLevelElement) {
-				ChunkLevelElement chunkElem = (ChunkLevelElement) current;
-				TopLevelElement parentElem = chunkElem.getParent();
-				
-				int curChunkIndex = parentElem.getChunkElements().indexOf(chunkElem);
-				int curParentIndex = Arrays.asList(topElements).indexOf(parentElem);
-				
-				if (next) {
-					if (curChunkIndex < parentElem.getChunkElements().size() - 1) {
-						candidate = parentElem.getChunkElements().get(curChunkIndex + 1);
-					} else {
-						// Find the next top level element.
-						if (curParentIndex < topElements.length - 1) {
-							candidate = topElements[curParentIndex + 1];
-						} else {
-							candidate = null;
-						}
-					}
-				} else {
-					if (curChunkIndex > 0) {
-						candidate = parentElem.getChunkElements().get(curChunkIndex - 1);
-					} else {
-						// Select my own parent.
-						candidate = parentElem;
-					}
-				}
+				candidate = getCandidateFromChunkLevelElement(
+						(ChunkLevelElement) current, next, topElements);
 			} else {
 				// If there are some elements at least..
 				if (topElements.length > 0) {
@@ -268,7 +281,56 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 				getControl().getDisplay().beep();
 			}
 		}
-	
+
+		private Object getCandidateFromChunkLevelElement(ChunkLevelElement chunkElem,
+				boolean next, TopLevelElement[] topElements) {
+			Object candidate;
+			TopLevelElement parentElem = chunkElem.getParent();
+			
+			int curChunkIndex = parentElem.getChunkElements().indexOf(chunkElem);
+			int curParentIndex = Arrays.asList(topElements).indexOf(parentElem);
+			
+			if (next) {
+				if (curChunkIndex < parentElem.getChunkElements().size() - 1) {
+					candidate = parentElem.getChunkElements().get(curChunkIndex + 1);
+				} else {
+					// Find the next top level element.
+					if (curParentIndex < topElements.length - 1) {
+						candidate = topElements[curParentIndex + 1];
+					} else {
+						candidate = null;
+					}
+				}
+			} else {
+				if (curChunkIndex > 0) {
+					candidate = parentElem.getChunkElements().get(curChunkIndex - 1);
+				} else {
+					// Select my own parent.
+					candidate = parentElem;
+				}
+			}
+			return candidate;
+		}
+
+		private Object getCandidateFromTopLevelElement(TopLevelElement topElem,
+				boolean next, TopLevelElement[] topElements) {
+			Object candidate;
+			int curIndex = Arrays.asList(topElements).indexOf(topElem);
+			
+			if (next) {
+				// There must be some children here.
+				candidate = topElem.getChunkElements().get(0);
+			} else {
+				// Find the last chunk of the previous top level element.
+				if (curIndex > 0) {
+					TopLevelElement prevTopElem = topElements[curIndex - 1];
+					candidate = prevTopElem.getChunkElements().get(prevTopElem.getChunkElements().size() - 1);
+				} else {
+					candidate = null;
+				}
+			}
+			return candidate;
+		}
 	}
 
 	private class NextChunk extends Action {
@@ -726,54 +788,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		// Setup the menu manager for the chunks tree viewer.
 		MenuManager treeViewerMenuMgr = new MenuManager();
 		treeViewerMenuMgr.setRemoveAllWhenShown(true);
-		treeViewerMenuMgr.addMenuListener(new IMenuListener() {
-			@Override
-			public void menuAboutToShow(IMenuManager manager) {
-				IStructuredSelection treeSel = (IStructuredSelection) mChunksTreeViewer.getSelection();
-				if (treeSel != null && treeSel.size() > 0) {
-					final Object selElem = treeSel.getFirstElement();
-					if (selElem instanceof TopLevelElement) {
-						manager.add(new Action("Remove this file from the selection (Keep it unchanged)") {
-							@Override
-							public void run() {
-								TopLevelElement topElem = (TopLevelElement) selElem;
-								List<RuntimeDC> runtimeDCs = new ArrayList<RuntimeDC>();
-								
-								for (Chunk chunk : topElem.getChunks()) {
-									runtimeDCs.addAll(chunk.getInvolvedChanges());
-								}
-								
-								// Get the operation ids.
-								List<OperationId> ids = OperationId.getOperationIdsFromRuntimeDCs(runtimeDCs);
-								
-								// Tell the timeline to REMOVE these from the selection.
-								TimelineViewPart timeline = TimelineViewPart.getInstance();
-								if (timeline != null) {
-									timeline.removeSelection(ids);
-								}
-							}
-						});
-					} else if (selElem instanceof ChunkLevelElement) {
-						manager.add(new Action("Remove this chunk from the selection (Keep it unchanged)") {
-							@Override
-							public void run() {
-								ChunkLevelElement chunkElem = (ChunkLevelElement) selElem;
-								List<RuntimeDC> runtimeDCs = chunkElem.getChunk().getInvolvedChanges();
-								
-								// Get the operation ids.
-								List<OperationId> ids = OperationId.getOperationIdsFromRuntimeDCs(runtimeDCs);
-								
-								// Tell the timeline to REMOVE these from the selection.
-								TimelineViewPart timeline = TimelineViewPart.getInstance();
-								if (timeline != null) {
-									timeline.removeSelection(ids);
-								}
-							}
-						});
-					}
-				}
-			}
-		});
+		treeViewerMenuMgr.addMenuListener(new TreeViewerMenuListener());
 		
 		Control treeControl = mChunksTreeViewer.getControl();
 		treeControl.setMenu(treeViewerMenuMgr.createContextMenu(treeControl));
@@ -911,48 +926,17 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		
 		// Restore the chosen alternatives.
 		if (oldInput != null) {
-			for (TopLevelElement oldTopElem : oldInput) {
-				TopLevelElement matchingTopElem = null;
-				for (TopLevelElement newTopElem : newInput) {
-					if (oldTopElem.getFileKey().equals(newTopElem.getFileKey())) {
-						matchingTopElem = newTopElem;
-						break;
-					}
-				}
-				
-				if (matchingTopElem == null) {
-					continue;
-				}
-				
-				for (ChunkLevelElement oldChunkElem : oldTopElem.getChunkElements()) {
-					if (oldChunkElem.getChosenAlternative() == null) {
-						continue;
-					}
-					
-					boolean found = false;
-					
-					for (ChunkLevelElement newChunkElem : matchingTopElem.getChunkElements()) {
-						if (areSameChunks(oldChunkElem.getChunk(), newChunkElem.getChunk()) &&
-								oldChunkElem.getUndoAlternatives().size() == newChunkElem.getUndoAlternatives().size()) {
-							int oldAlternativeIndex = oldChunkElem.getUndoAlternatives().indexOf(oldChunkElem.getChosenAlternative());
-							newChunkElem.setChosenAlternative(newChunkElem.getUndoAlternatives().get(oldAlternativeIndex));
-							
-							found = true;
-							break;
-						}
-					}
-					
-					if (found) {
-						continue;
-					}
-				}
-			}
+			restoreChosenAlternatives(oldInput, newInput);
 		}
 		
-		// Set the input here.
 		mChunksTreeViewer.setInput(newInput);
 		
-		// Restore selections, if possible.
+		restoreSelections(oldSelection, newInput);
+		
+		updateOKButtonEnabled();
+	}
+
+	private void restoreSelections(Object oldSelection, TopLevelElement[] newInput) {
 		if (oldSelection instanceof TopLevelElement) {
 			TopLevelElement oldTopElem = (TopLevelElement) oldSelection;
 			
@@ -967,24 +951,76 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			TopLevelElement oldTopElem = oldChunkElem.getParent();
 			
 			for (TopLevelElement newTopElem : newInput) {
-				if (oldTopElem.getFileKey().equals(newTopElem.getFileKey())) {
-					for (ChunkLevelElement newChunkElem : newTopElem.getChunkElements()) {
-						if (areSameChunks(oldChunkElem.getChunk(), newChunkElem.getChunk())) {
-							mChunksTreeViewer.setSelection(new StructuredSelection(newChunkElem), true);
-							break;
-						}
-					}
+				if (restoreSelectionsForTopElement(oldChunkElem, oldTopElem, newTopElem)) {
 					break;
 				}
 			}
 		}
+	}
+
+	private boolean restoreSelectionsForTopElement(ChunkLevelElement oldChunkElem,
+			TopLevelElement oldTopElem, TopLevelElement newTopElem) {
+		if (oldTopElem.getFileKey().equals(newTopElem.getFileKey())) {
+			for (ChunkLevelElement newChunkElem : newTopElem.getChunkElements()) {
+				if (areSameChunks(oldChunkElem.getChunk(), newChunkElem.getChunk())) {
+					mChunksTreeViewer.setSelection(new StructuredSelection(newChunkElem), true);
+					break;
+				}
+			}
+			
+			return true;
+		}
 		
-		updateOKButtonEnabled();
+		return false;
+	}
+
+	private void restoreChosenAlternatives(TopLevelElement[] oldInput,
+			TopLevelElement[] newInput) {
+		for (TopLevelElement oldTopElem : oldInput) {
+			TopLevelElement matchingTopElem = null;
+			for (TopLevelElement newTopElem : newInput) {
+				if (oldTopElem.getFileKey().equals(newTopElem.getFileKey())) {
+					matchingTopElem = newTopElem;
+					break;
+				}
+			}
+			
+			if (matchingTopElem == null) {
+				continue;
+			}
+			
+			restoreChosenAlternatives(oldTopElem, matchingTopElem);
+		}
+	}
+
+	private void restoreChosenAlternatives(TopLevelElement oldTopElem,
+			TopLevelElement matchingTopElem) {
+		for (ChunkLevelElement oldChunkElem : oldTopElem.getChunkElements()) {
+			if (oldChunkElem.getChosenAlternative() == null) {
+				continue;
+			}
+			
+			boolean found = false;
+			
+			for (ChunkLevelElement newChunkElem : matchingTopElem.getChunkElements()) {
+				if (areSameChunks(oldChunkElem.getChunk(), newChunkElem.getChunk()) &&
+						oldChunkElem.getUndoAlternatives().size() == newChunkElem.getUndoAlternatives().size()) {
+					int oldAlternativeIndex = oldChunkElem.getUndoAlternatives().indexOf(oldChunkElem.getChosenAlternative());
+					newChunkElem.setChosenAlternative(newChunkElem.getUndoAlternatives().get(oldAlternativeIndex));
+					
+					found = true;
+					break;
+				}
+			}
+			
+			if (found) {
+				continue;
+			}
+		}
 	}
 
 	@Override
 	public void rectSelectionChanged() {
-		// TODO maybe preserve the previous selections about the conflict resolution?
 		setChunksTreeViewerInput();
 		updateBottomPanel();
 	}

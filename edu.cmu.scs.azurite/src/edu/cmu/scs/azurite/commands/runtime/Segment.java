@@ -456,6 +456,20 @@ public class Segment {
 		return copy;
 	}
 	
+	/**
+	 * Determines whether this segment is in the given selection range
+	 * @param selectionStart the start offset of the selection range
+	 * @param selectionEnd the end offset of the selection range
+	 * @return true if this segment is within the selection range, false otherwise.
+	 */
+	public boolean inSelectionRange(int selectionStart, int selectionEnd) {
+		if (isDeletion()) {
+			return selectionStart < getOffset() && getOffset() < selectionEnd;
+		} else {
+			return getOffset() < selectionEnd && getEndOffset() > selectionStart;
+		}
+	}
+	
 	private static Comparator<Segment> locationComparator;
 	
 	/**
@@ -495,4 +509,5 @@ public class Segment {
 		
 		return locationComparator;
 	}
+
 }

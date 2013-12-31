@@ -339,14 +339,8 @@ public class CodeHistoryDiffViewer extends Composite {
 		Chunk chunk = new Chunk();
 		for (RuntimeDC dc : subList) {
 			for (Segment segment : dc.getAllSegments()) {
-				if (segment.isDeletion()) {
-					if (mSelectionStart < segment.getOffset() && segment.getOffset() < mSelectionEnd) {
-						chunk.add(segment);
-					}
-				} else {
-					if (segment.getOffset() < mSelectionEnd && segment.getEndOffset() > mSelectionStart) {
-						chunk.add(segment);
-					}
+				if (segment.inSelectionRange(mSelectionStart, mSelectionEnd)) {
+					chunk.add(segment);
 				}
 			}
 		}

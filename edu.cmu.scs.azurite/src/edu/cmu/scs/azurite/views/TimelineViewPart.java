@@ -932,7 +932,9 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		
 		List<OperationId> ids = new ArrayList<OperationId>();
 		for (Object element : selectedArray) {
-			if (!(element instanceof Object[])) { continue; }
+			if (!(element instanceof Object[])) {
+				continue;
+			}
 			
 			Object[] idComponents = (Object[])element;
 			if (idComponents.length == 2 &&
