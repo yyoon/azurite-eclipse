@@ -59,6 +59,13 @@ var MARKER_WIDTH = 1;
 var MARKER_SIZE = 10;
 var MARKER_COLOR = 'orange';
 
+var RANGE_BOX_FILL_OPACITY = 0.3;
+var RANGE_BOX_COLOR = 'royalblue';
+
+var RANGE_START_LINE_COLOR = 'white';
+var RANGE_START_LINE_WIDTH = MARKER_WIDTH;
+var RANGE_START_LINE_DASH_ARRAY = '5,5';
+
 var EVENT_WIDTH = 1;
 var EVENT_ICON_WIDTH = 16;
 var EVENT_ICON_HEIGHT = 16;
@@ -249,7 +256,13 @@ global.lastWindowHeight = null;
 global.files = [];
 global.fileStack = [];
 global.sessions = [];
-global.selected = [];
+global.selectedRects = [];
+
+// should either be null (no selection) or [startPixel, endPixel)
+global.selectedPixelRange = null;
+// should either be null (no selection) or [startAbsTimestamp, endAbsTimestamp)
+global.selectedTimestampRange = null;
+
 global.events = [];
 
 global.ticks = [];
@@ -334,6 +347,7 @@ global.dragStartScrollPos = null;
 global.draggingMarker = false;
 global.draggingMarkerInTimeTickArea = false;
 global.dragStartMarkerPos = null;
+global.draggingMarkerShift = false;
 global.diffWhileDraggingMarker = 0;
 
 global.markerTimestamp = 0;
@@ -405,7 +419,20 @@ function setupSVG() {
 	
 	svg.subMarkers = svg.subMarkerWrap.append('g')
 		.attr('id', 'sub_markers');
-	
+
+	svg.subRangeBox = svg.subMarkers.append('rect')
+		.attr('id', 'range_selection_box')
+		.attr('fill', RANGE_BOX_COLOR)
+		.attr('fill-opacity', RANGE_BOX_FILL_OPACITY)
+		.style('display', 'none');
+
+	svg.subRangeStartLine = svg.subMarkers.append('line')
+		.attr('id', 'range_start_line')
+		.attr('stroke-width', RANGE_START_LINE_WIDTH)
+		.attr('stroke-dasharray', RANGE_START_LINE_DASH_ARRAY)
+		.attr('stroke', RANGE_START_LINE_COLOR)
+		.style('display', 'none');
+
 	svg.subMarker = svg.subMarkers.append('g')
 		.attr('id', 'sub_marker')
 		.style('display', 'none');	// hidden initially.
@@ -486,6 +513,9 @@ function recalculateClipPaths() {
 		.attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' ' + CHART_MARGINS.top + ')');
 	svg.subMarker.select('#marker_line').attr('y2', svgHeight);
 	svg.subMarker.select('#marker_lower_triangle').attr('transform', 'translate(0, ' + (svgHeight - TICKS_HEIGHT) + ')');
+
+	svg.subRangeBox.attr('height', svgHeight);
+	svg.subRangeStartLine.attr('y2', svgHeight);
 	
 	svg.clipMarkerWrap
 		.attr('y', -MARKER_SIZE)
@@ -1387,9 +1417,9 @@ function initMouseDownHandler() {
 			global.draggingMarkerInTimeTickArea = false;
 
 			if (!global.isCtrlDown) {
-				global.prevSelected = global.selected.slice(0);
+				global.prevSelectedRects = global.selectedRects.slice(0);
 
-				global.selected = [];
+				global.selectedRects = [];
 				svg.subRects.selectAll('rect.highlight_rect').remove();
 
 				checkAndNotifySelectionChanged();
@@ -1465,7 +1495,30 @@ function initMouseDownHandler() {
 				global.draggingMarker = false;
 				global.draggingMarkerInTimeTickArea = true;
 
-				showMarkerAtPixel(-global.translateX + mouseX - global.timeTickArea.left);
+				var pixelPosition = -global.translateX + mouseX - global.timeTickArea.left;
+
+				// Handle shift key and range selection ---------------------------------
+				if (event.shiftKey) {
+					global.draggingMarkerShift = true;
+
+					if (global.selectedPixelRange !== null) {
+						// If there is already a selected range, just update the end pixel
+						updateEndPixelRange(pixelPosition);
+					}
+					else if (global.markerPos !== null) {
+						// If there is no range selection, make a new one.
+						selectPixelRange(global.markerPos, pixelPosition);
+					}
+				}
+				else {
+					global.draggingMarkerShift = false;
+
+					deselectRange();
+				}
+				// ----------------------------------------------------------------------
+
+				// Move the marker
+				showMarkerAtPixel(pixelPosition);
 			}());
 
 			return;
@@ -1478,6 +1531,16 @@ function initMouseDownHandler() {
 			global.draggingMarker = true;
 			global.draggingMarkerInTimeTickArea = false;
 			
+			// Handle shift key only on mouse move
+			if (event.shiftKey) {
+				global.draggingMarkerShift = true;
+			}
+			else {
+				global.draggingMarkerShift = false;
+
+				deselectRange();
+			}
+
 			global.dragStartMarkerPos = global.markerPos;
 			global.diffWhileDraggingMarker = 0;
 			return;
@@ -1563,10 +1626,32 @@ function initMouseMoveHandler() {
 			}());
 		}
 		else if (global.draggingMarkerInTimeTickArea) {
-			showMarkerAtPixel(-global.translateX + mouseX - global.timeTickArea.left);
+			var pixelPosition = -global.translateX + mouseX - global.timeTickArea.left;
+
+			// Handle shift key and range selection ---------------------------------
+			if (global.draggingMarkerShift) {
+				// Assume there is a time range selection.
+				updateEndPixelRange(pixelPosition);
+			}
+			// ----------------------------------------------------------------------
+
+			// Move the marker
+			showMarkerAtPixel(pixelPosition);
 		}
 		else if (global.draggingMarker) {
 			var markerPos = mouseX - global.dragStart[0] + global.dragStartMarkerPos + global.diffWhileDraggingMarker;
+
+			// Handle shift key and range selection ---------------------------------
+			if (global.draggingMarkerShift) {
+				if (global.selectedPixelRange !== null) {
+					updateEndPixelRange(markerPos);
+				}
+				else {
+					selectPixelRange(global.dragStartMarkerPos, markerPos);
+				}
+			}
+			// ----------------------------------------------------------------------
+
 			showMarkerAtPixel(markerPos);
 		}
 	};
@@ -1688,15 +1773,15 @@ function showContextMenu(e) {
 	cmenu.mousePos = [mouseX, mouseY];
 	
 	if (cursorInArea(mouseX, mouseY, global.draggableArea)) {
-		if (global.selected.length === 0) {
+		if (global.selectedRects.length === 0) {
 			addSelections(mouseX, mouseY, mouseX + 1, mouseY + 1);
 		}
 		
-		if (global.selected.length === 1) {
+		if (global.selectedRects.length === 1) {
 			// showContextMenu(e, '#cmenu_main_single');
 			cmenu.typeName = 'main_single';
 		}
-		else if (global.selected.length > 0) {
+		else if (global.selectedRects.length > 0) {
 			// showContextMenu(e, '#cmenu_main');
 			cmenu.typeName = 'main_multi';
 		}
@@ -1729,16 +1814,16 @@ function showContextMenu(e) {
 
 function addSelectionsByIds(sids, ids, clearPreviousSelection) {
 	// Keep the previous selection in order to notify selection changed.
-	global.prevSelected = global.selected.slice(0);
+	global.prevSelectedRects = global.selectedRects.slice(0);
 
 	if (clearPreviousSelection) {
-		global.selected = [];
+		global.selectedRects = [];
 	}
 
 	for ( var i = 0; i < ids.length; ++i) {
 		var sid = sids[i];
 		var id = ids[i];
-		global.selected.push(new OperationId(sid, id));
+		global.selectedRects.push(new OperationId(sid, id));
 	}
 
 	updateHighlight();
@@ -1746,7 +1831,7 @@ function addSelectionsByIds(sids, ids, clearPreviousSelection) {
 }
 
 function removeSelectionsByIds(sids, ids) {
-	global.prevSelected = global.selected.slice(0);
+	global.prevSelectedRects = global.selectedRects.slice(0);
 
 	for (var i = 0; i < ids.length; ++i) {
 		var sid = sids[i];
@@ -1754,7 +1839,7 @@ function removeSelectionsByIds(sids, ids) {
 		
 		var index = indexOfSelected(sid, id);
 		if (index !== -1) {
-			global.selected.splice(index, 1);
+			global.selectedRects.splice(index, 1);
 		}
 	}
 	
@@ -1763,7 +1848,7 @@ function removeSelectionsByIds(sids, ids) {
 }
 
 function addSelections(x1, y1, x2, y2, toggle) {
-	global.prevSelected = global.selected.slice(0);
+	global.prevSelectedRects = global.selectedRects.slice(0);
 
 	var rect = svg.main.node().createSVGRect();
 	rect.x = x1;
@@ -1783,14 +1868,14 @@ function addSelections(x1, y1, x2, y2, toggle) {
 
 		if (toggle === true) {
 			if (index !== -1) {
-				global.selected.splice(index, 1);
+				global.selectedRects.splice(index, 1);
 			}
 			else {
-				global.selected.push(new OperationId(sid, id));
+				global.selectedRects.push(new OperationId(sid, id));
 			}
 		}
 		else if (!isSelected(sid, id)) {
-			global.selected.push(new OperationId(sid, id));
+			global.selectedRects.push(new OperationId(sid, id));
 		}
 	});
 
@@ -1801,17 +1886,17 @@ function addSelections(x1, y1, x2, y2, toggle) {
 function checkAndNotifySelectionChanged() {
 	var notify = true;
 
-	if (global.prevSelected instanceof Array) {
-		if (global.prevSelected.length === global.selected.length) {
+	if (global.prevSelectedRects instanceof Array) {
+		if (global.prevSelectedRects.length === global.selectedRects.length) {
 			notify = false;
 			
-			for (var i = 0; i < global.prevSelected.length; ++i) {
-				if (global.prevSelected[i].id !== global.selected[i].id) {
+			for (var i = 0; i < global.prevSelectedRects.length; ++i) {
+				if (global.prevSelectedRects[i].id !== global.selectedRects[i].id) {
 					notify = true;
 					break;
 				}
 
-				if (global.prevSelected[i].sid !== global.selected[i].sid) {
+				if (global.prevSelectedRects[i].sid !== global.selectedRects[i].sid) {
 					notify = true;
 					break;
 				}
@@ -1830,8 +1915,8 @@ function isSelected(sid, id) {
 
 function indexOfSelected(sid, id) {
 	var i;
-	for (i = 0; i < global.selected.length; ++i) {
-		if (global.selected[i].sid === sid && global.selected[i].id === id) {
+	for (i = 0; i < global.selectedRects.length; ++i) {
+		if (global.selectedRects[i].sid === sid && global.selectedRects[i].id === id) {
 			return i;
 		}
 	}
@@ -1842,8 +1927,8 @@ function indexOfSelected(sid, id) {
 function updateHighlight() {
 	svg.subRects.selectAll('rect.highlight_rect').remove();
 
-	for ( var i = 0; i < global.selected.length; ++i) {
-		var idString = '#' + global.selected[i].sid + '_' + global.selected[i].id;
+	for ( var i = 0; i < global.selectedRects.length; ++i) {
+		var idString = '#' + global.selectedRects[i].sid + '_' + global.selectedRects[i].id;
 
 		var $ref = $(idString);
 		if ($ref.length === 0) {
@@ -1938,8 +2023,8 @@ function undo() {
 function getStandardRectSelection() {
 	var result = [];
 
-	for ( var i = 0; i < global.selected.length; ++i) {
-		result.push([ global.selected[i].sid, global.selected[i].id ]);
+	for ( var i = 0; i < global.selectedRects.length; ++i) {
+		result.push([ global.selectedRects[i].sid, global.selectedRects[i].id ]);
 	}
 	
 	return result;
@@ -1950,12 +2035,12 @@ function undoEverythingAfterSelection() {
 	// hideContextMenu();
 	
 	// Do nothing if there is no selection.
-	if (global.selected.length === 0) {
+	if (global.selectedRects.length === 0) {
 		return;
 	}
 	
 	// find the last selected item.
-	var selectedCopy = global.selected.slice(0);
+	var selectedCopy = global.selectedRects.slice(0);
 	selectedCopy.sort(global.oidCompareFunc);
 
 	// Call the function in the plug-in side.
@@ -2402,11 +2487,11 @@ function showAllFilesInProject() {
 }
 
 function jumpToLocation() {
-	if (global.selected.length === 0) {
+	if (global.selectedRects.length === 0) {
 		return;
 	}
 	
-	var selection = global.selected[0];
+	var selection = global.selectedRects[0];
 	var rect = $('rect#' + selection.sid + '_' + selection.id).get(0);
 	
 	if (rect !== null) {
@@ -2419,11 +2504,11 @@ function jumpToLocation() {
 }
 
 function showAllFilesEditedTogether() {
-	if (global.selected.length <= 1) {
+	if (global.selectedRects.length <= 1) {
 		return;
 	}
 	
-	var sortedSelection = global.selected.slice(0);
+	var sortedSelection = global.selectedRects.slice(0);
 	sortedSelection.sort(function (lhs, rhs) {
 		if (lhs.sid < rhs.sid) {
 			return -1;
@@ -2440,8 +2525,8 @@ function showAllFilesEditedTogether() {
 		return 0;
 	});
 	
-	var start = global.selected[0];
-	var end = global.selected[global.selected.length - 1];
+	var start = global.selectedRects[0];
+	var end = global.selectedRects[global.selectedRects.length - 1];
 	
 	var startRect = $('rect#' + start.sid + '_' + start.id).get(0);
 	var endRect = $('rect#' + end.sid + '_' + end.id).get(0);
@@ -2470,6 +2555,60 @@ function showAllFilesEditedTogether() {
 	layout();
 }
 
+function showAllFilesEditedInRange() {
+	if (global.selectedTimestampRange === null) {
+		return;
+	}
+
+	var start = global.selectedTimestampRange[0];
+	var end = global.selectedTimestampRange[1];
+
+	var rects = svg.subRects.selectAll('rect.op_rect')[0].slice(0);
+	var filteredRects = rects.filter(function (element) {
+		var absTimestamp = element.__data__.sid + element.__data__.t1;
+		return start <= absTimestamp && absTimestamp < end;
+	});
+	
+	// Make all files invisible for the moment.
+	var i;
+	for (i = 0; i < global.files.length; ++i) {
+		global.files[i].visible = false;
+	}
+
+	for (var i = 0; i < filteredRects.length; ++i) {
+		filteredRects[i].__data__.fileGroup.file.visible = true;
+	}
+
+	layoutFiles();
+	layout();
+}
+
+function openAllFilesEditedInRange() {
+	azurite.openAllFilesEditedInRange(getAllFilesEditedInRange());
+}
+
+function getAllFilesEditedInRange() {
+	if (global.selectedTimestampRange === null) {
+		return [];
+	}
+
+	var start = global.selectedTimestampRange[0];
+	var end = global.selectedTimestampRange[1];
+
+	var rects = svg.subRects.selectAll('rect.op_rect')[0].slice(0);
+	var filteredRects = rects.filter(function (element) {
+		var absTimestamp = element.__data__.sid + element.__data__.t1;
+		return start <= absTimestamp && absTimestamp < end;
+	});
+
+	var filePaths = [];
+	for (var i = 0; i < filteredRects.length; ++i) {
+		filePaths.push(filteredRects[i].__data__.fileGroup.file.path);
+	}
+
+	return filePaths;
+}
+
 function updateEvents() {
 	svg.subEvents.selectAll('.event_line')
 		.attr('x1', eventDraw.xFunc)
@@ -2478,20 +2617,20 @@ function updateEvents() {
 		.attr('x', eventDraw.iconXFunc);
 }
 
-function showMarkerAtPixel(position, notify) {
-	if (isNaN(position)) {
+function showMarkerAtPixel(pixel, notify) {
+	if (isNaN(pixel)) {
 		// Don't show the marker at all.
 		svg.subMarker.style('display', 'none');
 		return;
 	}
 
-	global.markerPos = position;
-	global.markerTimestamp = pixelToTimestamp(position);
+	global.markerPos = pixel;
+	global.markerTimestamp = pixelToTimestamp(pixel);
 
 	var timeFormat = '%I:%M:%S %p';
 	var timeFormatter = d3.time.format(timeFormat);
 	
-	svg.subMarker.attr('transform', 'translate(' + position + ' 0)');
+	svg.subMarker.attr('transform', 'translate(' + pixel + ' 0)');
 	svg.subMarkerText.text(timeFormatter(new Date(global.markerTimestamp)));
 
 	svg.subMarker.style('display', '');
@@ -2520,6 +2659,45 @@ function updateMarkerPosition() {
 
 function hideMarker() {
 	svg.subMarker.style('display', 'none');
+}
+
+function selectPixelRange(startPixel, endPixel) {
+	global.selectedPixelRange = [startPixel, endPixel];
+	global.selectedTimestampRange = [pixelToTimestamp(startPixel), pixelToTimestamp(endPixel)];
+
+	updateRangeSelectionBox();
+}
+
+function updateEndPixelRange(endPixel) {
+	if (global.selectedPixelRange !== null) {
+		selectPixelRange(global.selectedPixelRange[0], endPixel);
+	}
+}
+
+function deselectRange() {
+	global.selectedPixelRange = null;
+	global.selectedTimestampRange = null;
+
+	updateRangeSelectionBox();
+}
+
+function updateRangeSelectionBox() {
+	if (global.selectedPixelRange !== null) {
+		svg.subRangeBox
+			.attr('x', (Math.min(global.selectedPixelRange[0], global.selectedPixelRange[1])))
+			.attr('width', (Math.abs(global.selectedPixelRange[1] - global.selectedPixelRange[0])))
+			.style('display', '');
+		svg.subRangeStartLine
+			.attr('x1', global.selectedPixelRange[0])
+			.attr('x2', global.selectedPixelRange[0])
+			.style('display', '');
+	}
+	else {
+		svg.subRangeBox
+			.style('display', 'none');
+		svg.subRangeStartLine
+			.style('display', 'none');
+	}
 }
 
 function hideFirebugUI() {

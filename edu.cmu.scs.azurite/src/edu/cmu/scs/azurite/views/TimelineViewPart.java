@@ -271,6 +271,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		new LogFunction(browser, BROWSER_FUNC_PREFIX + "log");
 		new GetInfoFunction(browser, BROWSER_FUNC_PREFIX + "getInfo");
 		new MarkerMoveFunction(browser, BROWSER_FUNC_PREFIX + "markerMove");
+		new OpenAllFilesEditedInRangeFunction(browser, BROWSER_FUNC_PREFIX + "openAllFilesEditedInRange");
 		
 		new EclipseCommandFunction(browser, BROWSER_FUNC_PREFIX + "eclipseCommand");
 		
@@ -596,6 +597,46 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		
 	}
 	
+	class OpenAllFilesEditedInRangeFunction extends BrowserFunction {
+		
+		public OpenAllFilesEditedInRangeFunction(Browser browser, String name) {
+			super(browser, name);
+		}
+		
+		@Override
+		public Object function(Object[] arguments) {
+			if (arguments.length != 1) {
+				return RETURN_CODE_FAIL;
+			}
+			
+			try {
+				Object[] filePaths = (Object[]) arguments[0];
+				
+				for (Object element : filePaths) {
+					String filePath = (String) element;
+					File fileToOpen = new File(filePath);
+					
+					if (fileToOpen.exists() && fileToOpen.isFile()) {
+					    IFileStore fileStore = EFS.getLocalFileSystem().getStore(fileToOpen.toURI());
+					    IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
+					 
+					    try {
+					        IDE.openEditorOnFileStore( page, fileStore );
+					    } catch ( PartInitException e ) {
+					        //Put your exception handler here if you wish to
+					    }
+					} else {
+					    //Do something if the file does not exist
+					}
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			
+			return RETURN_CODE_OK;
+		}
+	}
+	
 	@Override
 	public void activeFileChanged(String projectName, String filePath) {
 		if (projectName == null || filePath == null) {
@@ -871,6 +912,19 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	public List<OperationId> getRectSelection() {
 		Object selected = evaluateJSCode("return getStandardRectSelection();");
 		return translateSelection(selected);
+	}
+	
+	public boolean isRangeSelected() {
+		try {
+			Object result = evaluateJSCode("return global.selectedTimestampRange !== null;");
+			if (result instanceof Boolean) {
+				return ((Boolean) result).booleanValue();
+			} else {
+				return false;
+			}
+		} catch (SWTException e) {
+			return false;
+		}
 	}
 
 	public static List<OperationId> translateSelection(Object selected) {

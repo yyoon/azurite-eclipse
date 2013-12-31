@@ -708,6 +708,24 @@
             class="edu.cmu.scs.azurite.ui.handlers.InteractiveSelectiveUndoHandler"
             commandId="edu.cmu.scs.azurite.ui.commands.interactiveSelectiveUndoCommand">
       </handler>
+      <handler
+            class="edu.cmu.scs.azurite.ui.handlers.ShowFilesInRangeHandler"
+            commandId="edu.cmu.scs.azurite.ui.commands.showFilesInRangeCommand">
+         <enabledWhen>
+            <reference
+                  definitionId="rangeSelected">
+            </reference>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="edu.cmu.scs.azurite.ui.handlers.OpenFilesInRangeHandler"
+            commandId="edu.cmu.scs.azurite.ui.commands.openFilesInRangeCommand">
+         <enabledWhen>
+            <reference
+                  definitionId="rangeSelected">
+            </reference>
+         </enabledWhen>
+      </handler>
    </extension>
    <extension
          point="org.eclipse.core.expressions.definitions">
@@ -747,6 +765,13 @@
                property="edu.cmu.scs.azurite.selection.multiRectsSelected">
          </test>
       </definition>
+      <definition
+            id="rangeSelected">
+         <test
+               forcePluginActivation="true"
+               property="edu.cmu.scs.azurite.selection.rangeSelected">
+         </test>
+      </definition>
    </extension>
    <extension
          point="org.eclipse.core.expressions.propertyTesters">
@@ -761,7 +786,7 @@
             class="edu.cmu.scs.azurite.expressions.TimelineSelectionPropertyTester"
             id="edu.cmu.scs.azurite.timelineSelectionPropertyTester"
             namespace="edu.cmu.scs.azurite.selection"
-            properties="rectSelected,singleRectSelected,multiRectsSelected"
+            properties="rectSelected,singleRectSelected,multiRectsSelected,rangeSelected"
             type="java.lang.Object">
       </propertyTester>
    </extension>
