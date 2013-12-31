@@ -527,7 +527,9 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 		Map<FileKey, List<RuntimeDC>> params = new HashMap<FileKey, List<RuntimeDC>>();
 		for (FileKey key : fileKeys) {
 			List<RuntimeDC> filteredIds = filterDocumentChangesByIds(key, ids);
-			if (filteredIds.size() == 0) { continue; }
+			if (filteredIds.size() == 0) {
+				continue;
+			}
 			
 			params.put(key, filteredIds);
 		}

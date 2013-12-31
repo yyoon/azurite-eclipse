@@ -198,7 +198,9 @@ public class PastHistoryManager implements DocumentChangeListener {
 			command.setCommandIndex(command.getCommandIndex() + insertedCount.value);
 			copyEvents.addCommand(command);
 			
-			if (!(command instanceof BaseDocumentChangeEvent)) { continue; }
+			if (!(command instanceof BaseDocumentChangeEvent)) {
+				continue;
+			}
 			
 			if (command instanceof FileOpenCommand) {
 				final FileOpenCommand foc = (FileOpenCommand)command;
@@ -329,7 +331,9 @@ public class PastHistoryManager implements DocumentChangeListener {
 			Map<FileKey, String> localFinalSnapshots) {
 		
 		for (FileKey key : localInitialSnapshots.keySet()) {
-			if (!mInitialSnapshots.containsKey(key)) { continue; }
+			if (!mInitialSnapshots.containsKey(key)) {
+				continue;
+			}
 			
 			String finalContent = localFinalSnapshots.get(key);
 			SnapshotElement elem = mInitialSnapshots.get(key);
@@ -337,7 +341,9 @@ public class PastHistoryManager implements DocumentChangeListener {
 			// If the final snapshot of this session differs from
 			// the initial snapshot that we know so far,
 			// compute the diffs and add fake operations.
-			if (elem.getSnapshot() == null || finalContent == null) { continue; }
+			if (elem.getSnapshot() == null || finalContent == null) {
+				continue;
+			}
 			
 			if (!elem.getSnapshot().equals(finalContent)) {
 				injectDiffDCs(key, finalContent, elem.getSnapshot(),

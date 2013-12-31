@@ -57,10 +57,14 @@ public class HistorySearchHandler extends AbstractHandler {
 				searchText, caseSensitive, scopeSelectedCode, currentSession));
 		
 		IEditorPart editor = EventRecorder.getInstance().getEditor();
-		if (editor == null) { return null; }
+		if (editor == null) {
+			return null;
+		}
 		
 		IDocument doc = Utilities.getDocument(editor);
-		if (doc == null) { return null; }
+		if (doc == null) {
+			return null;
+		}
 		
 		List<RuntimeDC> dcs = scopeSelectedCode ? HandlerUtilities.getOperationsInSelectedRegion()
 				: RuntimeHistoryManager.getInstance().filterDocumentChanges(new IRuntimeDCFilter() {

@@ -52,10 +52,21 @@ public class OperationId implements Comparable<OperationId> {
 
 	@Override
 	public int compareTo(OperationId other) {
-		if (this.sid < other.sid) { return -1; }
-		if (this.sid > other.sid) { return 1; }
-		if (this.id < other.id) { return -1; }
-		if (this.id > other.id) { return 1; }
+		if (this.sid < other.sid) {
+			return -1;
+		}
+		
+		if (this.sid > other.sid) {
+			return 1;
+		}
+		
+		if (this.id < other.id) {
+			return -1;
+		}
+		
+		if (this.id > other.id) {
+			return 1;
+		}
 		
 		return 0;
 	}

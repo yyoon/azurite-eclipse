@@ -100,8 +100,13 @@ public abstract class RuntimeDC {
 				@Override
 				public int compare(RuntimeDC lhs,
 						RuntimeDC rhs) {
-					if (lhs.getOriginal().getSessionId() < rhs.getOriginal().getSessionId()) { return -1; }
-					if (lhs.getOriginal().getSessionId() > rhs.getOriginal().getSessionId()) { return 1; }
+					if (lhs.getOriginal().getSessionId() < rhs.getOriginal().getSessionId()) {
+						return -1;
+					}
+					
+					if (lhs.getOriginal().getSessionId() > rhs.getOriginal().getSessionId()) {
+						return 1;
+					}
 					
 					int lindex = lhs.getOriginal().getCommandIndex();
 					int rindex = rhs.getOriginal().getCommandIndex();
