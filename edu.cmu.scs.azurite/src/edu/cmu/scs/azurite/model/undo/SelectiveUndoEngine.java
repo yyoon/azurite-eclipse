@@ -84,8 +84,9 @@ public class SelectiveUndoEngine {
 			// Don't do anything further.
 		}
 		
-		if (document == null)
+		if (document == null) {
 			throw new IllegalStateException("Failed to get the active document");
+		}
 		
 		doSelectiveUndo(runtimeDocChanges, document);
 	}
@@ -396,8 +397,9 @@ public class SelectiveUndoEngine {
 				chunk.add(segments.get(k));
 			}
 			
-			if (chunk != prevChunk)
+			if (chunk != prevChunk) {
 				chunks.add(chunk);
+			}
 			
 			// advance the loop index.
 			i = j;

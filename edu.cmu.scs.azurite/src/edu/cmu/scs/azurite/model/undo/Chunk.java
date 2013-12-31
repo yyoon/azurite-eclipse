@@ -123,8 +123,9 @@ public class Chunk extends ArrayList<Segment> {
 		
 		// Flood fill.
 		Queue<Pair<RuntimeDC, Integer>> queue = new LinkedList<Pair<RuntimeDC, Integer>>();
-		for (RuntimeDC dc : getInvolvedChanges())
+		for (RuntimeDC dc : getInvolvedChanges()) {
 			queue.add(new Pair<RuntimeDC, Integer>(dc, 0));
+		}
 		Set<RuntimeDC> set = new HashSet<RuntimeDC>();
 		
 		while (!queue.isEmpty()) {

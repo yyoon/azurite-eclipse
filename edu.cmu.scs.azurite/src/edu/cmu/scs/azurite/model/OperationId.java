@@ -26,17 +26,27 @@ public class OperationId implements Comparable<OperationId> {
 
 	@Override
 	public boolean equals(Object obj) {
-		if (this == obj)
+		if (this == obj) {
 			return true;
-		if (obj == null)
+		}
+		
+		if (obj == null) {
 			return false;
-		if (getClass() != obj.getClass())
+		}
+		
+		if (getClass() != obj.getClass()) {
 			return false;
+		}
+		
 		OperationId other = (OperationId) obj;
-		if (id != other.id)
+		if (id != other.id) {
 			return false;
-		if (sid != other.sid)
+		}
+		
+		if (sid != other.sid) {
 			return false;
+		}
+		
 		return true;
 	}
 
