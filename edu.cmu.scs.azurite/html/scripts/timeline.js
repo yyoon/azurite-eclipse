@@ -2,7 +2,7 @@
 /*global d3, azurite */
 
 /* Things to be called from Azurite */
-/*exported updateOperation, getRightmostTimestamp, addSelectionsByIds, removeSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarkerAtTimestamp, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile, addEvent, activateFirebugLite */
+/*exported updateOperation, getRightmostTimestamp, addSelectionsByIds, removeSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarkerAtTimestamp, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile, addEvent, activateFirebugLite, showAllFilesEditedInRange, openAllFilesEditedInRange */
 
 /* Things to be called manually when debugging */
 /*exported test, testMarker */
@@ -2575,7 +2575,7 @@ function showAllFilesEditedInRange() {
 		global.files[i].visible = false;
 	}
 
-	for (var i = 0; i < filteredRects.length; ++i) {
+	for (i = 0; i < filteredRects.length; ++i) {
 		filteredRects[i].__data__.fileGroup.file.visible = true;
 	}
 
