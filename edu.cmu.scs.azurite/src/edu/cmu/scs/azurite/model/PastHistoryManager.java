@@ -371,14 +371,17 @@ public class PastHistoryManager implements DocumentChangeListener {
 
 	@Override
 	public void documentChanged(BaseDocumentChangeEvent docChange) {
+		// Do nothing for this event
 	}
 
 	@Override
 	public void documentChangeFinalized(BaseDocumentChangeEvent docChange) {
+		// Do nothing for this event
 	}
 
 	@Override
 	public void documentChangeUpdated(BaseDocumentChangeEvent docChange) {
+		// Do nothing for this event
 	}
 	
 }

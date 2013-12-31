@@ -63,10 +63,12 @@ public class UndoInRegionAction implements IObjectActionDelegate {
 
 	@Override
 	public void selectionChanged(IAction action, ISelection selection) {
+		// Do nothing
 	}
 
 	@Override
 	public void setActivePart(IAction action, IWorkbenchPart targetPart) {
+		// Do nothing
 	}
 
 }

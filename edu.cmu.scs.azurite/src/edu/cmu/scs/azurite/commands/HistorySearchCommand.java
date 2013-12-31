@@ -30,6 +30,7 @@ public class HistorySearchCommand extends AbstractCommand {
 
 	@Override
 	public void dump() {
+		// Do nothing
 	}
 
 	@Override
