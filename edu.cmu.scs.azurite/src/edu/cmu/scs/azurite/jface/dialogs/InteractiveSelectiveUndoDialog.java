@@ -122,6 +122,55 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		}
 	}
 	
+	private final class TreeViewerMenuListener implements IMenuListener {
+		@Override
+		public void menuAboutToShow(IMenuManager manager) {
+			IStructuredSelection treeSel = (IStructuredSelection) mChunksTreeViewer.getSelection();
+			if (treeSel != null && treeSel.size() > 0) {
+				final Object selElem = treeSel.getFirstElement();
+				if (selElem instanceof TopLevelElement) {
+					manager.add(new Action("Remove this file from the selection (Keep it unchanged)") {
+						@Override
+						public void run() {
+							TopLevelElement topElem = (TopLevelElement) selElem;
+							List<RuntimeDC> runtimeDCs = new ArrayList<RuntimeDC>();
+							
+							for (Chunk chunk : topElem.getChunks()) {
+								runtimeDCs.addAll(chunk.getInvolvedChanges());
+							}
+							
+							// Get the operation ids.
+							List<OperationId> ids = OperationId.getOperationIdsFromRuntimeDCs(runtimeDCs);
+							
+							// Tell the timeline to REMOVE these from the selection.
+							TimelineViewPart timeline = TimelineViewPart.getInstance();
+							if (timeline != null) {
+								timeline.removeSelection(ids);
+							}
+						}
+					});
+				} else if (selElem instanceof ChunkLevelElement) {
+					manager.add(new Action("Remove this chunk from the selection (Keep it unchanged)") {
+						@Override
+						public void run() {
+							ChunkLevelElement chunkElem = (ChunkLevelElement) selElem;
+							List<RuntimeDC> runtimeDCs = chunkElem.getChunk().getInvolvedChanges();
+							
+							// Get the operation ids.
+							List<OperationId> ids = OperationId.getOperationIdsFromRuntimeDCs(runtimeDCs);
+							
+							// Tell the timeline to REMOVE these from the selection.
+							TimelineViewPart timeline = TimelineViewPart.getInstance();
+							if (timeline != null) {
+								timeline.removeSelection(ids);
+							}
+						}
+					});
+				}
+			}
+		}
+	}
+
 	private class KeepSelectedCodeUnchanged extends Action {
 		private final ITextSelection sel;
 
@@ -739,54 +788,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		// Setup the menu manager for the chunks tree viewer.
 		MenuManager treeViewerMenuMgr = new MenuManager();
 		treeViewerMenuMgr.setRemoveAllWhenShown(true);
-		treeViewerMenuMgr.addMenuListener(new IMenuListener() {
-			@Override
-			public void menuAboutToShow(IMenuManager manager) {
-				IStructuredSelection treeSel = (IStructuredSelection) mChunksTreeViewer.getSelection();
-				if (treeSel != null && treeSel.size() > 0) {
-					final Object selElem = treeSel.getFirstElement();
-					if (selElem instanceof TopLevelElement) {
-						manager.add(new Action("Remove this file from the selection (Keep it unchanged)") {
-							@Override
-							public void run() {
-								TopLevelElement topElem = (TopLevelElement) selElem;
-								List<RuntimeDC> runtimeDCs = new ArrayList<RuntimeDC>();
-								
-								for (Chunk chunk : topElem.getChunks()) {
-									runtimeDCs.addAll(chunk.getInvolvedChanges());
-								}
-								
-								// Get the operation ids.
-								List<OperationId> ids = OperationId.getOperationIdsFromRuntimeDCs(runtimeDCs);
-								
-								// Tell the timeline to REMOVE these from the selection.
-								TimelineViewPart timeline = TimelineViewPart.getInstance();
-								if (timeline != null) {
-									timeline.removeSelection(ids);
-								}
-							}
-						});
-					} else if (selElem instanceof ChunkLevelElement) {
-						manager.add(new Action("Remove this chunk from the selection (Keep it unchanged)") {
-							@Override
-							public void run() {
-								ChunkLevelElement chunkElem = (ChunkLevelElement) selElem;
-								List<RuntimeDC> runtimeDCs = chunkElem.getChunk().getInvolvedChanges();
-								
-								// Get the operation ids.
-								List<OperationId> ids = OperationId.getOperationIdsFromRuntimeDCs(runtimeDCs);
-								
-								// Tell the timeline to REMOVE these from the selection.
-								TimelineViewPart timeline = TimelineViewPart.getInstance();
-								if (timeline != null) {
-									timeline.removeSelection(ids);
-								}
-							}
-						});
-					}
-				}
-			}
-		});
+		treeViewerMenuMgr.addMenuListener(new TreeViewerMenuListener());
 		
 		Control treeControl = mChunksTreeViewer.getControl();
 		treeControl.setMenu(treeViewerMenuMgr.createContextMenu(treeControl));
@@ -927,10 +929,14 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			restoreChosenAlternatives(oldInput, newInput);
 		}
 		
-		// Set the input here.
 		mChunksTreeViewer.setInput(newInput);
 		
-		// Restore selections, if possible.
+		restoreSelections(oldSelection, newInput);
+		
+		updateOKButtonEnabled();
+	}
+
+	private void restoreSelections(Object oldSelection, TopLevelElement[] newInput) {
 		if (oldSelection instanceof TopLevelElement) {
 			TopLevelElement oldTopElem = (TopLevelElement) oldSelection;
 			
@@ -950,8 +956,6 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 				}
 			}
 		}
-		
-		updateOKButtonEnabled();
 	}
 
 	private boolean restoreSelectionsForTopElement(ChunkLevelElement oldChunkElem,
