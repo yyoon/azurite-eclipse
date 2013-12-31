@@ -27,35 +27,36 @@ public class UndoInRegionAction implements IObjectActionDelegate {
 		try {
 			// get active editor
 			IEditorPart editorPart = Utilities.getActiveEditor();
+			if (!(editorPart instanceof AbstractTextEditor)) {
+				return;
+			}
 
-			if (editorPart instanceof AbstractTextEditor) {
-				// check if there is text selection
-				int offset = 0;
-				int length = 0;
-				
-				IEditorSite iEditorSite = editorPart.getEditorSite();
-				if (iEditorSite != null) {
-					ISelectionProvider selectionProvider = iEditorSite
-							.getSelectionProvider();
-					if (selectionProvider != null) {
-						ISelection iSelection = selectionProvider
-								.getSelection();
-						offset = ((ITextSelection) iSelection).getOffset();
-						if (!iSelection.isEmpty()) {
-							length = ((ITextSelection) iSelection).getLength();
-						}
+			// check if there is text selection
+			int offset = 0;
+			int length = 0;
+			
+			IEditorSite iEditorSite = editorPart.getEditorSite();
+			if (iEditorSite != null) {
+				ISelectionProvider selectionProvider = iEditorSite
+						.getSelectionProvider();
+				if (selectionProvider != null) {
+					ISelection iSelection = selectionProvider
+							.getSelection();
+					offset = ((ITextSelection) iSelection).getOffset();
+					if (!iSelection.isEmpty()) {
+						length = ((ITextSelection) iSelection).getLength();
 					}
 				}
-
-				ITextEditor editor = (ITextEditor) editorPart;
-				IDocumentProvider dp = editor.getDocumentProvider();
-				IDocument doc = dp.getDocument(editor.getEditorInput());
-				
-				List<RuntimeDC> dcs = RuntimeHistoryManager.getInstance()
-						.filterDocumentChangesByRegion(offset, offset + length);
-				
-				SelectiveUndoEngine.getInstance().doSelectiveUndo(dcs, doc);
 			}
+
+			ITextEditor editor = (ITextEditor) editorPart;
+			IDocumentProvider dp = editor.getDocumentProvider();
+			IDocument doc = dp.getDocument(editor.getEditorInput());
+			
+			List<RuntimeDC> dcs = RuntimeHistoryManager.getInstance()
+					.filterDocumentChangesByRegion(offset, offset + length);
+			
+			SelectiveUndoEngine.getInstance().doSelectiveUndo(dcs, doc);
 		} catch (Exception e) {
 		}
 	}

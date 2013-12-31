@@ -17,22 +17,25 @@ public class CodeSelectionPropertyTester extends PropertyTester {
 
 		case "codeSelected": {
 			IEditorPart editorPart = (IEditorPart) receiver;
+			if (!(editorPart instanceof AbstractTextEditor)) {
+				return false;
+			}
 
-			if (editorPart instanceof AbstractTextEditor) {
-				// check if there is text selection
-				IEditorSite iEditorSite = editorPart.getEditorSite();
-				if (iEditorSite != null) {
-					ISelectionProvider selectionProvider = iEditorSite
-							.getSelectionProvider();
-					if (selectionProvider != null) {
-						ISelection iSelection = selectionProvider
-								.getSelection();
-						if (iSelection instanceof ITextSelection) {
-							ITextSelection textSelection = (ITextSelection) iSelection;
-							return !textSelection.isEmpty() && textSelection.getLength() > 0;
-						}
-					}
-				}
+			// check if there is text selection
+			IEditorSite iEditorSite = editorPart.getEditorSite();
+			if (iEditorSite == null) {
+				return false;
+			}
+			
+			ISelectionProvider selectionProvider = iEditorSite.getSelectionProvider();
+			if (selectionProvider == null) {
+				return false;
+			}
+			
+			ISelection iSelection = selectionProvider.getSelection();
+			if (iSelection instanceof ITextSelection) {
+				ITextSelection textSelection = (ITextSelection) iSelection;
+				return !textSelection.isEmpty() && textSelection.getLength() > 0;
 			}
 
 			return false;

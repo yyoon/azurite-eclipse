@@ -87,16 +87,20 @@ public class Chunk extends ArrayList<Segment> {
 		while (!queue.isEmpty()) {
 			RuntimeDC dc = queue.remove();
 			
-			if (isInRange(dc, getStartOffset(), getEndOffset())) {
-				if (!set.contains(dc)) {
-					set.add(dc);
-					result.addAll(dc.getAllSegments());
-					
-					for (RuntimeDC conflict : dc.getConflicts()) {
-						if (!set.contains(conflict)) {
-							queue.add(conflict);
-						}
-					}
+			if (!isInRange(dc, getStartOffset(), getEndOffset())) {
+				continue;
+			}
+			
+			if (set.contains(dc)) {
+				continue;
+			}
+			
+			set.add(dc);
+			result.addAll(dc.getAllSegments());
+			
+			for (RuntimeDC conflict : dc.getConflicts()) {
+				if (!set.contains(conflict)) {
+					queue.add(conflict);
 				}
 			}
 		}
@@ -126,18 +130,22 @@ public class Chunk extends ArrayList<Segment> {
 		while (!queue.isEmpty()) {
 			Pair<RuntimeDC, Integer> pair = queue.remove();
 			RuntimeDC dc = pair.getFirst();
+			
+			if (set.contains(dc)) {
+				continue;
+			}
 
-			if (!set.contains(dc)) {
-				set.add(dc);
-				result.addAll(dc.getAllSegments());
+			set.add(dc);
+			result.addAll(dc.getAllSegments());
+			
+			if (depth != -1 && pair.getSecond().compareTo(depth) >= 0) {
+				continue;
+			}
 
-				if (depth == -1 || pair.getSecond().compareTo(depth) < 0) {
-					for (RuntimeDC conflict : dc.getConflicts()) {
-						if (!set.contains(conflict)) {
-							queue.add(new Pair<RuntimeDC, Integer>(conflict,
-									pair.getSecond() + 1));
-						}
-					}
+			for (RuntimeDC conflict : dc.getConflicts()) {
+				if (!set.contains(conflict)) {
+					queue.add(new Pair<RuntimeDC, Integer>(conflict,
+							pair.getSecond() + 1));
 				}
 			}
 		}

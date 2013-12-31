@@ -20,21 +20,25 @@ public class HandlerUtilities {
 			// get active editor
 			IEditorPart editorPart = EventRecorder.getInstance().getEditor();
 
-			if (editorPart instanceof AbstractTextEditor) {
-				IEditorSite iEditorSite = editorPart.getEditorSite();
-				if (iEditorSite != null) {
-					ISelectionProvider selectionProvider = iEditorSite
-							.getSelectionProvider();
-					if (selectionProvider != null) {
-						ISelection iSelection = selectionProvider
-								.getSelection();
-						if (iSelection instanceof ITextSelection) {
-							ITextSelection iTextSelection = (ITextSelection) iSelection;
-							if (!iTextSelection.isEmpty() && iTextSelection.getLength() > 0) {
-								return true;
-							}
-						}
-					}
+			if (!(editorPart instanceof AbstractTextEditor)) {
+				return false;
+			}
+			
+			IEditorSite iEditorSite = editorPart.getEditorSite();
+			if (iEditorSite == null) {
+				return false;
+			}
+			
+			ISelectionProvider selectionProvider = iEditorSite.getSelectionProvider();
+			if (selectionProvider == null) {
+				return false;
+			}
+			
+			ISelection iSelection = selectionProvider.getSelection();
+			if (iSelection instanceof ITextSelection) {
+				ITextSelection iTextSelection = (ITextSelection) iSelection;
+				if (!iTextSelection.isEmpty() && iTextSelection.getLength() > 0) {
+					return true;
 				}
 			}
 		} catch (Exception e) {
@@ -48,31 +52,33 @@ public class HandlerUtilities {
 		try {
 			// get active editor
 			IEditorPart editorPart = EventRecorder.getInstance().getEditor();
+			
+			if (!(editorPart instanceof AbstractTextEditor)) {
+				return null;
+			}
 
-			if (editorPart instanceof AbstractTextEditor) {
-				// check if there is text selection
-				int offset = 0;
-				int length = 0;
-				
-				IEditorSite iEditorSite = editorPart.getEditorSite();
-				if (iEditorSite != null) {
-					ISelectionProvider selectionProvider = iEditorSite
-							.getSelectionProvider();
-					if (selectionProvider != null) {
-						ISelection iSelection = selectionProvider
-								.getSelection();
-						offset = ((ITextSelection) iSelection).getOffset();
-						if (!iSelection.isEmpty()) {
-							length = ((ITextSelection) iSelection).getLength();
-						}
+			// check if there is text selection
+			int offset = 0;
+			int length = 0;
+			
+			IEditorSite iEditorSite = editorPart.getEditorSite();
+			if (iEditorSite != null) {
+				ISelectionProvider selectionProvider = iEditorSite
+						.getSelectionProvider();
+				if (selectionProvider != null) {
+					ISelection iSelection = selectionProvider
+							.getSelection();
+					offset = ((ITextSelection) iSelection).getOffset();
+					if (!iSelection.isEmpty()) {
+						length = ((ITextSelection) iSelection).getLength();
 					}
 				}
-
-				List<RuntimeDC> dcs = RuntimeHistoryManager.getInstance()
-						.filterDocumentChangesByRegion(offset, offset + length);
-				
-				return dcs;
 			}
+
+			List<RuntimeDC> dcs = RuntimeHistoryManager.getInstance()
+					.filterDocumentChangesByRegion(offset, offset + length);
+			
+			return dcs;
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -84,19 +90,20 @@ public class HandlerUtilities {
 		try {
 			// get active editor
 			IEditorPart editorPart = EventRecorder.getInstance().getEditor();
+			if (!(editorPart instanceof AbstractTextEditor)) {
+				return null;
+			}
 
-			if (editorPart instanceof AbstractTextEditor) {
-				// check if there is text selection
-				IEditorSite iEditorSite = editorPart.getEditorSite();
-				if (iEditorSite != null) {
-					ISelectionProvider selectionProvider = iEditorSite
-							.getSelectionProvider();
-					if (selectionProvider != null) {
-						ISelection iSelection = selectionProvider
-								.getSelection();
-						if (iSelection instanceof ITextSelection) {
-							return (ITextSelection)iSelection;
-						}
+			// check if there is text selection
+			IEditorSite iEditorSite = editorPart.getEditorSite();
+			if (iEditorSite != null) {
+				ISelectionProvider selectionProvider = iEditorSite
+						.getSelectionProvider();
+				if (selectionProvider != null) {
+					ISelection iSelection = selectionProvider
+							.getSelection();
+					if (iSelection instanceof ITextSelection) {
+						return (ITextSelection)iSelection;
 					}
 				}
 			}

@@ -248,56 +248,7 @@ public class SelectiveUndoEngine {
 			while (it.hasNext()) {
 				Segment segmentUnderUndo = it.next();
 				
-				if (segmentUnderUndo.isDeletion()) {
-					// Insert the text back at the offset.
-					buffer.replace(
-							segmentUnderUndo.getOffset() - initialOffset,
-							segmentUnderUndo.getOffset() - initialOffset,
-							segmentUnderUndo.getText());
-					
-					// Re-adjust all the following segments' offsets.
-					for (Segment chunkSegment : copyChunk) {
-						if (chunkSegment.equals(segmentUnderUndo)) {
-							continue;
-						}
-						if (Segment.getLocationComparator().compare(chunkSegment, segmentUnderUndo) < 0) {
-							continue;
-						}
-
-						chunkSegment.incrementOffset(segmentUnderUndo.getLength());
-					}
-					
-					// Re-open all the closed segments.
-					for (Segment closedSegment : segmentUnderUndo.getSegmentsClosedByMe()) {
-						if (copyChunk.contains(closedSegment)) {
-							closedSegment.reopen(segmentUnderUndo.getOffset());
-						}
-					}
-					
-					for (Segment right : segmentUnderUndo.getRight()) {
-						if (copyChunk.contains(right)) {
-							right.setOffset(segmentUnderUndo.getOffset() + segmentUnderUndo.getLength());
-						}
-					}
-				} else {
-					// Delete this segment.
-					buffer.replace(
-							segmentUnderUndo.getOffset() - initialOffset,
-							segmentUnderUndo.getEndOffset() - initialOffset,
-							"");
-					
-					// Re-adjust all the following segments' offsets.
-					for (Segment chunkSegment : copyChunk) {
-						if (chunkSegment.equals(segmentUnderUndo)) {
-							continue;
-						}
-						if (Segment.getLocationComparator().compare(chunkSegment, segmentUnderUndo) < 0) {
-							continue;
-						}
-						
-						chunkSegment.decrementOffset(segmentUnderUndo.getLength());
-					}
-				}
+				undoSegment(segmentUnderUndo, copyChunk, initialOffset, buffer);
 				
 				it.remove();
 				copyChunk.remove(segmentUnderUndo);
@@ -305,6 +256,70 @@ public class SelectiveUndoEngine {
 		}
 
 		return buffer.toString();
+	}
+
+	private void undoSegment(Segment segmentUnderUndo, Chunk copyChunk,
+			int initialOffset, StringBuffer buffer) {
+		if (segmentUnderUndo.isDeletion()) {
+			undoDeleteSegment(segmentUnderUndo, copyChunk, initialOffset, buffer);
+		} else {
+			undoInsertSegment(segmentUnderUndo, copyChunk, initialOffset, buffer);
+		}
+	}
+
+	private void undoInsertSegment(Segment segmentUnderUndo, Chunk copyChunk,
+			int initialOffset, StringBuffer buffer) {
+		// Delete this segment.
+		buffer.replace(
+				segmentUnderUndo.getOffset() - initialOffset,
+				segmentUnderUndo.getEndOffset() - initialOffset,
+				"");
+		
+		// Re-adjust all the following segments' offsets.
+		for (Segment chunkSegment : copyChunk) {
+			if (chunkSegment.equals(segmentUnderUndo)) {
+				continue;
+			}
+			if (Segment.getLocationComparator().compare(chunkSegment, segmentUnderUndo) < 0) {
+				continue;
+			}
+			
+			chunkSegment.decrementOffset(segmentUnderUndo.getLength());
+		}
+	}
+
+	private void undoDeleteSegment(Segment segmentUnderUndo, Chunk copyChunk,
+			int initialOffset, StringBuffer buffer) {
+		// Insert the text back at the offset.
+		buffer.replace(
+				segmentUnderUndo.getOffset() - initialOffset,
+				segmentUnderUndo.getOffset() - initialOffset,
+				segmentUnderUndo.getText());
+		
+		// Re-adjust all the following segments' offsets.
+		for (Segment chunkSegment : copyChunk) {
+			if (chunkSegment.equals(segmentUnderUndo)) {
+				continue;
+			}
+			if (Segment.getLocationComparator().compare(chunkSegment, segmentUnderUndo) < 0) {
+				continue;
+			}
+
+			chunkSegment.incrementOffset(segmentUnderUndo.getLength());
+		}
+		
+		// Re-open all the closed segments.
+		for (Segment closedSegment : segmentUnderUndo.getSegmentsClosedByMe()) {
+			if (copyChunk.contains(closedSegment)) {
+				closedSegment.reopen(segmentUnderUndo.getOffset());
+			}
+		}
+		
+		for (Segment right : segmentUnderUndo.getRight()) {
+			if (copyChunk.contains(right)) {
+				right.setOffset(segmentUnderUndo.getOffset() + segmentUnderUndo.getLength());
+			}
+		}
 	}
 	
 	public void doSelectiveUndoWithParams(SelectiveUndoParams params) {

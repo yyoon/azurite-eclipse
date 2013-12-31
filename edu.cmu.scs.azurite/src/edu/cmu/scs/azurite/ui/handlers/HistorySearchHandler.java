@@ -120,20 +120,7 @@ public class HistorySearchHandler extends AbstractHandler {
 			} else {
 				// Get the previous versions by performing undo.
 				List<RuntimeDC> subList = dcs.subList(version, dcs.size());
-				Chunk chunk = new Chunk();
-				for (RuntimeDC dc : subList) {
-					for (Segment segment : dc.getAllSegments()) {
-						if (segment.isDeletion()) {
-							if (selectionStart < segment.getOffset() && segment.getOffset() < selectionEnd) {
-								chunk.add(segment);
-							}
-						} else {
-							if (segment.getOffset() < selectionEnd && segment.getEndOffset() > selectionStart) {
-								chunk.add(segment);
-							}
-						}
-					}
-				}
+				Chunk chunk = getChunkFromSublist(subList, selectionStart, selectionEnd);
 				Collections.sort(chunk, Segment.getLocationComparator());
 				
 				int startOffset = chunk.getStartOffset();
@@ -192,6 +179,19 @@ public class HistorySearchHandler extends AbstractHandler {
 		}
 		
 		return null;
+	}
+
+	private Chunk getChunkFromSublist(List<RuntimeDC> subList,
+			int selectionStart, int selectionEnd) {
+		Chunk chunk = new Chunk();
+		for (RuntimeDC dc : subList) {
+			for (Segment segment : dc.getAllSegments()) {
+				if (segment.inSelectionRange(selectionStart, selectionEnd)) {
+					chunk.add(segment);
+				}
+			}
+		}
+		return chunk;
 	}
 
 }
