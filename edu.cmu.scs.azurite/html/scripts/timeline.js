@@ -2555,6 +2555,60 @@ function showAllFilesEditedTogether() {
 	layout();
 }
 
+function showAllFilesEditedInRange() {
+	if (global.selectedTimestampRange === null) {
+		return;
+	}
+
+	var start = global.selectedTimestampRange[0];
+	var end = global.selectedTimestampRange[1];
+
+	var rects = svg.subRects.selectAll('rect.op_rect')[0].slice(0);
+	var filteredRects = rects.filter(function (element) {
+		var absTimestamp = element.__data__.sid + element.__data__.t1;
+		return start <= absTimestamp && absTimestamp < end;
+	});
+	
+	// Make all files invisible for the moment.
+	var i;
+	for (i = 0; i < global.files.length; ++i) {
+		global.files[i].visible = false;
+	}
+
+	for (var i = 0; i < filteredRects.length; ++i) {
+		filteredRects[i].__data__.fileGroup.file.visible = true;
+	}
+
+	layoutFiles();
+	layout();
+}
+
+function openAllFilesEditedInRange() {
+	azurite.openAllFilesEditedInRange(getAllFilesEditedInRange());
+}
+
+function getAllFilesEditedInRange() {
+	if (global.selectedTimestampRange === null) {
+		return [];
+	}
+
+	var start = global.selectedTimestampRange[0];
+	var end = global.selectedTimestampRange[1];
+
+	var rects = svg.subRects.selectAll('rect.op_rect')[0].slice(0);
+	var filteredRects = rects.filter(function (element) {
+		var absTimestamp = element.__data__.sid + element.__data__.t1;
+		return start <= absTimestamp && absTimestamp < end;
+	});
+
+	var filePaths = [];
+	for (var i = 0; i < filteredRects.length; ++i) {
+		filePaths.push(filteredRects[i].__data__.fileGroup.file.path);
+	}
+
+	return filePaths;
+}
+
 function updateEvents() {
 	svg.subEvents.selectAll('.event_line')
 		.attr('x1', eventDraw.xFunc)
