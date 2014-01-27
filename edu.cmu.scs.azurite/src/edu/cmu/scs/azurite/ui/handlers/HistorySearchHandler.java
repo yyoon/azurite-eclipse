@@ -14,7 +14,6 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.IEditorPart;
 
-import edu.cmu.scs.azurite.commands.HistorySearchCommand;
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.commands.runtime.Segment;
 import edu.cmu.scs.azurite.jface.dialogs.HistorySearchDialog;
@@ -24,6 +23,7 @@ import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.azurite.model.undo.Chunk;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
 import edu.cmu.scs.azurite.views.TimelineViewPart;
+import edu.cmu.scs.fluorite.commands.HistorySearchCommand;
 import edu.cmu.scs.fluorite.model.EventRecorder;
 import edu.cmu.scs.fluorite.util.Utilities;
 
