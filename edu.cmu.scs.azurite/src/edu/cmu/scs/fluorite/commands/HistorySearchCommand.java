@@ -1,4 +1,4 @@
-package edu.cmu.scs.azurite.commands;
+package edu.cmu.scs.fluorite.commands;
 
 import java.util.HashMap;
 import java.util.Map;
