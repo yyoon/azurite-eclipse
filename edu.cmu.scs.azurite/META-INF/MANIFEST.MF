@@ -19,5 +19,5 @@ Require-Bundle: org.eclipse.ui,
  org.eclipse.core.expressions;bundle-version="3.3.0"
 Bundle-RequiredExecutionEnvironment: JavaSE-1.7
 Bundle-ActivationPolicy: lazy
-Bundle-ClassPath: edu.cmu.scs.azurite.jar
+Bundle-ClassPath: .
 Eclipse-BundleShape: dir
