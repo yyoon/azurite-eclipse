@@ -496,7 +496,7 @@ function recalculateClipPaths() {
 		.attr('x', '-1')
 		.attr('y', '-1')
 		.attr('width', (svgWidth * FILES_PORTION + 2) + 'px')
-		.attr('height', (svgHeight - 20 + 2) + 'px');
+		.attr('height', (svgHeight - TICKS_HEIGHT - EVENTS_HEIGHT + 2) + 'px');
 
 	svg.subFiles
 		.attr('transform', 'translate(' + CHART_MARGINS.left + ' ' + CHART_MARGINS.top + ')');
