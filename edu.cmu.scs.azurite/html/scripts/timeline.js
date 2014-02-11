@@ -2760,3 +2760,8 @@ function testMarker() {
 	showMarkerAtTimestamp();
 	translateX(0);
 }
+
+function showEvents(show) {
+	var displayValue = show === true ? '' : 'none';
+	svg.subEventsWrap.style('display', displayValue);
+}
