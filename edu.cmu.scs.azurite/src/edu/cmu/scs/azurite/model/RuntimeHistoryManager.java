@@ -306,6 +306,10 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 	}
 	
 	private void addRuntimeDCFromOriginalDC(BaseDocumentChangeEvent docChange, FileKey key) {
+		addRuntimeDCFromOriginalDC(docChange, key, true);
+	}
+	
+	private void addRuntimeDCFromOriginalDC(BaseDocumentChangeEvent docChange, FileKey key, boolean fireEvent) {
 		RuntimeDC runtimeDocChange = RuntimeDC.createRuntimeDocumentChange(docChange);
 		runtimeDocChange.setBelongsTo(key);
 		
@@ -316,7 +320,9 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 		list.add(runtimeDocChange);
 		
 		// Fire runtime document change event
-		fireRuntimeDCAddedEvent(runtimeDocChange);
+		if (fireEvent) {
+			fireRuntimeDCAddedEvent(runtimeDocChange);
+		}
 	}
 	
 	public List<RuntimeDC> filterDocumentChangesByIds(FileKey key, final List<OperationId> ids) {
@@ -573,6 +579,32 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 
 	@Override
 	public void documentChangeAmended(BaseDocumentChangeEvent oldDocChange, BaseDocumentChangeEvent newDocChange) {
+		// Find out the runtime DC associated with the oldDocChange,
+		// and replace the originalDC to the new one.
+		// Presumably, this is the last runtime DC associated with the current file.
+		List<RuntimeDC> dcs = getRuntimeDocumentChanges();
+		if (dcs == null || dcs.isEmpty()) {
+			throw new IllegalStateException("Could not find the runtimeDC associated with the oldDocChange.");
+		}
+		
+		RuntimeDC candidateDC = dcs.get(dcs.size() - 1);
+		if (candidateDC.getOriginal() != oldDocChange) {
+			throw new IllegalStateException("The last runtime DC is not the desired one!");
+		}
+		
+		if (mNextIndexToApply.get(getCurrentFileKey()) >= dcs.size()) {
+			throw new IllegalStateException("The dynamic segment calculation is already done!");
+		}
+		
+		// Delete the last one from dcs, and add a new one.
+		dcs.remove(dcs.size() - 1);
+		addRuntimeDCFromOriginalDC(newDocChange, getCurrentFileKey(), false);
+		
+		// Also, amend the current session events.
+		int oldIndex = mCurrentSessionEvents.getCommands().indexOf(oldDocChange);
+		mCurrentSessionEvents.getCommands().set(oldIndex, newDocChange);
+		
+		// Finally, notify the listeners
 		fireDocumentChangeAmendedEvent(oldDocChange, newDocChange);
 	}
 	

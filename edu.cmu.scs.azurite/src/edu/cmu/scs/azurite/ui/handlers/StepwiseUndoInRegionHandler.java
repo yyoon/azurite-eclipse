@@ -46,11 +46,6 @@ public class StepwiseUndoInRegionHandler extends AbstractHandler {
 	
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
-		List<RuntimeDC> dcs = HandlerUtilities.getOperationsInSelectedRegion();
-		if (dcs == null) {
-			return null;
-		}
-		
 		ITextSelection selection = HandlerUtilities.getSelectedRegion();
 
 		// get active editor
@@ -75,6 +70,11 @@ public class StepwiseUndoInRegionHandler extends AbstractHandler {
 		boolean firstInvocation = determineFirstInvocation(doc, selection);
 		
 		if (firstInvocation) {
+			List<RuntimeDC> dcs = HandlerUtilities.getOperationsInSelectedRegion();
+			if (dcs == null) {
+				return null;
+			}
+			
 			this.lastReferredActiveDocument = doc;
 			this.originalSelection = selection;
 			
@@ -94,7 +94,7 @@ public class StepwiseUndoInRegionHandler extends AbstractHandler {
 		}
 		
 		// See if there are remaining operations to be undone.
-		if (dcs.size() <= StepwiseUndoState.getStepCount() + 1) {
+		if (this.snapshotsAfterEachStep.size() <= StepwiseUndoState.getStepCount() + 1) {
 			Shell shell = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell();
 			MessageDialog.openInformation(shell,
 					"Azurite - Stepwise Undo in Region",
