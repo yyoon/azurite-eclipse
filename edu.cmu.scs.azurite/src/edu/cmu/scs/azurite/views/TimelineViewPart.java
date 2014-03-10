@@ -898,7 +898,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	
 	public int getSelectedRectsCount() {
 		try {
-			Object result = evaluateJSCode("return global.selected.length;");
+			Object result = evaluateJSCode("return global.selectedRects.length;");
 			if (result instanceof Number) {
 				return ((Number) result).intValue();
 			} else {
