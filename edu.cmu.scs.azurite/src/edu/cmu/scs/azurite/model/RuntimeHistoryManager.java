@@ -159,6 +159,12 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 		}
 	}
 	
+	private void fireDocumentChangeAmendedEvent(BaseDocumentChangeEvent oldDocChange, BaseDocumentChangeEvent newDocChange) {
+		for (Object listenerObj : mRuntimeDocumentChangeListeners.getListeners()) {
+			((RuntimeDCListener)listenerObj).documentChangeAmended(oldDocChange, newDocChange);
+		}
+	}
+	
 	public Set<FileKey> getFileKeys() {
 		return mDocumentChanges.keySet();
 	}
@@ -563,6 +569,11 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 			mCurrentSessionEvents.addCommand(command);
 			mEventsToBeDisplayed.add(command);
 		}
+	}
+
+	@Override
+	public void documentChangeAmended(BaseDocumentChangeEvent oldDocChange, BaseDocumentChangeEvent newDocChange) {
+		fireDocumentChangeAmendedEvent(oldDocChange, newDocChange);
 	}
 	
 }

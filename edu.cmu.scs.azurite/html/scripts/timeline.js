@@ -5,7 +5,7 @@
 /*exported updateOperation, getRightmostTimestamp, addSelectionsByIds, removeSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarkerAtTimestamp, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile, addEvent, activateFirebugLite, showAllFilesEditedInRange, openAllFilesEditedInRange */
 
 /* Things to be called manually when debugging */
-/*exported test, testMarker */
+/*exported test, testMarker, showEvents */
 
 /**
  * Things should be executed at the beginning.
@@ -106,6 +106,9 @@ rectDraw.wFunc = function(d) {
 };
 rectDraw.hFunc = function(d) {
 	return Math.max(MIN_HEIGHT / global.scaleY, ROW_HEIGHT * (d.y2 - d.y1) / 100);
+};
+rectDraw.fillFunc = function(d) {
+	return d.color();
 };
 
 var fileDraw = {};
@@ -631,15 +634,15 @@ function EditOperation(sid, id, t1, t2, y1, y2, type, fileGroup) {
 	this.y1 = y1;
 	this.y2 = y2;
 	this.type = type;
-	this.color = null;
-
-	if (type === TYPE_INSERT) {
-		this.color = "green";
-	} else if (type === TYPE_DELETE) {
-		this.color = "red";
-	} else if (type === TYPE_REPLACE) {
-		this.color = "blue";
-	}
+	this.color = function() {
+		if (this.type === TYPE_INSERT) {
+			return "green";
+		} else if (type === TYPE_DELETE) {
+			return "red";
+		} else if (type === TYPE_REPLACE) {
+			return "blue";
+		}
+	};
 	
 	this.fileGroup = fileGroup;
 	this.session = fileGroup.session;
@@ -792,9 +795,7 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current
 		.attr('height', rectDraw.hFunc)
 		.attr('rx', RECT_RADIUS)
 		.attr('ry', RECT_RADIUS)
-		.attr('fill', function(d) {
-			return d.color;
-		})
+		.attr('fill', rectDraw.fillFunc)
 		.attr('vector-effect', 'non-scaling-stroke');
 	
 	if (autolayout === true) {
@@ -910,7 +911,7 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current
  * Update the timestamp2 value for an existing operation, in case multiple
  * operations are merged into one.
  */
-function updateOperation(sid, id, t2, y1, y2, scroll) {
+function updateOperation(sid, id, t2, y1, y2, type, scroll) {
 	var lastOp = global.lastOperation;
 	
 	if (lastOp === null ||
@@ -925,11 +926,14 @@ function updateOperation(sid, id, t2, y1, y2, scroll) {
 	lastOp.y1 = y1;
 	lastOp.y2 = y2;
 
+	lastOp.type = type;
+
 	if (global.lastRect !== null) {
 		global.lastRect
 			.attr('width', rectDraw.wFunc)
 			.attr('y', rectDraw.yFunc)
-			.attr('height', rectDraw.hFunc);
+			.attr('height', rectDraw.hFunc)
+			.attr('fill', rectDraw.fillFunc);
 	}
 	
 	var session = lastOp.session;

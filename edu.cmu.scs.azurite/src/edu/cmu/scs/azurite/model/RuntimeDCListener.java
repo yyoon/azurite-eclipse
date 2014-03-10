@@ -30,6 +30,11 @@ public interface RuntimeDCListener {
 	void documentChangeUpdated(BaseDocumentChangeEvent docChange);
 	
 	/**
+	 * Fired when a document change was amended.
+	 */
+	void documentChangeAmended(BaseDocumentChangeEvent oldDocChange, BaseDocumentChangeEvent newDocChange);
+	
+	/**
 	 * Fired when some past history files were read.
 	 */
 	void pastLogsRead(List<Events> listEvents);
