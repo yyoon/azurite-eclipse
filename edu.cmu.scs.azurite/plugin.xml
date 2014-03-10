@@ -585,6 +585,12 @@
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M1+M2+M3+F">
       </key>
+      <key
+            commandId="edu.cmu.scs.azurite.ui.commands.stepwiseUndoInRegionCommand"
+            contextId="org.eclipse.ui.contexts.window"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="M1+M2+M3+Z">
+      </key>
    </extension>
    <extension
          point="org.eclipse.core.runtime.preferences">
