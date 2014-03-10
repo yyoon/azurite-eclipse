@@ -637,9 +637,9 @@ function EditOperation(sid, id, t1, t2, y1, y2, type, fileGroup) {
 	this.color = function() {
 		if (this.type === TYPE_INSERT) {
 			return "green";
-		} else if (type === TYPE_DELETE) {
+		} else if (this.type === TYPE_DELETE) {
 			return "red";
-		} else if (type === TYPE_REPLACE) {
+		} else if (this.type === TYPE_REPLACE) {
 			return "blue";
 		}
 	};

@@ -207,7 +207,7 @@ public class StepwiseUndoInRegionHandler extends AbstractHandler {
 			
 			if (prefix + suffix == originalSnapshot.length()) {
 				Insert insert = new Insert(prefix, newSnapshot.substring(prefix, newSnapshot.length() - suffix), doc);
-				recorder.amendLastDocumentChange(insert);
+				recorder.amendLastDocumentChange(insert, true);
 			} else if (prefix + suffix == newSnapshot.length()) {
 				Delete delete = new Delete(
 						prefix,
@@ -217,7 +217,7 @@ public class StepwiseUndoInRegionHandler extends AbstractHandler {
 						originalSnapshot.substring(prefix, originalSnapshot.length() - suffix),
 						doc);
 				
-				recorder.amendLastDocumentChange(delete);
+				recorder.amendLastDocumentChange(delete, true);
 			} else {
 				Replace replace = new Replace(
 						prefix,
@@ -229,7 +229,7 @@ public class StepwiseUndoInRegionHandler extends AbstractHandler {
 						newSnapshot.substring(prefix, newSnapshot.length() - suffix),
 						doc);
 				
-				recorder.amendLastDocumentChange(replace);
+				recorder.amendLastDocumentChange(replace, true);
 			}
 		}
 	}
