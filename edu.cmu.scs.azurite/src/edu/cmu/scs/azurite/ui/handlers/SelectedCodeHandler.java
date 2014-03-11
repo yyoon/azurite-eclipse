@@ -44,6 +44,7 @@ public class SelectedCodeHandler extends AbstractHandler {
 		Object[][] input = {
 				{ null, "Select Corresponding Timeline Rectangles", "edu.cmu.scs.azurite.ui.commands.selectCorrespondingTimelineRectanglesCommand" },
 				{ "icons/undo_in_region.png", "Undo All Operations on the Selection", "edu.cmu.scs.azurite.ui.commands.undoInRegionCommand" },
+				{ null, "Stepwise Undo Operations on the Selection", "edu.cmu.scs.azurite.ui.commands.stepwiseUndoInRegionCommand" },
 				{ "icons/time_machine.png", "Launch Code History Diff View", "edu.cmu.scs.azurite.ui.commands.launchCodeHistoryDiff" },
 		};
 		

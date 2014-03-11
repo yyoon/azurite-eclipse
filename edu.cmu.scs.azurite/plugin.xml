@@ -48,6 +48,10 @@
                   style="push">
             </command>
             <command
+                  commandId="edu.cmu.scs.azurite.ui.commands.stepwiseUndoInRegionCommand"
+                  style="push">
+            </command>
+            <command
                   commandId="edu.cmu.scs.azurite.ui.commands.launchCodeHistoryDiff"
                   style="push">
             </command>
@@ -77,6 +81,10 @@
                </command>
                <command
                      commandId="edu.cmu.scs.azurite.ui.commands.undoInRegionCommand"
+                     style="push">
+               </command>
+               <command
+                     commandId="edu.cmu.scs.azurite.ui.commands.stepwiseUndoInRegionCommand"
                      style="push">
                </command>
                <command
@@ -420,6 +428,10 @@
                style="push">
          </command>
          <command
+               commandId="edu.cmu.scs.azurite.ui.commands.stepwiseUndoInRegionCommand"
+               style="push">
+         </command>
+         <command
                commandId="edu.cmu.scs.azurite.ui.commands.launchCodeHistoryDiff"
                style="push">
          </command>
@@ -459,6 +471,10 @@
       <command
             id="edu.cmu.scs.azurite.ui.commands.undoInRegionCommand"
             name="Undo All Operations on the Selection">
+      </command>
+      <command
+            id="edu.cmu.scs.azurite.ui.commands.stepwiseUndoInRegionCommand"
+            name="Stepwise Undo Operations on the Selection">
       </command>
       <command
             id="edu.cmu.scs.azurite.ui.commands.launchCodeHistoryDiff"
@@ -569,6 +585,12 @@
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M1+M2+M3+F">
       </key>
+      <key
+            commandId="edu.cmu.scs.azurite.ui.commands.stepwiseUndoInRegionCommand"
+            contextId="org.eclipse.ui.contexts.window"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="M1+M2+M3+Z">
+      </key>
    </extension>
    <extension
          point="org.eclipse.core.runtime.preferences">
@@ -654,6 +676,15 @@
       <handler
             class="edu.cmu.scs.azurite.ui.handlers.UndoInRegionHandler"
             commandId="edu.cmu.scs.azurite.ui.commands.undoInRegionCommand">
+         <enabledWhen>
+            <reference
+                  definitionId="codeSelected">
+            </reference>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="edu.cmu.scs.azurite.ui.handlers.StepwiseUndoInRegionHandler"
+            commandId="edu.cmu.scs.azurite.ui.commands.stepwiseUndoInRegionCommand">
          <enabledWhen>
             <reference
                   definitionId="codeSelected">
