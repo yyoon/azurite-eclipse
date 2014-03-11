@@ -181,7 +181,11 @@ eventDraw.colorFunc = function(d) {
 eventDraw.iconFunc = function(d) {
 	switch (d.type) {
 		case 'JUnitCommand':
+		case 'JUnitCommand(true)':
 			return 'images/event_icons/junitsucc.gif';
+
+		case 'JUnitCommand(false)':
+			return 'images/event_icons/juniterr.gif';
 
 		case 'RunCommand':
 			return 'images/event_icons/run_exc.gif';
