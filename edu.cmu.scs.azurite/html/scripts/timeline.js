@@ -164,6 +164,16 @@ eventDraw.colorFunc = function(d) {
 		case 'org.eclipse.ui.file.save':
 			return 'lightskyblue';
 
+		case 'org.eclipse.egit.ui.team.Commit':
+		case 'org.eclipse.egit.ui.team.Pull':
+		case 'org.eclipse.egit.ui.team.Fetch':
+		case 'org.eclipse.egit.ui.team.Push':
+		case 'org.eclipse.egit.ui.team.Merge':
+		case 'org.eclipse.egit.ui.team.Reset':
+		case 'org.eclipse.egit.ui.team.Rebase':
+		case 'org.eclipse.egit.ui.CheckoutCommand':
+			return 'goldenrod';
+
 		default:
 			return 'gold';
 	}
@@ -181,6 +191,30 @@ eventDraw.iconFunc = function(d) {
 
 		case 'org.eclipse.ui.file.save':
 			return 'images/event_icons/save_edit.gif';
+
+		case 'org.eclipse.egit.ui.team.Commit':
+			return 'images/event_icons/commit.gif';
+
+		case 'org.eclipse.egit.ui.team.Pull':
+			return 'images/event_icons/pull.gif';
+
+		case 'org.eclipse.egit.ui.team.Fetch':
+			return 'images/event_icons/fetch.gif';
+
+		case 'org.eclipse.egit.ui.team.Push':
+			return 'images/event_icons/push.gif';
+
+		case 'org.eclipse.egit.ui.team.Merge':
+			return 'images/event_icons/merge.gif';
+
+		case 'org.eclipse.egit.ui.team.Reset':
+			return 'images/event_icons/reset.gif';
+
+		case 'org.eclipse.egit.ui.team.Rebase':
+			return 'images/event_icons/rebase.gif';
+
+		case 'org.eclipse.egit.ui.CheckoutCommand':
+			return 'images/event_icons/checkout.gif';
 
 		default:
 			return 'images/event_icons/error.png';
