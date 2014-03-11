@@ -14,8 +14,15 @@ import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.DocumentEvent;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IDocumentExtension4;
+import org.eclipse.jface.text.IDocumentListener;
 import org.eclipse.jface.text.ITextSelection;
+import org.eclipse.jface.text.ITextViewerExtension6;
+import org.eclipse.jface.text.IUndoManager;
 import org.eclipse.jface.text.TextSelection;
+import org.eclipse.jface.text.source.ISourceViewer;
+import org.eclipse.jface.viewers.ISelectionChangedListener;
+import org.eclipse.jface.viewers.ISelectionProvider;
+import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.PlatformUI;
@@ -36,6 +43,8 @@ import edu.cmu.scs.fluorite.util.Utilities;
 public class StepwiseUndoInRegionHandler extends AbstractHandler {
 	
 	private IDocument lastReferredActiveDocument;
+	private ISelectionProvider lastSelectionProvider;
+	private CompoundCancelListener lastCompoundCancelListener;
 	
 	private ITextSelection lastKnownSelection;
 	private String lastKnownSnapshot;
@@ -70,15 +79,31 @@ public class StepwiseUndoInRegionHandler extends AbstractHandler {
 		boolean firstInvocation = determineFirstInvocation(doc, selection);
 		
 		if (firstInvocation) {
+			// Cleanup ----------
+			if (this.lastReferredActiveDocument != null) {
+				this.lastReferredActiveDocument.removePrenotifiedDocumentListener(this.lastCompoundCancelListener);
+			}
+			
+			if (this.lastSelectionProvider != null) {
+				this.lastSelectionProvider.removeSelectionChangedListener(this.lastCompoundCancelListener);
+			}
+			// ------------------
+			
 			List<RuntimeDC> dcs = HandlerUtilities.getOperationsInSelectedRegion();
 			if (dcs == null) {
 				return null;
 			}
 			
 			this.lastReferredActiveDocument = doc;
+			this.lastSelectionProvider = editorPart.getEditorSite().getSelectionProvider();
+			this.lastCompoundCancelListener = new CompoundCancelListener();
+			
+			this.lastReferredActiveDocument.addPrenotifiedDocumentListener(this.lastCompoundCancelListener);
+			this.lastSelectionProvider.addSelectionChangedListener(this.lastCompoundCancelListener);
+			
 			this.originalSelection = selection;
 			
-			StepwiseUndoState.clearStepCount();
+			StepwiseUndoState.clear();
 			
 			// Calculate the snapshots
 			this.snapshotsAfterEachStep = new ArrayList<String>();
@@ -90,6 +115,14 @@ public class StepwiseUndoInRegionHandler extends AbstractHandler {
 				SelectiveUndoEngine.getInstance().doSelectiveUndo(subDCs, copy);
 				
 				this.snapshotsAfterEachStep.add(copy.get());
+			}
+			
+			// Begin compound change.
+			ISourceViewer sourceViewer = Utilities.getSourceViewer(editorPart);
+			if (sourceViewer instanceof ITextViewerExtension6) {
+				IUndoManager mgr = ((ITextViewerExtension6) sourceViewer).getUndoManager();
+				mgr.beginCompoundChange();
+				StepwiseUndoState.setUndoManager(mgr);
 			}
 		}
 		
@@ -126,6 +159,8 @@ public class StepwiseUndoInRegionHandler extends AbstractHandler {
 			int curPrefix = dmp.diff_commonPrefix(doc.get(), newSnapshot);
 			int curSuffix = dmp.diff_commonSuffix(doc.get(), newSnapshot);
 			
+			this.lastCompoundCancelListener.disable();
+			
 			ext4.replace(
 					curPrefix,
 					doc.getLength() - curPrefix - curSuffix,
@@ -148,7 +183,9 @@ public class StepwiseUndoInRegionHandler extends AbstractHandler {
 			endOffset = newSnapshot.length() - suffix;
 		}
 		
-		editorPart.getEditorSite().getSelectionProvider().setSelection(new TextSelection(doc, startOffset, endOffset - startOffset));
+		this.lastSelectionProvider.setSelection(new TextSelection(doc, startOffset, endOffset - startOffset));
+		this.lastCompoundCancelListener.enable();
+		
 		this.lastKnownSelection = new TextSelection(doc, startOffset, endOffset - startOffset);
 		
 		// Also, store the last known snapshot / modification stamp.
@@ -237,9 +274,14 @@ public class StepwiseUndoInRegionHandler extends AbstractHandler {
 	public static class StepwiseUndoState {
 		
 		private static int stepCount = 0;
+		private static IUndoManager undoManager = null;
 		
-		public static void clearStepCount() {
+		public static void clear() {
 			stepCount = 0;
+			if (undoManager != null) {
+				undoManager.endCompoundChange();
+				undoManager = null;
+			}
 		}
 		
 		public static int getStepCount() {
@@ -248,6 +290,46 @@ public class StepwiseUndoInRegionHandler extends AbstractHandler {
 		
 		public static void incrementStepCount() {
 			++stepCount;
+		}
+		
+		public static void setUndoManager(IUndoManager mgr) {
+			undoManager = mgr;
+		}
+		
+	}
+	
+	private static class CompoundCancelListener implements IDocumentListener, ISelectionChangedListener {
+		
+		private boolean enabled = false;
+		
+		@Override
+		public void documentAboutToBeChanged(DocumentEvent event) {
+			// Do nothing.
+		}
+
+		@Override
+		public void documentChanged(DocumentEvent event) {
+			checkAndClear();
+		}
+
+		@Override
+		public void selectionChanged(SelectionChangedEvent event) {
+			checkAndClear();
+		}
+		
+		public void enable() {
+			this.enabled = true;
+		}
+		
+		public void disable() {
+			this.enabled = false;
+		}
+		
+		private void checkAndClear() {
+			if (this.enabled) {
+				StepwiseUndoState.clear();
+				disable();
+			}
 		}
 		
 	}
