@@ -563,6 +563,16 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 			EclipseCommand eclipseCommand = (EclipseCommand) command;
 			switch (eclipseCommand.getCommandID()) {
 				case "org.eclipse.ui.file.save":
+					
+				// Egit commands
+				case "org.eclipse.egit.ui.team.Commit":
+				case "org.eclipse.egit.ui.team.Pull":
+				case "org.eclipse.egit.ui.team.Fetch":
+				case "org.eclipse.egit.ui.team.Push":
+				case "org.eclipse.egit.ui.team.Merge":
+				case "org.eclipse.egit.ui.team.Reset":
+				case "org.eclipse.egit.ui.team.Rebase":
+				case "org.eclipse.egit.ui.CheckoutCommand":
 					return true;
 					
 				default:
