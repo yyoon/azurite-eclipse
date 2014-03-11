@@ -143,8 +143,16 @@ public class StepwiseUndoInRegionHandler extends AbstractHandler {
 		
 		diff_match_patch dmp = new diff_match_patch();
 		
-		final int prefix = dmp.diff_commonPrefix(originalSnapshot, newSnapshot);
-		final int suffix = dmp.diff_commonSuffix(originalSnapshot, newSnapshot);
+		int prefix = dmp.diff_commonPrefix(originalSnapshot, newSnapshot);
+		int suffix = dmp.diff_commonSuffix(originalSnapshot, newSnapshot);
+		
+		if (prefix + suffix > originalSnapshot.length()) {
+			suffix = originalSnapshot.length() - prefix;
+		}
+		
+		if (prefix + suffix > newSnapshot.length()) {
+			suffix = newSnapshot.length() - prefix;
+		}
 		
 		try {
 			long stamp = ext4.getModificationStamp();
@@ -159,6 +167,14 @@ public class StepwiseUndoInRegionHandler extends AbstractHandler {
 			int curPrefix = dmp.diff_commonPrefix(doc.get(), newSnapshot);
 			int curSuffix = dmp.diff_commonSuffix(doc.get(), newSnapshot);
 			
+			if (curPrefix + curSuffix > doc.getLength()) {
+				curSuffix = doc.getLength() - curPrefix;
+			}
+			
+			if (curPrefix + curSuffix > newSnapshot.length()) {
+				curSuffix = newSnapshot.length() - curPrefix;
+			}
+			
 			this.lastCompoundCancelListener.disable();
 			
 			ext4.replace(
@@ -167,6 +183,8 @@ public class StepwiseUndoInRegionHandler extends AbstractHandler {
 					newSnapshot.substring(curPrefix, newSnapshot.length() - curSuffix),
 					nextStamp);
 		} catch (BadLocationException e) {
+			e.printStackTrace();
+		} catch (StringIndexOutOfBoundsException e) {
 			e.printStackTrace();
 		}
 		

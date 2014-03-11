@@ -453,6 +453,10 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 			throw new IllegalArgumentException();
 		}
 		
+		// It's a little bit odd, but make sure that there's no pending document changes
+		// in the EventRecorder side
+		EventRecorder.getInstance().fireLastDocumentChangeFinalizedEvent();
+		
 		// Lazy-evaluation of the dynamic segments!
 		List<RuntimeDC> list = calculate ? calculateDynamicSegments(key) :
 			getRuntimeDocumentChanges(key);
