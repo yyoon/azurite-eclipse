@@ -159,7 +159,7 @@ eventDraw.colorFunc = function(d) {
 			return 'green';
 
 		case 'Annotation':
-			return 'blue';
+			return 'goldenrod';
 
 		case 'org.eclipse.ui.file.save':
 			return 'lightskyblue';
@@ -191,7 +191,7 @@ eventDraw.iconFunc = function(d) {
 			return 'images/event_icons/run_exc.gif';
 
 		case 'Annotation':
-			return 'images/event_icons/pin.png';
+			return 'images/event_icons/tag.png';
 
 		case 'org.eclipse.ui.file.save':
 			return 'images/event_icons/save_edit.gif';
