@@ -1435,7 +1435,8 @@ function initMouseDownHandler() {
 
 			// Filter only the icons.
 			d3.selectAll(list).filter('.event_icon').each(function(d) {
-				showMarkerAtTimestamp(d.dt);
+				// In this case, this should be notified to the Azurite plug-in.
+				showMarkerAtTimestamp(d.dt, true);
 			});
 		}
 
@@ -2683,20 +2684,24 @@ function showMarkerAtPixel(pixel, notify) {
 	}
 }
 
-function showMarkerAtTimestamp(absTimestamp) {
+function showMarkerAtTimestamp(absTimestamp, notify) {
 	if (absTimestamp !== undefined) {
 		global.markerTimestamp = absTimestamp;
 	}
 	
-	updateMarkerPosition();
+	updateMarkerPosition(notify);
 	svg.subMarker.style('display', '');
 }
 
-function updateMarkerPosition() {
+function updateMarkerPosition(notify) {
 	var t = global.markerTimestamp;
 	var tx = timestampToPixel(t);
 
-	showMarkerAtPixel(tx, false);
+	if (notify === undefined) {
+		notify = false;
+	}
+
+	showMarkerAtPixel(tx, notify);
 }
 
 function hideMarker() {
