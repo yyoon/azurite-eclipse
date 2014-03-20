@@ -44,6 +44,7 @@ public class SelectedCodeHandler extends AbstractHandler {
 		Object[][] input = {
 				{ null, "Select Corresponding Timeline Rectangles", "edu.cmu.scs.azurite.ui.commands.selectCorrespondingTimelineRectanglesCommand" },
 				{ "icons/undo_in_region.png", "Undo All Operations on the Selection", "edu.cmu.scs.azurite.ui.commands.undoInRegionCommand" },
+				{ null, "Stepwise Undo Operations on the Selection", "edu.cmu.scs.azurite.ui.commands.stepwiseUndoInRegionCommand" },
 				{ "icons/time_machine.png", "Launch Code History Diff View", "edu.cmu.scs.azurite.ui.commands.launchCodeHistoryDiff" },
 		};
 		
@@ -59,8 +60,7 @@ public class SelectedCodeHandler extends AbstractHandler {
 				IHandlerService handlerService = (IHandlerService) PlatformUI.getWorkbench().getService(IHandlerService.class);
 				try {
 					handlerService.executeCommand(commandId, null);
-				}
-				catch (Exception e) {
+				} catch (Exception e) {
 					e.printStackTrace();
 				}
 			}
@@ -73,10 +73,12 @@ public class SelectedCodeHandler extends AbstractHandler {
 
 		@Override
 		public void dispose() {
+			// Do nothing
 		}
 
 		@Override
 		public void inputChanged(Viewer viewer, Object oldInput, Object newInput) {
+			// Do nothing
 		}
 
 		@Override

@@ -159,7 +159,7 @@ public class PastHistoryManager implements DocumentChangeListener {
 		
 		LogReader reader = new LogReader();
 		for (File logFile : logFilesToRead) {
-			Events events = reader.readDocumentChanges(logFile.getAbsolutePath());
+			Events events = reader.readAll(logFile.getAbsolutePath());
 			if (events != null) {
 				tempEvents.add(events);
 			}
@@ -198,7 +198,9 @@ public class PastHistoryManager implements DocumentChangeListener {
 			command.setCommandIndex(command.getCommandIndex() + insertedCount.value);
 			copyEvents.addCommand(command);
 			
-			if (!(command instanceof BaseDocumentChangeEvent)) { continue; }
+			if (!(command instanceof BaseDocumentChangeEvent)) {
+				continue;
+			}
 			
 			if (command instanceof FileOpenCommand) {
 				final FileOpenCommand foc = (FileOpenCommand)command;
@@ -319,8 +321,7 @@ public class PastHistoryManager implements DocumentChangeListener {
 					}
 				}
 			}
-		}
-		finally {
+		} finally {
 			AbstractCommand.setIncrementCommandID(incrementCommandID);
 		}
 	}
@@ -330,7 +331,9 @@ public class PastHistoryManager implements DocumentChangeListener {
 			Map<FileKey, String> localFinalSnapshots) {
 		
 		for (FileKey key : localInitialSnapshots.keySet()) {
-			if (!mInitialSnapshots.containsKey(key)) { continue; }
+			if (!mInitialSnapshots.containsKey(key)) {
+				continue;
+			}
 			
 			String finalContent = localFinalSnapshots.get(key);
 			SnapshotElement elem = mInitialSnapshots.get(key);
@@ -338,7 +341,9 @@ public class PastHistoryManager implements DocumentChangeListener {
 			// If the final snapshot of this session differs from
 			// the initial snapshot that we know so far,
 			// compute the diffs and add fake operations.
-			if (elem.getSnapshot() == null || finalContent == null) { continue; }
+			if (elem.getSnapshot() == null || finalContent == null) {
+				continue;
+			}
 			
 			if (!elem.getSnapshot().equals(finalContent)) {
 				injectDiffDCs(key, finalContent, elem.getSnapshot(),
@@ -372,14 +377,22 @@ public class PastHistoryManager implements DocumentChangeListener {
 
 	@Override
 	public void documentChanged(BaseDocumentChangeEvent docChange) {
+		// Do nothing for this event
 	}
 
 	@Override
 	public void documentChangeFinalized(BaseDocumentChangeEvent docChange) {
+		// Do nothing for this event
 	}
 
 	@Override
 	public void documentChangeUpdated(BaseDocumentChangeEvent docChange) {
+		// Do nothing for this event
+	}
+
+	@Override
+	public void documentChangeAmended(BaseDocumentChangeEvent oldDocChange, BaseDocumentChangeEvent newDocChange) {
+		// Do nothing for this event
 	}
 	
 }

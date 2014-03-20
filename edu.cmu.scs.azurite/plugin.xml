@@ -10,13 +10,6 @@
       </category>
       <view
             category="edu.cmu.scs.azurite"
-            class="edu.cmu.scs.azurite.views.GraphViewPart"
-            icon="icons/azurite.gif"
-            id="edu.cmu.scs.azurite.views.GraphViewPart"
-            name="Graph View">
-      </view>
-      <view
-            category="edu.cmu.scs.azurite"
             class="edu.cmu.scs.azurite.views.TimelineViewPart"
             icon="icons/timeline_marker.png"
             id="edu.cmu.scs.azurite.views.TimelineViewPart"
@@ -55,6 +48,10 @@
                   style="push">
             </command>
             <command
+                  commandId="edu.cmu.scs.azurite.ui.commands.stepwiseUndoInRegionCommand"
+                  style="push">
+            </command>
+            <command
                   commandId="edu.cmu.scs.azurite.ui.commands.launchCodeHistoryDiff"
                   style="push">
             </command>
@@ -84,6 +81,10 @@
                </command>
                <command
                      commandId="edu.cmu.scs.azurite.ui.commands.undoInRegionCommand"
+                     style="push">
+               </command>
+               <command
+                     commandId="edu.cmu.scs.azurite.ui.commands.stepwiseUndoInRegionCommand"
                      style="push">
                </command>
                <command
@@ -427,6 +428,10 @@
                style="push">
          </command>
          <command
+               commandId="edu.cmu.scs.azurite.ui.commands.stepwiseUndoInRegionCommand"
+               style="push">
+         </command>
+         <command
                commandId="edu.cmu.scs.azurite.ui.commands.launchCodeHistoryDiff"
                style="push">
          </command>
@@ -466,6 +471,10 @@
       <command
             id="edu.cmu.scs.azurite.ui.commands.undoInRegionCommand"
             name="Undo All Operations on the Selection">
+      </command>
+      <command
+            id="edu.cmu.scs.azurite.ui.commands.stepwiseUndoInRegionCommand"
+            name="Stepwise Undo Operations on the Selection">
       </command>
       <command
             id="edu.cmu.scs.azurite.ui.commands.launchCodeHistoryDiff"
@@ -553,8 +562,8 @@
             id="edu.cmu.scs.azurite.ui.commands.undoAllFilesToThisPoint"
             name="Undo All Files to This Point">
          <commandParameter
-               id="edu.cmu.scs.azurite.ui.commands.undoAllFilesToThisPoint.annotationId"
-               name="ID of the Annotation"
+               id="edu.cmu.scs.azurite.ui.commands.undoAllFilesToThisPoint.absTimestamp"
+               name="Absolute timestamp of the base point"
                optional="false">
          </commandParameter>
       </command>
@@ -563,8 +572,8 @@
             id="edu.cmu.scs.azurite.ui.commands.undoCurrentFileToThisPoint"
             name="Undo Current File to This Point">
          <commandParameter
-               id="edu.cmu.scs.azurite.ui.commands.undoCurrentFileToThisPoint.annotationId"
-               name="ID of the Annotation"
+               id="edu.cmu.scs.azurite.ui.commands.undoCurrentFileToThisPoint.absTimestamp"
+               name="Absolute timestamp of the base point"
                optional="false">
          </commandParameter>
       </command>
@@ -575,6 +584,12 @@
             commandId="edu.cmu.scs.azurite.ui.commands.activateFirebugLiteCommand"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M1+M2+M3+F">
+      </key>
+      <key
+            commandId="edu.cmu.scs.azurite.ui.commands.stepwiseUndoInRegionCommand"
+            contextId="org.eclipse.ui.contexts.window"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="M1+M2+M3+Z">
       </key>
    </extension>
    <extension
@@ -668,6 +683,15 @@
          </enabledWhen>
       </handler>
       <handler
+            class="edu.cmu.scs.azurite.ui.handlers.StepwiseUndoInRegionHandler"
+            commandId="edu.cmu.scs.azurite.ui.commands.stepwiseUndoInRegionCommand">
+         <enabledWhen>
+            <reference
+                  definitionId="codeSelected">
+            </reference>
+         </enabledWhen>
+      </handler>
+      <handler
             class="edu.cmu.scs.azurite.ui.handlers.LaunchCodeHistoryDiffHandler"
             commandId="edu.cmu.scs.azurite.ui.commands.launchCodeHistoryDiff">
          <enabledWhen>
@@ -715,6 +739,24 @@
             class="edu.cmu.scs.azurite.ui.handlers.InteractiveSelectiveUndoHandler"
             commandId="edu.cmu.scs.azurite.ui.commands.interactiveSelectiveUndoCommand">
       </handler>
+      <handler
+            class="edu.cmu.scs.azurite.ui.handlers.ShowFilesInRangeHandler"
+            commandId="edu.cmu.scs.azurite.ui.commands.showFilesInRangeCommand">
+         <enabledWhen>
+            <reference
+                  definitionId="rangeSelected">
+            </reference>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="edu.cmu.scs.azurite.ui.handlers.OpenFilesInRangeHandler"
+            commandId="edu.cmu.scs.azurite.ui.commands.openFilesInRangeCommand">
+         <enabledWhen>
+            <reference
+                  definitionId="rangeSelected">
+            </reference>
+         </enabledWhen>
+      </handler>
    </extension>
    <extension
          point="org.eclipse.core.expressions.definitions">
@@ -754,6 +796,13 @@
                property="edu.cmu.scs.azurite.selection.multiRectsSelected">
          </test>
       </definition>
+      <definition
+            id="rangeSelected">
+         <test
+               forcePluginActivation="true"
+               property="edu.cmu.scs.azurite.selection.rangeSelected">
+         </test>
+      </definition>
    </extension>
    <extension
          point="org.eclipse.core.expressions.propertyTesters">
@@ -768,9 +817,140 @@
             class="edu.cmu.scs.azurite.expressions.TimelineSelectionPropertyTester"
             id="edu.cmu.scs.azurite.timelineSelectionPropertyTester"
             namespace="edu.cmu.scs.azurite.selection"
-            properties="rectSelected,singleRectSelected,multiRectsSelected"
+            properties="rectSelected,singleRectSelected,multiRectsSelected,rangeSelected"
             type="java.lang.Object">
       </propertyTester>
+   </extension>
+   <extension
+         id="edu.cmu.scs.azurite.baseMarker"
+         point="org.eclipse.core.resources.markers">
+      <super
+            type="org.eclipse.core.resources.textmarker">
+      </super>
+   </extension>
+   <extension
+         id="edu.cmu.scs.azurite.insertMarker"
+         point="org.eclipse.core.resources.markers">
+      <super
+            type="edu.cmu.scs.azurite.baseMarker">
+      </super>
+   </extension>
+   <extension
+         id="edu.cmu.scs.azurite.deleteMarker"
+         point="org.eclipse.core.resources.markers">
+      <super
+            type="edu.cmu.scs.azurite.baseMarker">
+      </super>
+   </extension>
+   <extension
+         id="edu.cmu.scs.azurite.replaceMarker"
+         point="org.eclipse.core.resources.markers">
+      <super
+            type="edu.cmu.scs.azurite.baseMarker">
+      </super>
+   </extension>
+   <extension
+         point="org.eclipse.ui.editors.annotationTypes">
+      <type
+            markerType="edu.cmu.scs.azurite.baseMarker"
+            name="edu.cmu.scs.azurite.baseType">
+      </type>
+      <type
+            markerType="edu.cmu.scs.azurite.insertMarker"
+            name="edu.cmu.scs.azurite.insertType"
+            super="edu.cmu.scs.azurite.baseType">
+      </type>
+      <type
+            markerType="edu.cmu.scs.azurite.deleteMarker"
+            name="edu.cmu.scs.azurite.deleteType"
+            super="edu.cmu.scs.azurite.baseType">
+      </type>
+      <type
+            markerType="edu.cmu.scs.azurite.replaceMarker"
+            name="edu.cmu.scs.azurite.replaceType"
+            super="edu.cmu.scs.azurite.baseType">
+      </type>
+   </extension>
+   <extension
+         point="org.eclipse.ui.editors.markerAnnotationSpecification">
+      <specification
+            annotationType="edu.cmu.scs.azurite.insertType"
+            colorPreferenceKey="edu.cmu.scs.azurite.insert.color"
+            colorPreferenceValue="0,128,0"
+            contributesToHeader="false"
+            highlightPreferenceKey="edu.cmu.scs.azurite.insert.highlight"
+            highlightPreferenceValue="false"
+            icon="icons/bullet_add.png"
+            includeOnPreferencePage="true"
+            isGoToNextNavigationTarget="true"
+            isGoToNextNavigationTargetKey="edu.cmu.scs.azurite.insert.isGoToNextNavigationTarget"
+            isGoToPreviousNavigationTarget="false"
+            isGoToPreviousNavigationTargetKey="edu.cmu.scs.azurite.insert.isGoToPreviousNavigationTarget"
+            label="Code Insertion"
+            overviewRulerPreferenceKey="edu.cmu.scs.azurite.insert.overviewRuler"
+            overviewRulerPreferenceValue="true"
+            presentationLayer="0"
+            showInNextPrevDropdownToolbarAction="true"
+            showInNextPrevDropdownToolbarActionKey="edu.cmu.scs.azurite.insert.showInNextPrevDropdownToolbarAction"
+            textPreferenceKey="edu.cmu.scs.azurite.insert.text"
+            textPreferenceValue="true"
+            textStylePreferenceKey="edu.cmu.scs.azurite.insert.textStyle"
+            textStylePreferenceValue="BOX"
+            verticalRulerPreferenceKey="edu.cmu.scs.azurite.insert.verticalRuler"
+            verticalRulerPreferenceValue="true">
+      </specification>
+      <specification
+            annotationType="edu.cmu.scs.azurite.deleteType"
+            colorPreferenceKey="edu.cmu.scs.azurite.delete.color"
+            colorPreferenceValue="255,0,0"
+            contributesToHeader="false"
+            highlightPreferenceKey="edu.cmu.scs.azurite.delete.highlight"
+            highlightPreferenceValue="false"
+            icon="icons/bullet_delete.png"
+            includeOnPreferencePage="true"
+            isGoToNextNavigationTarget="true"
+            isGoToNextNavigationTargetKey="edu.cmu.scs.azurite.delete.isGoToNextNavigationTarget"
+            isGoToPreviousNavigationTarget="false"
+            isGoToPreviousNavigationTargetKey="edu.cmu.scs.azurite.delete.isGoToPreviousNavigationTarget"
+            label="Code Deletion"
+            overviewRulerPreferenceKey="edu.cmu.scs.azurite.delete.overviewRuler"
+            overviewRulerPreferenceValue="true"
+            presentationLayer="0"
+            showInNextPrevDropdownToolbarAction="true"
+            showInNextPrevDropdownToolbarActionKey="edu.cmu.scs.azurite.delete.showInNextPrevDropdownToolbarAction"
+            textPreferenceKey="edu.cmu.scs.azurite.delete.text"
+            textPreferenceValue="true"
+            textStylePreferenceKey="edu.cmu.scs.azurite.delete.textStyle"
+            textStylePreferenceValue="BOX"
+            verticalRulerPreferenceKey="edu.cmu.scs.azurite.delete.verticalRuler"
+            verticalRulerPreferenceValue="true">
+      </specification>
+      <specification
+            annotationType="edu.cmu.scs.azurite.replaceType"
+            colorPreferenceKey="edu.cmu.scs.azurite.replace.color"
+            colorPreferenceValue="0,0,255"
+            contributesToHeader="false"
+            highlightPreferenceKey="edu.cmu.scs.azurite.replace.highlight"
+            highlightPreferenceValue="false"
+            icon="icons/bullet_blue.png"
+            includeOnPreferencePage="true"
+            isGoToNextNavigationTarget="true"
+            isGoToNextNavigationTargetKey="edu.cmu.scs.azurite.replace.isGoToNextNavigationTarget"
+            isGoToPreviousNavigationTarget="false"
+            isGoToPreviousNavigationTargetKey="edu.cmu.scs.azurite.replace.isGoToPreviousNavigationTarget"
+            label="Code Replacement"
+            overviewRulerPreferenceKey="edu.cmu.scs.azurite.replace.overviewRuler"
+            overviewRulerPreferenceValue="true"
+            presentationLayer="0"
+            showInNextPrevDropdownToolbarAction="true"
+            showInNextPrevDropdownToolbarActionKey="edu.cmu.scs.azurite.replace.showInNextPrevDropdownToolbarAction"
+            textPreferenceKey="edu.cmu.scs.azurite.replace.text"
+            textPreferenceValue="true"
+            textStylePreferenceKey="edu.cmu.scs.azurite.replace.textStyle"
+            textStylePreferenceValue="BOX"
+            verticalRulerPreferenceKey="edu.cmu.scs.azurite.replace.verticalRuler"
+            verticalRulerPreferenceValue="true">
+      </specification>
    </extension>
 
 </plugin>

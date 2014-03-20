@@ -2,10 +2,10 @@
 /*global d3, azurite */
 
 /* Things to be called from Azurite */
-/*exported setStartTimestamp, updateOperation, getRightmostTimestamp, showContextMenu, addSelectionsByIds, removeSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarker, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile, addAnnotation */
+/*exported updateOperation, getRightmostTimestamp, addSelectionsByIds, removeSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarkerAtTimestamp, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile, addEvent, activateFirebugLite, showAllFilesEditedInRange, openAllFilesEditedInRange */
 
 /* Things to be called manually when debugging */
-/*exported test */
+/*exported test, testMarker, showEvents */
 
 /**
  * Things should be executed at the beginning.
@@ -15,7 +15,9 @@
 
 // Disable selection.
 document.unselectable = "on";
-document.onselectstart = function() { return false; };
+document.onselectstart = function() {
+    return false;
+};
 
 /**
  * Constants. (Always use UPPER_CASE.)
@@ -27,13 +29,19 @@ var TYPE_INSERT = 0;
 var TYPE_DELETE = 1;
 var TYPE_REPLACE = 2;
 
-var TIMETICK_INTERVAL = 100;
-
 var RECT_RADIUS = 1;
 var MIN_WIDTH = 6;
+var MIN_HEIGHT = MIN_WIDTH;
 var ROW_HEIGHT = 30;
-var TICKS_HEIGHT = 30;
 var DEFAULT_RATIO = 100;
+
+var TICKMARK_SIZE = 6;
+var TICKMARK_WIDTH = 1;
+var TICKMARK_COLOR = 'white';
+var TICK_TEXT_OFFSET = 2;
+var TICK_TEXT_COLOR = 'white';
+var TICKS_MIN_INTERVAL = 200;
+var TICKS_BACKGROUND = 'dimgray';
 
 var FILE_NAME_OFFSET_X = 5;
 var FILE_NAME_OFFSET_Y = 5;
@@ -47,19 +55,36 @@ var INDICATOR_WIDTH = 2;
 var SCROLLBAR_WIDTH = 10;
 var SCROLLBAR_DIST_THRESHOLD = 50;
 
+var MARKER_WIDTH = 1;
 var MARKER_SIZE = 10;
-var MARKER_COLOR = 'red';
+var MARKER_COLOR = 'orange';
 
-var ANNOTATION_WIDTH = 2;
-var ANNOTATION_COLOR = 'orange';
-var ANNOTATION_SIZE = 10;
+var RANGE_BOX_FILL_OPACITY = 0.3;
+var RANGE_BOX_COLOR = 'royalblue';
+
+var RANGE_START_LINE_COLOR = 'white';
+var RANGE_START_LINE_WIDTH = MARKER_WIDTH;
+var RANGE_START_LINE_DASH_ARRAY = '5,5';
+
+var EVENT_WIDTH = 1;
+var EVENT_ICON_WIDTH = 16;
+var EVENT_ICON_HEIGHT = 16;
+
+
+// When changing one of the following heights, be sure to also change the corresponding css.
+// (e.g., vscroll_wrapper's padding values)
+// ----------------------------------------
+var TICKS_HEIGHT = 30;
+var EVENTS_HEIGHT = 20;
 
 var CHART_MARGINS = {
 	left : 10,
 	top : 10,
 	right : 10,
-	bottom : 10
+	bottom : 0
 };
+// ----------------------------------------
+
 
 var MIN_SCROLL_THUMB_SIZE = 30;
 
@@ -70,13 +95,20 @@ rectDraw.xFunc = function(d) {
 	return (d.t1 - d.session.startAbsTimestamp + d.sid) / DEFAULT_RATIO;
 };
 rectDraw.yFunc = function(d) {
-	return Math.min(ROW_HEIGHT * d.y1 / 100, ROW_HEIGHT - MIN_WIDTH / global.scaleY);
+	if (ROW_HEIGHT * (d.y2 - d.y1) / 100 <= MIN_HEIGHT) {
+		return (ROW_HEIGHT - MIN_HEIGHT) * d.y1 / (100 - (d.y2 - d.y1));
+	} else {
+		return ROW_HEIGHT * d.y1 / 100;
+	}
 };
 rectDraw.wFunc = function(d) {
 	return Math.max(MIN_WIDTH / global.scaleX, (d.t2 - d.t1) / DEFAULT_RATIO);
 };
 rectDraw.hFunc = function(d) {
-	return Math.max(MIN_WIDTH / global.scaleY, ROW_HEIGHT * (d.y2 - d.y1) / 100);
+	return Math.max(MIN_HEIGHT / global.scaleY, ROW_HEIGHT * (d.y2 - d.y1) / 100);
+};
+rectDraw.fillFunc = function(d) {
+	return d.color();
 };
 
 var fileDraw = {};
@@ -111,13 +143,97 @@ indicatorDraw.wFunc = function() {
 	return INDICATOR_WIDTH / global.scaleX;
 };
 
-var annotationDraw = {};
-annotationDraw.xFunc = function(d) {
-	return timestampToPixel(d.sid + d.t);
+var eventDraw = {};
+eventDraw.xFunc = function(d) {
+	return timestampToPixel(d.dt);
 };
-annotationDraw.dFunc = function(d) {
-	var x = annotationDraw.xFunc(d);
-	return 'M ' + x + ' 0 L ' + (x - (ANNOTATION_SIZE / 2)) + ' ' + (-ANNOTATION_SIZE / 2) + ' ' + (x - (ANNOTATION_SIZE / 2)) + ' ' + (-ANNOTATION_SIZE) + ' ' + (x + (ANNOTATION_SIZE / 2)) + ' ' + (-ANNOTATION_SIZE) + ' ' + (x + (ANNOTATION_SIZE / 2)) + ' ' + (-ANNOTATION_SIZE / 2);
+eventDraw.y1Func = function() {
+	return -(getSvgHeight() - TICKS_HEIGHT - EVENTS_HEIGHT);
+};
+eventDraw.colorFunc = function(d) {
+	switch (d.type) {
+		case 'JUnitCommand':
+			return 'green';
+
+		case 'RunCommand':
+			return 'green';
+
+		case 'Annotation':
+			return 'goldenrod';
+
+		case 'org.eclipse.ui.file.save':
+			return 'lightskyblue';
+
+		case 'org.eclipse.egit.ui.team.Commit':
+		case 'org.eclipse.egit.ui.team.Pull':
+		case 'org.eclipse.egit.ui.team.Fetch':
+		case 'org.eclipse.egit.ui.team.Push':
+		case 'org.eclipse.egit.ui.team.Merge':
+		case 'org.eclipse.egit.ui.team.Reset':
+		case 'org.eclipse.egit.ui.team.Rebase':
+		case 'org.eclipse.egit.ui.CheckoutCommand':
+			return 'goldenrod';
+
+		default:
+			return 'gold';
+	}
+};
+eventDraw.iconFunc = function(d) {
+	switch (d.type) {
+		case 'JUnitCommand':
+		case 'JUnitCommand(true)':
+			return 'images/event_icons/junitsucc.gif';
+
+		case 'JUnitCommand(false)':
+			return 'images/event_icons/juniterr.gif';
+
+		case 'RunCommand':
+			return 'images/event_icons/run_exc.gif';
+
+		case 'Annotation':
+			return 'images/event_icons/tag.png';
+
+		case 'org.eclipse.ui.file.save':
+			return 'images/event_icons/save_edit.gif';
+
+		case 'org.eclipse.egit.ui.team.Commit':
+			return 'images/event_icons/commit.gif';
+
+		case 'org.eclipse.egit.ui.team.Pull':
+			return 'images/event_icons/pull.gif';
+
+		case 'org.eclipse.egit.ui.team.Fetch':
+			return 'images/event_icons/fetch.gif';
+
+		case 'org.eclipse.egit.ui.team.Push':
+			return 'images/event_icons/push.gif';
+
+		case 'org.eclipse.egit.ui.team.Merge':
+			return 'images/event_icons/merge.gif';
+
+		case 'org.eclipse.egit.ui.team.Reset':
+			return 'images/event_icons/reset.gif';
+
+		case 'org.eclipse.egit.ui.team.Rebase':
+			return 'images/event_icons/rebase.gif';
+
+		case 'org.eclipse.egit.ui.CheckoutCommand':
+			return 'images/event_icons/checkout.gif';
+
+		default:
+			return 'images/event_icons/error.png';
+	}
+};
+eventDraw.iconXFunc = function(d) {
+	return timestampToPixel(d.dt) - EVENT_ICON_WIDTH / 2;
+};
+
+var timeTickDraw = {};
+timeTickDraw.xFunc = function(d) {
+	return timestampToPixel(d);
+};
+timeTickDraw.textXFunc = function(d) {
+	return timestampToPixel(d) + TICK_TEXT_OFFSET;
 };
 
 /**
@@ -126,20 +242,52 @@ annotationDraw.dFunc = function(d) {
 var global = {};
 
 global.operationCompareFunc = function (lhs, rhs) {
-	if (lhs.__data__.t1 < rhs.__data__.t1) { return -1; }
-	if (lhs.__data__.t1 > rhs.__data__.t1) { return 1; }
-	if (lhs.__data__.id < rhs.__data__.id) { return -1; }
-	if (lhs.__data__.id > rhs.__data__.id) { return 1; }
+	if (lhs.__data__.t1 < rhs.__data__.t1) {
+		return -1;
+	}
+	if (lhs.__data__.t1 > rhs.__data__.t1) {
+		return 1;
+	}
+	if (lhs.__data__.id < rhs.__data__.id) {
+		return -1;
+	}
+	if (lhs.__data__.id > rhs.__data__.id) {
+		return 1;
+	}
 	return 0;
 };
 
 global.oidCompareFunc = function (lhs, rhs) {
-	if (lhs.sid < rhs.sid) { return -1; }
-	if (lhs.sid > rhs.sid) { return 1; }
-	if (lhs.id < rhs.id) { return -1; }
-	if (lhs.id > rhs.id) { return 1; }
+	if (lhs.sid < rhs.sid) {
+		return -1;
+	}
+	if (lhs.sid > rhs.sid) {
+		return 1;
+	}
+	if (lhs.id < rhs.id) {
+		return -1;
+	}
+	if (lhs.id > rhs.id) {
+		return 1;
+	}
 	return 0;
 };
+
+global.rectDistCompareFunc = function (rect) {
+	var bounds = rect.getBBox();
+	if (bounds.x <= global.targetDist && global.targetDist <= bounds.x + bounds.width) {
+		return 0;
+	}
+	if (global.targetDist < bounds.x) {
+		return -1;
+	}
+	return 1;
+};
+
+global.filterVisibleFunc = function (d) {
+	return d.isVisible();
+};
+
 
 // variables to remember the last window size
 global.lastWindowWidth = null;
@@ -149,8 +297,17 @@ global.lastWindowHeight = null;
 global.files = [];
 global.fileStack = [];
 global.sessions = [];
-global.selected = [];
-global.annotations = [];
+global.selectedRects = [];
+
+// should either be null (no selection) or [startPixel, endPixel)
+global.selectedPixelRange = null;
+// should either be null (no selection) or [startAbsTimestamp, endAbsTimestamp)
+global.selectedTimestampRange = null;
+
+global.events = [];
+
+global.ticks = [];
+global.dates = [];
 
 global.getVisibleFiles = function () {
 	return global.files.filter(function (e, i, a) {
@@ -210,7 +367,14 @@ global.vscrollArea = {
 	bottom: 0
 };
 
-global.annotationArea = {
+global.eventArea = {
+	left: 0,
+	top: 0,
+	right: 0,
+	bottom: 0
+};
+
+global.timeTickArea = {
 	left: 0,
 	top: 0,
 	right: 0,
@@ -222,7 +386,9 @@ global.draggingVScroll = false;
 global.dragStartScrollPos = null;
 
 global.draggingMarker = false;
+global.draggingMarkerInTimeTickArea = false;
 global.dragStartMarkerPos = null;
+global.draggingMarkerShift = false;
 global.diffWhileDraggingMarker = 0;
 
 global.markerTimestamp = 0;
@@ -233,11 +399,20 @@ global.profile = false;
 
 // context menu
 var cmenu = {};
-cmenu.isContextMenuVisible = false;
 cmenu.isRightButtonDown = false;
 cmenu.mousePos = [];
 cmenu.typeName = '';
+
 global.isCtrlDown = false;
+global.isMac = navigator.appVersion.indexOf("Mac") !== -1;
+
+// time scale (initialize with a default scale)
+global.timeScale = d3.time.scale()
+	.domain([new Date(0), new Date()])
+	.range([0, 0]);
+global.domainArray = [];
+global.rangeArray = [];
+global.timeScale.clamp(true);
 
 /**
  * SVG Setup.
@@ -258,13 +433,26 @@ function setupSVG() {
 
 	svg.subRects = svg.subRectsWrap.append('g')
 		.attr('id', 'sub_rects');
-	
-	svg.subAnnotationWrap = svg.main.append('g')
-		.attr('id', 'sub_annotation_wrap')
-		.attr('clip-path', 'url(#clipMarkerWrap)');
-	
-	svg.subAnnotations = svg.subAnnotationWrap.append('g')
-		.attr('id', 'sub_annotations');
+
+	// The order of ticks / events / markers are important!
+	// The marker part should appear later than the ticks / events, so that the marker is fully shown
+	svg.subTicksWrap = svg.main.append('g')
+		.attr('id', 'sub_ticks_wrap')
+		.attr('clip-path', 'url(#clipTicksWrap)');
+	svg.subTicksBackground = svg.subTicksWrap.append('rect');
+	svg.subTicksBackground
+		.attr('id', 'ticks_background')
+		.attr('fill', TICKS_BACKGROUND);
+
+	svg.subTicks = svg.subTicksWrap.append('g')
+		.attr('id', 'sub_ticks');
+
+	svg.subEventsWrap = svg.main.append('g')
+		.attr('id', 'sub_events_wrap')
+		.attr('clip-path', 'url(#clipEventsWrap)');
+
+	svg.subEvents = svg.subEventsWrap.append('g')
+		.attr('id', 'sub_events');
 	
 	svg.subMarkerWrap = svg.main.append('g')
 		.attr('id', 'sub_marker_wrap')
@@ -272,7 +460,20 @@ function setupSVG() {
 	
 	svg.subMarkers = svg.subMarkerWrap.append('g')
 		.attr('id', 'sub_markers');
-	
+
+	svg.subRangeBox = svg.subMarkers.append('rect')
+		.attr('id', 'range_selection_box')
+		.attr('fill', RANGE_BOX_COLOR)
+		.attr('fill-opacity', RANGE_BOX_FILL_OPACITY)
+		.style('display', 'none');
+
+	svg.subRangeStartLine = svg.subMarkers.append('line')
+		.attr('id', 'range_start_line')
+		.attr('stroke-width', RANGE_START_LINE_WIDTH)
+		.attr('stroke-dasharray', RANGE_START_LINE_DASH_ARRAY)
+		.attr('stroke', RANGE_START_LINE_COLOR)
+		.style('display', 'none');
+
 	svg.subMarker = svg.subMarkers.append('g')
 		.attr('id', 'sub_marker')
 		.style('display', 'none');	// hidden initially.
@@ -281,21 +482,28 @@ function setupSVG() {
 		.attr('id', 'marker_line')
 		.attr('class', 'marker')
 		.attr('y1', -MARKER_SIZE / 2)
-		.attr('stroke-width', 2)
+		.attr('stroke-width', MARKER_WIDTH)
 		.attr('stroke', MARKER_COLOR);
 	svg.subMarker.append('path')
 		.attr('id', 'marker_upper_triangle')
 		.attr('class', 'marker')
-		.attr('d', 'M 0 0 L ' + (-MARKER_SIZE) + ' ' + (-MARKER_SIZE) + ' ' + MARKER_SIZE + ' ' + (-MARKER_SIZE))
+		.attr('d', 'M 0 0 L ' + (-MARKER_SIZE / 2) + ' ' + (-MARKER_SIZE) + ' ' + (MARKER_SIZE / 2) + ' ' + (-MARKER_SIZE))
 		.attr('fill', MARKER_COLOR);
-	svg.subMarker.append('path')
+/*	svg.subMarker.append('path')
 		.attr('id', 'marker_lower_triangle')
 		.attr('class', 'marker')
-		.attr('d', 'M 0 0 L ' + (-MARKER_SIZE) + ' ' + MARKER_SIZE + ' ' + MARKER_SIZE + ' ' + MARKER_SIZE)
-		.attr('fill', MARKER_COLOR);
-
-	svg.subTicks = svg.main.append('g')
-		.attr('id', 'sub_ticks');
+		.attr('d', 'M 0 0 L ' + (-MARKER_SIZE / 2) + ' ' + MARKER_SIZE + ' ' + (MARKER_SIZE / 2) + ' ' + MARKER_SIZE)
+		.attr('fill', MARKER_COLOR);*/
+	svg.subMarkerText = svg.subMarker.append('text');
+	svg.subMarkerText
+		.attr('id', 'marker_time_text')
+		.attr('class', 'marker')
+		.attr('x', MARKER_SIZE)
+		.attr('y', -MARKER_SIZE / 2)
+		.attr('alignment-baseline', 'central')
+		.attr('fill', TICK_TEXT_COLOR)
+		.attr('font-size', MARKER_SIZE + 'px')
+		.text('This is a test! gq');
 
 	svg.main.append('rect')
 		.attr('class', 'selection_box')
@@ -312,6 +520,12 @@ function setupSVG() {
 	svg.clipMarkerWrap = svg.main.append('clipPath')
 		.attr('id', 'clipMarkerWrap').append('rect');
 
+	svg.clipTicksWrap = svg.main.append('clipPath')
+		.attr('id', 'clipTicksWrap').append('rect');
+
+	svg.clipEventsWrap = svg.main.append('clipPath')
+		.attr('id', 'clipEventsWrap').append('rect');
+
 	recalculateClipPaths();
 }
 
@@ -323,7 +537,7 @@ function recalculateClipPaths() {
 		.attr('x', '-1')
 		.attr('y', '-1')
 		.attr('width', (svgWidth * FILES_PORTION + 2) + 'px')
-		.attr('height', (svgHeight - 20 + 2) + 'px');
+		.attr('height', (svgHeight - TICKS_HEIGHT - EVENTS_HEIGHT + 2) + 'px');
 
 	svg.subFiles
 		.attr('transform', 'translate(' + CHART_MARGINS.left + ' ' + CHART_MARGINS.top + ')');
@@ -334,24 +548,41 @@ function recalculateClipPaths() {
 	svg.clipRectsWrap
 		.attr('y', '-1')
 		.attr('width', (svgWidth * (1.0 - FILES_PORTION)) + 'px')
-		.attr('height', (svgHeight - TICKS_HEIGHT + 2) + 'px');
-	
-	svg.subAnnotationWrap
-		.attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' ' + CHART_MARGINS.top + ')');
-	svg.subAnnotations.select('.annotation_line').attr('y2', svgHeight - TICKS_HEIGHT + ANNOTATION_SIZE / 2);
+		.attr('height', (svgHeight - TICKS_HEIGHT - EVENTS_HEIGHT + 2) + 'px');
 	
 	svg.subMarkerWrap
 		.attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' ' + CHART_MARGINS.top + ')');
-	svg.subMarker.select('#marker_line').attr('y2', svgHeight - TICKS_HEIGHT + MARKER_SIZE / 2);
+	svg.subMarker.select('#marker_line').attr('y2', svgHeight);
 	svg.subMarker.select('#marker_lower_triangle').attr('transform', 'translate(0, ' + (svgHeight - TICKS_HEIGHT) + ')');
+
+	svg.subRangeBox.attr('height', svgHeight);
+	svg.subRangeStartLine.attr('y2', svgHeight);
 	
 	svg.clipMarkerWrap
 		.attr('y', -MARKER_SIZE)
 		.attr('width', (svgWidth * (1.0 - FILES_PORTION)))
-		.attr('height', (svgHeight - TICKS_HEIGHT + 2 * MARKER_SIZE));
+		.attr('height', (svgHeight + 2 * MARKER_SIZE));
 
-	svg.subTicks
+	svg.subTicksWrap
 		.attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' ' + (CHART_MARGINS.top + svgHeight - TICKS_HEIGHT) + ')');
+
+	svg.clipTicksWrap
+		.attr('y', -TICKMARK_SIZE / 2)
+		.attr('width', (svgWidth * (1.0 - FILES_PORTION)))
+		.attr('height', TICKS_HEIGHT + TICKMARK_SIZE);
+	svg.subTicksBackground
+		.attr('y', 0)
+		.attr('width', (svgWidth * (1.0 - FILES_PORTION)))
+		.attr('height', TICKS_HEIGHT);
+
+	svg.subEventsWrap
+		.attr('transform', 'translate(' + (CHART_MARGINS.left + svgWidth * FILES_PORTION) + ' ' + (CHART_MARGINS.top + svgHeight - TICKS_HEIGHT - EVENTS_HEIGHT) + ')');
+	svg.subEvents.selectAll('.event_line').attr('y1', eventDraw.y1Func);
+
+	svg.clipEventsWrap
+		.attr('y', -(svgHeight - TICKS_HEIGHT - EVENTS_HEIGHT))
+		.attr('width', (svgWidth * (1.0 - FILES_PORTION)))
+		.attr('height', svgHeight - TICKS_HEIGHT);
 }
 
 /**
@@ -437,19 +668,19 @@ function EditOperation(sid, id, t1, t2, y1, y2, type, fileGroup) {
 	this.sid = sid;
 	this.id = id;
 	this.t1 = t1;
-	this.t2 = (t2 === null ? t1 : t2);
+	this.t2 = (t2 === null || t1 === t2 ? t1 + 1 : t2);
 	this.y1 = y1;
 	this.y2 = y2;
 	this.type = type;
-	this.color = null;
-
-	if (type === TYPE_INSERT) {
-		this.color = "green";
-	} else if (type === TYPE_DELETE) {
-		this.color = "red";
-	} else if (type === TYPE_REPLACE) {
-		this.color = "blue";
-	}
+	this.color = function() {
+		if (this.type === TYPE_INSERT) {
+			return "green";
+		} else if (this.type === TYPE_DELETE) {
+			return "red";
+		} else if (this.type === TYPE_REPLACE) {
+			return "blue";
+		}
+	};
 	
 	this.fileGroup = fileGroup;
 	this.session = fileGroup.session;
@@ -487,13 +718,15 @@ function OperationId(sid, id) {
 }
 
 /**
- * Annotation object for user annotation.
+ * Event object for generic events displayed in the timeline.
  */
-function Annotation(sid, id, t, comment) {
+function Event(sid, id, t, dt, type, desc) {
 	this.sid = sid;
 	this.id = id;
 	this.t = t;
-	this.comment = comment;
+	this.dt = dt;
+	this.type = type;
+	this.desc = desc;
 }
 
 /**
@@ -526,14 +759,6 @@ function updateSeparatingLines() {
 		.attr('y1', lineDraw.yFunc)
 		.attr('x2', lineDraw.x2Func)
 		.attr('y2', lineDraw.yFunc);
-}
-
-/**
- * Called by Azurite.
- * Sets the start timestamp.
- */
-function setStartTimestamp(timestamp, adjustMaxTimestamp, preservePosition) {
-	// Do nothing.
 }
 
 /**
@@ -593,23 +818,30 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current
 	fileGroup.operations.push(newOp);
 	global.lastOperation = newOp;
 	
-	session.startAbsTimestamp = Math.min(session.startAbsTimestamp, sid + t1);
-	session.endAbsTimestamp = Math.max(session.endAbsTimestamp, sid + t2);
+	session.startAbsTimestamp = Math.min(session.startAbsTimestamp, sid + newOp.t1);
+	session.endAbsTimestamp = Math.max(session.endAbsTimestamp, sid + newOp.t2);
 
 	var rectToAppend = fileGroup.g.append('rect');
 	rectToAppend.datum(newOp);
 	rectToAppend
-		.attr('id', function(d) { return d.sid + '_' + d.id; })
+		.attr('id', function(d) {
+			return d.sid + '_' + d.id;
+		})
 		.attr('class', 'op_rect')
 		.attr('y', rectDraw.yFunc)
 		.attr('width', rectDraw.wFunc)
 		.attr('height', rectDraw.hFunc)
 		.attr('rx', RECT_RADIUS)
 		.attr('ry', RECT_RADIUS)
-		.attr('fill', function(d) { return d.color; })
+		.attr('fill', rectDraw.fillFunc)
 		.attr('vector-effect', 'non-scaling-stroke');
 	
 	if (autolayout === true) {
+		var sessionTx = session.tx;
+		if (sessionTx === undefined) {
+			sessionTx = 0;
+		}
+
 		if (global.layout === LayoutEnum.COMPACT) {
 			// Find the last visible rect in this session.
 			var rectsInSession = session.g.selectAll('rect.op_rect').filter(function (d) {
@@ -624,9 +856,41 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current
 			}
 			
 			rectToAppend.attr('x', x);
+
+			global.domainArray.push(new Date(sid + newOp.t1));
+			global.domainArray.push(new Date(sid + newOp.t2));
+			global.rangeArray.push(sessionTx + x);
+			global.rangeArray.push(sessionTx + x + rectDraw.wFunc(newOp));
 		}
 		else if (global.layout === LayoutEnum.REALTIME) {
 			rectToAppend.attr('x', rectDraw.xFunc);
+
+			// Assuming this session is the last one...
+			if (global.domainArray.length === 0) {
+				global.domainArray.push(new Date(session.startAbsTimestamp));
+				global.domainArray.push(new Date(session.endAbsTimestamp));
+				global.rangeArray.push(sessionTx + rectDraw.xFunc(newOp));
+				global.rangeArray.push(sessionTx + rectDraw.xFunc(newOp) + rectDraw.wFunc(newOp));
+			}
+			else {
+				global.domainArray[global.domainArray.length - 1] = new Date(session.endAbsTimestamp);
+				global.rangeArray[global.rangeArray.length - 1] = sessionTx + rectDraw.xFunc(newOp) + rectDraw.wFunc(newOp);
+			}
+		}
+
+		global.timeScale.domain(global.domainArray).range(global.rangeArray);
+
+		// Time ticks
+		if (global.ticks.length === 0) {
+			updateTicks();
+		} else {
+			var lastTick = global.ticks[global.ticks.length - 1];
+			var currentPixel = timestampToPixel(newOp.t2);
+			var lastTickPixel = timeTickDraw.xFunc(lastTick);
+
+			if (currentPixel - lastTickPixel > getTicksMaxInterval()) {
+				updateTicks();
+			}
 		}
 	}
 	
@@ -634,7 +898,9 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current
 	$(rectToAppend.node()).tipsy({
 		gravity: $.fn.tipsy.autoNS,
 		html: true,
-		checkFn: function() { return !global.dragging; },
+		checkFn: function() {
+			return !global.dragging;
+		},
 		title: function() {
 			var d = this.__data__;
 			return d.getInfo();
@@ -683,7 +949,7 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current
  * Update the timestamp2 value for an existing operation, in case multiple
  * operations are merged into one.
  */
-function updateOperation(sid, id, t2, y1, y2, scroll) {
+function updateOperation(sid, id, t2, y1, y2, type, scroll) {
 	var lastOp = global.lastOperation;
 	
 	if (lastOp === null ||
@@ -698,25 +964,48 @@ function updateOperation(sid, id, t2, y1, y2, scroll) {
 	lastOp.y1 = y1;
 	lastOp.y2 = y2;
 
+	lastOp.type = type;
+
 	if (global.lastRect !== null) {
 		global.lastRect
 			.attr('width', rectDraw.wFunc)
 			.attr('y', rectDraw.yFunc)
-			.attr('height', rectDraw.hFunc);
+			.attr('height', rectDraw.hFunc)
+			.attr('fill', rectDraw.fillFunc);
 	}
 	
 	var session = lastOp.session;
+	var sessionTx = session.tx;
+	if (sessionTx === undefined) {
+		sessionTx = 0;
+	}
 	
-	// Move the indicator.
+	// Move the indicator / adjust time scale
 	var indicatorX;
 	if (global.layout === LayoutEnum.COMPACT) {
 		var rectBounds = global.lastRect.node().getBBox();
 		indicatorX = rectBounds.x + rectBounds.width;
 		session.indicator.attr('x1', indicatorX).attr('x2', indicatorX);
+
+		global.domainArray[global.domainArray.length - 1] = new Date(lastOp.sid + t2);
+		global.rangeArray[global.rangeArray.length - 1] = sessionTx + rectBounds.x + rectBounds.width;
 	}
 	else {
 		indicatorX = (session.endAbsTimestamp - session.startAbsTimestamp) / DEFAULT_RATIO;
 		session.indicator.attr('x1', indicatorX).attr('x2', indicatorX);
+
+		global.domainArray[global.domainArray.length - 1] = new Date(session.endAbsTimestamp);
+		global.rangeArray[global.rangeArray.length - 1] = sessionTx + rectDraw.xFunc(lastOp) + rectDraw.wFunc(lastOp);
+	}
+	global.timeScale.domain(global.domainArray).range(global.rangeArray);
+
+	// Update time ticks if necessary.
+	var lastTick = global.ticks[global.ticks.length - 1];
+	var currentPixel = timestampToPixel(lastOp.t2);
+	var lastTickPixel = timeTickDraw.xFunc(lastTick);
+
+	if (currentPixel - lastTickPixel > getTicksMaxInterval()) {
+		updateTicks();
 	}
 	
 	if (scroll === true) {
@@ -725,38 +1014,41 @@ function updateOperation(sid, id, t2, y1, y2, scroll) {
 }
 
 /**
- * Called by Azurite.
+ * Called by Azurite
  */
-function addAnnotation(sid, id, t, comment) {
-	var newAnnotation = new Annotation(sid, id, t, comment);
-	
+function addEvent(sid, id, t, dt, type, desc) {
+	var newEvent = new Event(sid, id, t, dt, type, desc);
+
 	// Add it to the global list
-	global.annotations.push(newAnnotation);
-	
+	global.events.push(newEvent);
+
 	// Add the line object
-	var annotationLine = svg.subAnnotations.append('line').datum(newAnnotation);
-	annotationLine
-		.attr('class', 'annotation_line')
-		.attr('x1', annotationDraw.xFunc)
-		.attr('x2', annotationDraw.xFunc)
-		.attr('y1', -ANNOTATION_SIZE / 2)
-		.attr('y2', getSvgHeight() - TICKS_HEIGHT + ANNOTATION_SIZE / 2)
-		.attr('stroke-width', ANNOTATION_WIDTH)
-		.attr('stroke', ANNOTATION_COLOR);
-	
-	// Add the TAG
-	var annotationTag = svg.subAnnotations.append('path').datum(newAnnotation);
-	annotationTag
-		.attr('class', 'annotation_tag')
-		.attr('d', annotationDraw.dFunc)
-		.attr('fill', ANNOTATION_COLOR);
-	
-	$(annotationTag.node()).tipsy({
+	var eventLine = svg.subEvents.append('line').datum(newEvent);
+	eventLine
+		.attr('class', 'event_line')
+		.attr('x1', eventDraw.xFunc)
+		.attr('x2', eventDraw.xFunc)
+		.attr('y1', eventDraw.y1Func)
+		.attr('y2', EVENTS_HEIGHT / 2)
+		.attr('stroke-width', EVENT_WIDTH)
+		.attr('stroke', eventDraw.colorFunc);
+
+	// Add icon. The size should be 16x16
+	var eventIcon = svg.subEvents.append('image').datum(newEvent);
+	eventIcon
+		.attr('class', 'event_icon')
+		.attr('xlink:href', eventDraw.iconFunc)
+		.attr('x', eventDraw.iconXFunc)
+		.attr('y', (EVENTS_HEIGHT - EVENT_ICON_HEIGHT) / 2)
+		.attr('width', EVENT_ICON_WIDTH)
+		.attr('height', EVENT_ICON_HEIGHT);
+
+	$(eventIcon.node()).tipsy({
 		gravity: 'n',
 		html: true,
 		title: function() {
 			var d = this.__data__;
-			return d.comment;
+			return d.desc;
 		}
 	});
 }
@@ -792,17 +1084,30 @@ function layout(newLayout) {
 	
 	var i, session;
 	var compactXFunc = function (d) {
-		if (!d.isVisible()) { return 0; }
+		if (!d.isVisible()) {
+			return 0;
+		}
 		
 		var temp = global.tempX;
 		global.tempX += this.getBBox().width;
 		return temp;
+	};
+
+	// Domain values / range values for time scale
+	global.domainArray = [];
+	global.rangeArray = [];
+	var addScaleFunc = function (d, i) {
+		global.domainArray.push(new Date(d.sid + d.t1));
+		global.domainArray.push(new Date(d.sid + d.t2));
+		global.rangeArray.push(global.tempSessionTx + this.getBBox().x);
+		global.rangeArray.push(global.tempSessionTx + this.getBBox().x + this.getBBox().width);
 	};
 	
 	for (i = 0; i < global.sessions.length; ++i) {
 		session = global.sessions[i];
 		
 		session.g.attr('transform', 'translate(' + global.tempSessionTx + ' 0)');
+		session.tx = global.tempSessionTx;
 		
 		// Iterate through all the rects.
 		var rects = session.g.selectAll('rect.op_rect')[0].slice();
@@ -824,19 +1129,30 @@ function layout(newLayout) {
 		if (global.layout === LayoutEnum.COMPACT) {
 			session.indicator.attr('x1', global.tempX);
 			session.indicator.attr('x2', global.tempX);
+
+			// recalculate the time scales here.
+			d3.selectAll(rects).each(addScaleFunc);
 		}
 		else if (global.layout === LayoutEnum.REALTIME) {
 			session.indicator.attr('x1', (session.endAbsTimestamp - session.startAbsTimestamp) / DEFAULT_RATIO);
 			session.indicator.attr('x2', (session.endAbsTimestamp - session.startAbsTimestamp) / DEFAULT_RATIO);
+
+			global.domainArray.push(new Date(session.startAbsTimestamp));
+			global.domainArray.push(new Date(session.endAbsTimestamp));
+			global.rangeArray.push(session.tx);
+			global.rangeArray.push(session.tx + (session.endAbsTimestamp - session.startAbsTimestamp) / DEFAULT_RATIO);
 		}
 		
 		global.tempSessionTx += session.g.node().getBBox().width;
 	}
+
+	global.timeScale.domain(global.domainArray).range(global.rangeArray);
 	
 	updateHighlight();
 	updateHScroll();
 	updateMarkerPosition();
-	updateAnnotations();
+	updateEvents();
+	updateTicks();
 	
 	// Restore the scroll position.
 	showFrom(leftmostTimestamp);
@@ -905,7 +1221,9 @@ function layoutFiles() {
 		.attr('y', fileDraw.yFunc)
 		.attr('dy', '1em')
 		.attr('fill', 'black')
-		.text(function(d) { return d.fileName; });
+		.text(function(d) {
+			return d.fileName;
+		});
 	
 	// Separating Lines
 	var lines = svg.subRectsWrap.selectAll('line.separating_line')
@@ -941,106 +1259,7 @@ function screenPixelToTimestamp(screenPixel) {
 }
 
 function pixelToTimestamp(pixel) {
-	if (global.sessions.length === 0) {
-		return 0;
-	}
-	
-	// define the variables to be used in both blocks below.
-	var tx = pixel / global.scaleX;
-	var session = null, dist = 0;
-	var i, curWidth = 0, width;
-	var bounds, result;
-	
-	if (global.layout === LayoutEnum.COMPACT) {
-		// Get the session including the point,
-		// and the dist from the starting of the session group.
-		for (i = 0; i < global.sessions.length; ++i) {
-			width = global.sessions[i].g.node().getBBox().width;
-			
-			if (curWidth <= tx && tx < curWidth + width) {
-				session = global.sessions[i];
-				dist = tx - curWidth;
-				break;
-			}
-			
-			curWidth += width;
-		}
-		
-		if (session === null) {
-			session = global.sessions[i - 1];
-			dist = session.g.node().getBBox().width;
-		}
-		
-		// Collect all the visible rects in this session, and assume they are sorted.
-		var rects = session.g.selectAll('rect.op_rect')
-			.filter(function (d) { return d.isVisible(); })[0].slice(0);
-		rects.sort(global.operationCompareFunc);
-		
-		// Binary search through the rects.
-		var startIndex = 0, endIndex = rects.length - 1;
-		var midIndex = Math.floor((startIndex + endIndex) / 2);
-		while (startIndex <= endIndex) {
-			var rect = rects[midIndex];
-			bounds = rect.getBBox();
-			
-			// The middle rect contains the dist!
-			if (bounds.x <= dist && dist <= bounds.x + bounds.width) {
-				var data = rect.__data__;
-				result = Math.floor(session.sid + data.t1 + (data.t2 - data.t1) * (dist - bounds.x) / bounds.width);
-				
-				return result;
-			}
-			
-			if (dist < bounds.x) {
-				endIndex = midIndex - 1;
-			}
-			else {
-				startIndex = midIndex + 1;
-			}
-			
-			midIndex = Math.floor((startIndex + endIndex) / 2);
-		}
-		
-		// Couldn't find..
-		if (startIndex === 0) {
-			return session.startAbsTimestamp;
-		}
-		else if (startIndex === rects.length) {
-			return session.endAbsTimestamp;
-		}
-		else {
-			return Math
-					.floor((rects[startIndex - 1].__data__.t2 + rects[startIndex].__data__.t1) / 2) + session.sid;
-		}
-	}
-	else if (global.layout === LayoutEnum.REALTIME) {
-		// Get the session including the point,
-		// and the dist from the starting of the session group.
-		for (i = 0; i < global.sessions.length; ++i) {
-			width = global.sessions[i].g.node().getBBox().width;
-			
-			if (curWidth <= tx < curWidth + width) {
-				session = global.sessions[i];
-				dist = tx - curWidth;
-				break;
-			}
-			
-			curWidth += width;
-		}
-		
-		if (session === null) {
-			session = global.sessions[i];
-			dist = session.g.node().getBBox().width;
-		}
-		
-		bounds = session.g.node().getBBox();
-		
-		// Then just linearly interpolate.
-		result = session.startAbsTimestamp + (session.endAbsTimestamp - session.startAbsTimestamp) * (dist - bounds.x) / bounds.width;
-		return result;
-	}
-	
-	return 0;
+	return global.timeScale.invert(pixel / global.scaleX).getTime();
 }
 
 /*
@@ -1066,6 +1285,7 @@ window.onresize = function(e) {
 		recalculateClipPaths();
 		updateSeparatingLines();
 		updateAreas();
+		updateTicks();
 
 		updateHScroll();
 		updateVScroll();
@@ -1081,12 +1301,12 @@ function updateAreas() {
 	global.draggableArea.left = CHART_MARGINS.left + svgWidth * FILES_PORTION;
 	global.draggableArea.top = CHART_MARGINS.top;
 	global.draggableArea.right = CHART_MARGINS.left + svgWidth;
-	global.draggableArea.bottom = CHART_MARGINS.top + svgHeight - TICKS_HEIGHT;
+	global.draggableArea.bottom = CHART_MARGINS.top + svgHeight - TICKS_HEIGHT - EVENTS_HEIGHT;
 	
 	global.fileArea.left = CHART_MARGINS.left;
 	global.fileArea.top = CHART_MARGINS.top;
 	global.fileArea.right = CHART_MARGINS.left + svgWidth * FILES_PORTION;
-	global.fileArea.bottom = CHART_MARGINS.top + svgHeight;
+	global.fileArea.bottom = CHART_MARGINS.top + svgHeight - TICKS_HEIGHT - EVENTS_HEIGHT;
 
 	global.hscrollArea.left = (CHART_MARGINS.left + CHART_MARGINS.right + svgWidth) * FILES_PORTION + SCROLLBAR_WIDTH;
 	global.hscrollArea.top = CHART_MARGINS.top + CHART_MARGINS.bottom + svgHeight;
@@ -1097,11 +1317,16 @@ function updateAreas() {
 	global.vscrollArea.top = SCROLLBAR_WIDTH;
 	global.vscrollArea.right = CHART_MARGINS.left + CHART_MARGINS.right + svgWidth + SCROLLBAR_WIDTH;
 	global.vscrollArea.bottom = CHART_MARGINS.top + CHART_MARGINS.bottom + svgHeight - SCROLLBAR_WIDTH;
-	
-	global.annotationArea.left = CHART_MARGINS.left + svgWidth * FILES_PORTION;
-	global.annotationArea.top = CHART_MARGINS.top - ANNOTATION_SIZE;
-	global.annotationArea.right = CHART_MARGINS.left + svgWidth;
-	global.annotationArea.bottom = CHART_MARGINS.top;
+
+	global.eventArea.left = CHART_MARGINS.left + svgWidth * FILES_PORTION;
+	global.eventArea.top = CHART_MARGINS.top + svgHeight - TICKS_HEIGHT - EVENTS_HEIGHT;
+	global.eventArea.right = CHART_MARGINS.left + svgWidth;
+	global.eventArea.bottom = CHART_MARGINS.top + svgHeight - TICKS_HEIGHT;
+
+	global.timeTickArea.left = CHART_MARGINS.left + svgWidth * FILES_PORTION;
+	global.timeTickArea.top = CHART_MARGINS.top + svgHeight - TICKS_HEIGHT;
+	global.timeTickArea.right = CHART_MARGINS.left + svgWidth;
+	global.timeTickArea.bottom = CHART_MARGINS.top + svgHeight;
 }
 
 /******************************************************************
@@ -1148,7 +1373,11 @@ function initMouseWheelHandler() {
 
 function initKeyEventHandlers() {
 	document.addEventListener("keydown", function(e) {
-		if (e.keyCode === 17) {
+		// Consider the cmd key as toggle key on Mac OS X when drag-selecting.
+		if (e.keyCode === 17 && global.isMac === false) {
+			global.isCtrlDown = true;
+		}
+		else if ((e.keyCode === 91 || e.keyCode === 93) && global.isMac === true) {
 			global.isCtrlDown = true;
 		}
 		else if (e.keyCode === 107) {
@@ -1171,7 +1400,11 @@ function initKeyEventHandlers() {
 	}, false);
 
 	document.addEventListener("keyup", function(e) {
-		if (e.keyCode === 17) {
+		// Consider the cmd key as toggle key on Mac OS X when drag-selecting.
+		if (e.keyCode === 17 && global.isMac === false) {
+			global.isCtrlDown = false;
+		}
+		else if ((e.keyCode === 91 || e.keyCode === 93) && global.isMac === true) {
 			global.isCtrlDown = false;
 		}
 	}, false);
@@ -1185,15 +1418,33 @@ function initMouseDownHandler() {
 			cmenu.isRightButtonDown = e.button === 2;
 		}
 
-		if (cmenu.isContextMenuVisible) {
-			hideContextMenu();
-			return;
-		}
-
 		var mouseX = e.clientX - SVG_WRAPPER_PADDING;
 		var mouseY = e.clientY - MENU_PANEL_HEIGHT - SVG_WRAPPER_PADDING;
 
+		// Check if the mouse was clicked on an event, in which case the marker should move to that place.
+		// (whether or not it was the right button)
+		if (cursorInArea(mouseX, mouseY, global.eventArea)) {
+			var rect = svg.main.node().createSVGRect();
+			rect.x = mouseX;
+			rect.y = mouseY;
+			rect.width = 1;
+			rect.height = 1;
+
+			// Get all the intersecting objects in the SVG.
+			var list = svg.main.node().getIntersectionList(rect, null);
+
+			// Filter only the icons.
+			d3.selectAll(list).filter('.event_icon').each(function(d) {
+				// In this case, this should be notified to the Azurite plug-in.
+				showMarkerAtTimestamp(d.dt, true);
+			});
+		}
+
 		if (cmenu.isRightButtonDown) {
+			if (global.isMac) {
+				showContextMenu(e);
+			}
+
 			return;
 		}
 
@@ -1206,11 +1457,15 @@ function initMouseDownHandler() {
 			global.draggingHScroll = false;
 			global.draggingVScroll = false;
 			global.draggingMarker = false;
+			global.draggingMarkerInTimeTickArea = false;
 
 			if (!global.isCtrlDown) {
-				global.selected = [];
+				global.prevSelectedRects = global.selectedRects.slice(0);
+
+				global.selectedRects = [];
 				svg.subRects.selectAll('rect.highlight_rect').remove();
-				azurite.notifySelectionChanged();
+
+				checkAndNotifySelectionChanged();
 			}
 
 			d3.select('.selection_box').attr('x', mouseX).attr('y', mouseY);
@@ -1237,6 +1492,7 @@ function initMouseDownHandler() {
 					global.draggingHScroll = true;
 					global.draggingVScroll = false;
 					global.draggingMarker = false;
+					global.draggingMarkerInTimeTickArea = false;
 
 					global.dragStartScrollPos = thumbStart;
 					return;
@@ -1265,6 +1521,7 @@ function initMouseDownHandler() {
 					global.draggingHScroll = false;
 					global.draggingVScroll = true;
 					global.draggingMarker = false;
+					global.draggingMarkerInTimeTickArea = false;
 
 					global.dragStartScrollPos = thumbStart;
 					return;
@@ -1273,33 +1530,70 @@ function initMouseDownHandler() {
 			
 			return;
 		}
-		// Check if the marker is clicked
-		else {
-			var rect = svg.main.node().createSVGRect();
-			rect.x = mouseX;
-			rect.y = mouseY;
-			rect.width = 1;
-			rect.height = 1;
-
-			// Get all the intersecting objects in the SVG.
-			var list = svg.main.node().getIntersectionList(rect, null);
-
-			if (d3.selectAll(list).filter('.marker')[0].length > 0) {
+		else if (cursorInArea(mouseX, mouseY, global.timeTickArea)) {
+			(function () {
 				global.dragging = false;
 				global.draggingHScroll = false;
 				global.draggingVScroll = false;
-				global.draggingMarker = true;
-				
-				global.dragStartMarkerPos = global.markerPos;
-				global.diffWhileDraggingMarker = 0;
-				return;
+				global.draggingMarker = false;
+				global.draggingMarkerInTimeTickArea = true;
+
+				var pixelPosition = -global.translateX + mouseX - global.timeTickArea.left;
+
+				// Handle shift key and range selection ---------------------------------
+				if (event.shiftKey) {
+					global.draggingMarkerShift = true;
+
+					if (global.selectedPixelRange !== null) {
+						// If there is already a selected range, just update the end pixel
+						updateEndPixelRange(pixelPosition);
+					}
+					else if (global.markerPos !== null) {
+						// If there is no range selection, make a new one.
+						selectPixelRange(global.markerPos, pixelPosition);
+					}
+				}
+				else {
+					global.draggingMarkerShift = false;
+
+					deselectRange();
+				}
+				// ----------------------------------------------------------------------
+
+				// Move the marker
+				showMarkerAtPixel(pixelPosition);
+			}());
+
+			return;
+		}
+		// Check if the marker is clicked
+		else if (cursorInMarker(mouseX, mouseY)) {
+			global.dragging = false;
+			global.draggingHScroll = false;
+			global.draggingVScroll = false;
+			global.draggingMarker = true;
+			global.draggingMarkerInTimeTickArea = false;
+			
+			// Handle shift key only on mouse move
+			if (event.shiftKey) {
+				global.draggingMarkerShift = true;
 			}
+			else {
+				global.draggingMarkerShift = false;
+
+				deselectRange();
+			}
+
+			global.dragStartMarkerPos = global.markerPos;
+			global.diffWhileDraggingMarker = 0;
+			return;
 		}
 
 		global.dragging = false;
 		global.draggingHScroll = false;
 		global.draggingVScroll = false;
 		global.draggingMarker = false;
+		global.draggingMarkerInTimeTickArea = false;
 	};
 }
 
@@ -1374,15 +1668,34 @@ function initMouseMoveHandler() {
 				translateY(newTy);
 			}());
 		}
+		else if (global.draggingMarkerInTimeTickArea) {
+			var pixelPosition = -global.translateX + mouseX - global.timeTickArea.left;
+
+			// Handle shift key and range selection ---------------------------------
+			if (global.draggingMarkerShift) {
+				// Assume there is a time range selection.
+				updateEndPixelRange(pixelPosition);
+			}
+			// ----------------------------------------------------------------------
+
+			// Move the marker
+			showMarkerAtPixel(pixelPosition);
+		}
 		else if (global.draggingMarker) {
 			var markerPos = mouseX - global.dragStart[0] + global.dragStartMarkerPos + global.diffWhileDraggingMarker;
-			global.markerPos = markerPos;
-			global.markerTimestamp = pixelToTimestamp(markerPos);
-			
-			svg.subMarker.attr('transform', 'translate(' + markerPos + ' 0)');
-			
-			// Tell Azurite about this marker move!
-			azurite.markerMove(global.markerTimestamp);
+
+			// Handle shift key and range selection ---------------------------------
+			if (global.draggingMarkerShift) {
+				if (global.selectedPixelRange !== null) {
+					updateEndPixelRange(markerPos);
+				}
+				else {
+					selectPixelRange(global.dragStartMarkerPos, markerPos);
+				}
+			}
+			// ----------------------------------------------------------------------
+
+			showMarkerAtPixel(markerPos);
 		}
 	};
 }
@@ -1392,56 +1705,11 @@ function initMouseUpHandler() {
 		var mouseX, mouseY;
 		
 		if (cmenu.isRightButtonDown) {
-			mouseX = e.clientX - SVG_WRAPPER_PADDING;
-			mouseY = e.clientY - MENU_PANEL_HEIGHT - SVG_WRAPPER_PADDING;
-			
-			cmenu.mousePos = [mouseX, mouseY];
-			
-			if (cursorInArea(mouseX, mouseY, global.draggableArea)) {
-				if (global.selected.length === 0) {
-					addSelections(mouseX, mouseY, mouseX + 1, mouseY + 1);
-				}
-				
-				if (global.selected.length === 1) {
-					// showContextMenu(e, '#cmenu_main_single');
-					cmenu.typeName = 'main_single';
-				}
-				else if (global.selected.length > 0) {
-					// showContextMenu(e, '#cmenu_main');
-					cmenu.typeName = 'main_multi';
-				}
-				else {
-					cmenu.typeName = 'main_nothing';
-				}
+			// When not on a mac, show context menu on mouse up.
+			if (global.isMac === false) {
+				showContextMenu(e);
 			}
-			else if (cursorInArea(mouseX, mouseY, global.fileArea)) {
-				var numVisibleFiles = global.getVisibleFiles().length + global.translateY;
-				if (mouseY < numVisibleFiles * ROW_HEIGHT * global.scaleY) {
-					// showContextMenu(e, '#cmenu_file_in');
-					cmenu.typeName = 'file_in';
-				}
-				else {
-					// showContextMenu(e, '#cmenu_file_out');
-					cmenu.typeName = 'file_out';
-				}
-			}
-			else if (cursorInArea(mouseX, mouseY, global.annotationArea)) {
-				var rect = svg.main.node().createSVGRect();
-				rect.x = mouseX;
-				rect.y = mouseY;
-				rect.width = 1;
-				rect.height = 1;
 
-				// Get all the intersecting objects in the SVG.
-				var list = svg.main.node().getIntersectionList(rect, null);
-
-				// Filter only the operation rects.
-				d3.selectAll(list).filter('.annotation_tag').each(function(d) {
-					cmenu.typeName = 'annotation';
-					global.lastAnnotation = d;
-				});
-			}
-			
 			return;
 		}
 
@@ -1477,6 +1745,7 @@ function initMouseUpHandler() {
 		global.draggingHScroll = false;
 		global.draggingVScroll = false;
 		global.draggingMarker = false;
+		global.draggingMarkerInTimeTickArea = false;
 	};
 }
 
@@ -1504,6 +1773,32 @@ function initDblClickHandler() {
 	};
 }
 
+function cursorInMarker(x, y) {
+	var rect = svg.main.node().createSVGRect();
+	rect.x = x;
+	rect.y = y;
+	rect.width = 1;
+	rect.height = 1;
+
+	// Get all the intersecting objects in the SVG.
+	var list = svg.main.node().getIntersectionList(rect, null);
+
+	return d3.selectAll(list).filter('.marker')[0].length > 0;
+}
+
+function cursorInEvent(x, y) {
+	var rect = svg.main.node().createSVGRect();
+	rect.x = x;
+	rect.y = y;
+	rect.width = 1;
+	rect.height = 1;
+
+	// Get all the intersecting objects in the SVG.
+	var list = svg.main.node().getIntersectionList(rect, null);
+
+	return d3.selectAll(list).filter('.event_icon')[0].length > 0;
+}
+
 function cursorInArea(x, y, area) {
 	return x >= area.left && x < area.right && y >= area.top && y < area.bottom;
 }
@@ -1513,54 +1808,91 @@ function clampInArea(x, y, area) {
 			clamp(y, area.top, area.bottom - 1) ];
 }
 
-function showContextMenu(event, divId) {
-
-	var $contextMenu = $(divId);
-	var w = $contextMenu.outerWidth();
-	var h = $contextMenu.outerHeight();
+// This functions sets the necessary information for Eclipse plug-in to show a context menu
+function showContextMenu(e) {
+	var mouseX = e.clientX - SVG_WRAPPER_PADDING;
+	var mouseY = e.clientY - MENU_PANEL_HEIGHT - SVG_WRAPPER_PADDING;
 	
-	var menu = d3.select(divId);
-	menu.style('left', Math.min(event.clientX, global.lastWindowWidth - w) + 'px');
-	menu.style('top', Math.min(event.clientY, global.lastWindowHeight - h) + 'px');
-	menu.style('display', 'block');
-
-	cmenu.isContextMenuVisible = true;
-}
-
-function hideContextMenu() {
-	d3.selectAll('div.context_menu').style('display', 'none');
-	cmenu.isContextMenuVisible = false;
+	cmenu.mousePos = [mouseX, mouseY];
+	
+	if (cursorInArea(mouseX, mouseY, global.draggableArea)) {
+		if (global.selectedRects.length === 0) {
+			addSelections(mouseX, mouseY, mouseX + 1, mouseY + 1);
+		}
+		
+		if (global.selectedRects.length === 1) {
+			// showContextMenu(e, '#cmenu_main_single');
+			cmenu.typeName = 'main_single';
+		}
+		else if (global.selectedRects.length > 0) {
+			// showContextMenu(e, '#cmenu_main');
+			cmenu.typeName = 'main_multi';
+		}
+		else {
+			cmenu.typeName = 'main_nothing';
+		}
+	}
+	else if (cursorInArea(mouseX, mouseY, global.fileArea)) {
+		var numVisibleFiles = global.getVisibleFiles().length + global.translateY;
+		if (mouseY < numVisibleFiles * ROW_HEIGHT * global.scaleY) {
+			// showContextMenu(e, '#cmenu_file_in');
+			cmenu.typeName = 'file_in';
+		}
+		else {
+			// showContextMenu(e, '#cmenu_file_out');
+			cmenu.typeName = 'file_out';
+		}
+	}
+	else if (cursorInEvent(mouseX, mouseY, global.eventArea) || cursorInMarker(mouseX, mouseY)) {
+		cmenu.typeName = 'marker';
+		// "global.selectedTimestamp" will be evaluated from the plug-in side.
+		// In this case, use the display timeline, rather than the actual timestamp
+		// when this event was occurred.
+		global.selectedTimestamp = global.markerTimestamp;
+	}
+	else {
+		cmenu.typeName = 'unknown';
+	}
 }
 
 function addSelectionsByIds(sids, ids, clearPreviousSelection) {
+	// Keep the previous selection in order to notify selection changed.
+	global.prevSelectedRects = global.selectedRects.slice(0);
+
 	if (clearPreviousSelection) {
-		global.selected = [];
+		global.selectedRects = [];
 	}
 
 	for ( var i = 0; i < ids.length; ++i) {
 		var sid = sids[i];
 		var id = ids[i];
-		global.selected.push(new OperationId(sid, id));
+		global.selectedRects.push(new OperationId(sid, id));
 	}
 
 	updateHighlight();
+	checkAndNotifySelectionChanged();
 }
 
 function removeSelectionsByIds(sids, ids) {
-	for ( var i = 0; i < ids.length; ++i) {
+	global.prevSelectedRects = global.selectedRects.slice(0);
+
+	for (var i = 0; i < ids.length; ++i) {
 		var sid = sids[i];
 		var id = ids[i];
 		
 		var index = indexOfSelected(sid, id);
 		if (index !== -1) {
-			global.selected.splice(index, 1);
+			global.selectedRects.splice(index, 1);
 		}
 	}
 	
 	updateHighlight();
+	checkAndNotifySelectionChanged();
 }
 
 function addSelections(x1, y1, x2, y2, toggle) {
+	global.prevSelectedRects = global.selectedRects.slice(0);
+
 	var rect = svg.main.node().createSVGRect();
 	rect.x = x1;
 	rect.y = y1;
@@ -1579,18 +1911,45 @@ function addSelections(x1, y1, x2, y2, toggle) {
 
 		if (toggle === true) {
 			if (index !== -1) {
-				global.selected.splice(index, 1);
+				global.selectedRects.splice(index, 1);
 			}
 			else {
-				global.selected.push(new OperationId(sid, id));
+				global.selectedRects.push(new OperationId(sid, id));
 			}
 		}
 		else if (!isSelected(sid, id)) {
-			global.selected.push(new OperationId(sid, id));
+			global.selectedRects.push(new OperationId(sid, id));
 		}
 	});
 
 	updateHighlight();
+	checkAndNotifySelectionChanged();
+}
+
+function checkAndNotifySelectionChanged() {
+	var notify = true;
+
+	if (global.prevSelectedRects instanceof Array) {
+		if (global.prevSelectedRects.length === global.selectedRects.length) {
+			notify = false;
+			
+			for (var i = 0; i < global.prevSelectedRects.length; ++i) {
+				if (global.prevSelectedRects[i].id !== global.selectedRects[i].id) {
+					notify = true;
+					break;
+				}
+
+				if (global.prevSelectedRects[i].sid !== global.selectedRects[i].sid) {
+					notify = true;
+					break;
+				}
+			}
+		}
+	}
+
+	if (notify === true) {
+		azurite.notifySelectionChanged();
+	}
 }
 
 function isSelected(sid, id) {
@@ -1599,8 +1958,8 @@ function isSelected(sid, id) {
 
 function indexOfSelected(sid, id) {
 	var i;
-	for (i = 0; i < global.selected.length; ++i) {
-		if (global.selected[i].sid === sid && global.selected[i].id === id) {
+	for (i = 0; i < global.selectedRects.length; ++i) {
+		if (global.selectedRects[i].sid === sid && global.selectedRects[i].id === id) {
 			return i;
 		}
 	}
@@ -1611,8 +1970,8 @@ function indexOfSelected(sid, id) {
 function updateHighlight() {
 	svg.subRects.selectAll('rect.highlight_rect').remove();
 
-	for ( var i = 0; i < global.selected.length; ++i) {
-		var idString = '#' + global.selected[i].sid + '_' + global.selected[i].id;
+	for ( var i = 0; i < global.selectedRects.length; ++i) {
+		var idString = '#' + global.selectedRects[i].sid + '_' + global.selectedRects[i].id;
 
 		var $ref = $(idString);
 		if ($ref.length === 0) {
@@ -1629,19 +1988,17 @@ function updateHighlight() {
 			.attr('width', refBBox.width + HIGHLIGHT_WIDTH * 2 / global.scaleX)
 			.attr('height', refBBox.height + HIGHLIGHT_WIDTH * 2 / global.scaleY);
 	}
-	
-	azurite.notifySelectionChanged();
 }
 
 /******************************************************************
 LISTENER FUNCTIONS
 ******************************************************************/
 function barZoomIn() {
-	scaleX(global.scaleX + 0.5);
+	scaleX(global.scaleX + 0.1);
 }
 
 function barZoomOut() {
-	scaleX(global.scaleX - 0.5);
+	scaleX(global.scaleX - 0.1);
 }
 
 function showBefore() {
@@ -1667,7 +2024,7 @@ function scrollRight(pixels) {
 }
 
 function scrollToEnd() {
-	translateX(getMinTranslateX() + getSvgWidth() * (1.0 - FILES_PORTION));
+	translateX(getMinTranslateX());
 }
 
 function fileZoomIn() {
@@ -1709,8 +2066,8 @@ function undo() {
 function getStandardRectSelection() {
 	var result = [];
 
-	for ( var i = 0; i < global.selected.length; ++i) {
-		result.push([ global.selected[i].sid, global.selected[i].id ]);
+	for ( var i = 0; i < global.selectedRects.length; ++i) {
+		result.push([ global.selectedRects[i].sid, global.selectedRects[i].id ]);
 	}
 	
 	return result;
@@ -1721,12 +2078,12 @@ function undoEverythingAfterSelection() {
 	// hideContextMenu();
 	
 	// Do nothing if there is no selection.
-	if (global.selected.length === 0) {
+	if (global.selectedRects.length === 0) {
 		return;
 	}
 	
 	// find the last selected item.
-	var selectedCopy = global.selected.slice(0);
+	var selectedCopy = global.selectedRects.slice(0);
 	selectedCopy.sort(global.oidCompareFunc);
 
 	// Call the function in the plug-in side.
@@ -1767,7 +2124,6 @@ function scaleX(sx) {
 
 	d3.selectAll('.indicator').attr('stroke-width', indicatorDraw.wFunc);
 
-	updateTicks();
 	updateHScroll();
 	
 	if (global.layout === LayoutEnum.COMPACT) {
@@ -1809,7 +2165,6 @@ function translateX(tx) {
 
 	updateSubRectsTransform();
 
-	updateTicks();
 	updateHScroll();
 	
 	global.diffWhileDraggingMarker -= diff;
@@ -1828,8 +2183,13 @@ function getMinTranslateX() {
 		var session = global.sessions[i];
 		result += session.g.node().getBBox().width;
 	}
+
+	var scaled = result * global.scaleX;
+	var svgWidth = getSvgWidth();
+	var width = svgWidth > 0 ? getSvgWidth() * (1.0 - FILES_PORTION) : 0;
+	scaled = Math.max(scaled - width, 0);
 	
-	return -result * global.scaleX;
+	return -scaled;
 }
 
 function translateY(ty) {
@@ -1859,13 +2219,16 @@ function translateY(ty) {
 }
 
 function getMinTranslateY() {
-	return 1 - global.files.filter(function (e, i, a) { return e.visible; }).length;
+	return 1 - global.files.filter(function (e, i, a) {
+		return e.visible;
+	}).length;
 }
 
 function updateSubRectsTransform() {
 	svg.subRects.attr('transform', 'translate(' + global.translateX + ' ' + (global.translateY * ROW_HEIGHT * global.scaleY) + ') ' + 'scale(' + global.scaleX + ' ' + global.scaleY + ')');
 	svg.subMarkers.attr('transform', 'translate(' + global.translateX + ' 0)');
-	svg.subAnnotations.attr('transform', 'translate(' + global.translateX + ' 0)');
+	svg.subEvents.attr('transform', 'translate(' + global.translateX + ' 0)');
+	svg.subTicks.attr('transform', 'translate(' + global.translateX + ' 0)');
 }
 
 function showFrom(absTimestamp) {
@@ -1881,107 +2244,7 @@ function showTimestamp(absTimestamp, offsetInPixels) {
 }
 
 function timestampToPixel(absTimestamp) {
-	if (global.sessions.length === 0) {
-		return 0;
-	}
-	
-	// binary search through the sessions.
-	var startIndex = 0, endIndex = global.sessions.length - 1;
-	var midIndex = Math.floor((startIndex + endIndex) / 2);
-	
-	var filterVisibleFunc = function (d) {
-		return d.isVisible();
-	};
-	
-	while (startIndex <= endIndex) {
-		var midSession = global.sessions[midIndex];
-		
-		// found it.
-		if (midSession.startAbsTimestamp <= absTimestamp &&
-				absTimestamp <= midSession.endAbsTimestamp) {
-			
-			// Get the tx offset.
-			var txOffset = 0, tx;
-			var i;
-			for (i = 0; i < midIndex; ++i) {
-				txOffset += global.sessions[i].g.node().getBBox().width;
-			}
-			
-			if (global.layout === LayoutEnum.COMPACT) {
-				// again, binary search through the rects.
-				var rects = midSession.g.selectAll('rect.op_rect').filter(filterVisibleFunc)[0].slice();
-				rects.sort(global.operationCompareFunc);
-				
-				var startRectIndex = 0, endRectIndex = rects.length - 1;
-				var midRectIndex = Math.floor((startRectIndex + endRectIndex) / 2);
-				
-				while (startRectIndex <= endRectIndex) {
-					var midRect = rects[midRectIndex];
-					var data = midRect.__data__;
-					var absT1 = midSession.sid + data.t1;
-					var absT2 = midSession.sid + data.t2;
-					var rectBounds = midRect.getBBox();
-					
-					// found it.
-					if (absT1 <= absTimestamp && absTimestamp <= absT2) {
-						if (absT2 === absT1) {
-							tx = txOffset + rectBounds.x + rectBounds.width / 2;
-							return tx * global.scaleX;
-						}
-						else {
-							tx = txOffset + rectBounds.x + rectBounds.width * (absTimestamp - absT1) / (absT2 - absT1);
-							return tx * global.scaleX;
-						}
-					}
-					
-					if (absTimestamp < absT1) {
-						endRectIndex = midRectIndex - 1;
-					}
-					else {
-						startRectIndex = midRectIndex + 1;
-					}
-					
-					midRectIndex = Math.floor((startRectIndex + endRectIndex) / 2);
-				}
-				
-				// Not in the middle of a rect.
-				if (startRectIndex === 0) {
-					return txOffset * global.scaleX;
-				}
-				else if (startRectIndex === rects.length) {
-					return (txOffset + midSession.g.node().getBBox().width) * global.scaleX;
-				}
-				else {
-					return (txOffset + rects[startRectIndex].getBBox().x) * global.scaleX;
-				}
-			}
-			else if (global.layout === LayoutEnum.REALTIME) {
-				var sessionBounds = midSession.g.node().getBBox();
-				tx = txOffset + sessionBounds.width * (absTimestamp - midSession.startAbsTimestamp) / (midSession.endAbsTimestamp - midSession.startAbsTimestamp);
-				return tx * global.scaleX;
-			}
-		}
-		
-		if (absTimestamp < midSession.startAbsTimestamp) {
-			endIndex = midIndex - 1;
-		}
-		else {
-			startIndex = midIndex + 1;
-		}
-		
-		midIndex = Math.floor((startIndex + endIndex) / 2);
-	}
-	
-	// Couldn't found. Somewhere in the middle of sessions.
-	if (startIndex === 0) {
-		return 0;
-	}
-	else if (startIndex === global.sessions.length) {
-		return -getMinTranslateX();
-	}
-	else {
-		return global.sessions[startIndex].g.node().getBBox().x * global.scaleX;
-	}
+	return global.timeScale(new Date(absTimestamp)) * global.scaleX;
 }
 
 function updateHScroll() {
@@ -2017,38 +2280,164 @@ function updateVScroll() {
 
 function updateTicks() {
 	svg.subTicks.selectAll('text').remove();
-	
-	var totalWidth = getSvgWidth() * (1.0 - FILES_PORTION) - TIMETICK_INTERVAL;
-	var numIntervals = Math.floor(totalWidth / TIMETICK_INTERVAL);
-	var intervalSize = totalWidth / numIntervals;
-	
-	var i;
-	for (i = 0; i <= numIntervals; ++i) {
-		var screenPixel = TIMETICK_INTERVAL / 2 + intervalSize * i;
-		var timestamp = screenPixelToTimestamp(screenPixel);
-		var dateObj = new Date(timestamp);
-		
-		svg.subTicks.append('text')
-			.attr('x', screenPixel)
+	svg.subTicks.selectAll('line').remove();
+	if (global.sessions === undefined || global.sessions.length === 0) {
+		return;
+	}
+
+	var ticks = [];
+	var dates = [];
+
+	var i, j, text;
+
+	var minInterval = TICKS_MIN_INTERVAL;
+	var maxInterval = Math.max(getTicksMaxInterval(), TICKS_MIN_INTERVAL * 2);
+
+	// Iterate all the sessions.
+	for (i = 0; i < global.sessions.length; ++i) {
+		var session = global.sessions[i];
+
+		var start = session.startAbsTimestamp;
+		var end = session.endAbsTimestamp;
+
+		var nextSession = i === global.sessions.length - 1 ? null : global.sessions[i + 1];
+		var nextSessionStart = nextSession === null ? null : nextSession.startAbsTimestamp;
+		var nextSessionStartPixel = nextSession === null ? end : timestampToPixel(nextSessionStart);
+
+		// Always add the start of the session
+		ticks.push(new Date(start));
+		dates.push(new Date(start));
+
+		var startPixel = timestampToPixel(start);
+		var endPixel = timestampToPixel(end);
+		var pixelLength = endPixel - startPixel;
+
+		var scale = d3.time.scale()
+			.domain([start, end])
+			.range([startPixel, endPixel]);
+
+		// Retrieve the candidate ticks using d3's ticks() function.
+		var candidates = scale.ticks(4 * pixelLength / (minInterval + maxInterval));
+		var lastTickPixel = timestampToPixel(ticks[ticks.length - 1]);
+
+		// See if each candidate tick can be displayed without violating minInterval.
+		for (j = 0; j < candidates.length; ++j) {
+			var candidate = candidates[j].getTime();
+			var candidatePixel = timestampToPixel(candidate);
+
+			if (candidatePixel - lastTickPixel >= minInterval) {
+				if (nextSession === null || nextSessionStartPixel - candidatePixel >= minInterval) {
+					ticks.push(candidates[j]);
+					lastTickPixel = candidatePixel;
+				}
+			}
+		}
+	}
+
+	// Fill in too big gaps
+	for (i = 0; i < ticks.length - 1; ++i) {
+		var curPixel = timeTickDraw.xFunc(ticks[i]);
+		var nextPixel = timeTickDraw.xFunc(ticks[i + 1]);
+		var diff = nextPixel - curPixel;
+
+		if (diff > maxInterval) {
+			var count = Math.max(Math.floor(diff / ((minInterval + maxInterval) / 2)) - 1, 1);
+			var interval = diff / (count + 1);
+
+			// Insert ticks forcefully.
+			for (j = 1; j <= count; ++j) {
+				var pixelPosition = curPixel + interval * j;
+				var correspondingTimestamp = pixelToTimestamp(pixelPosition);
+
+				ticks.splice(i + j, 0, new Date(correspondingTimestamp));
+			}
+
+			i += count;
+		}
+	}
+
+	// Display seconds?
+	var displaySeconds = false;
+	for (i = 0; i < ticks.length - 1; ++i) {
+		if (d3.time.minute(ticks[i]).getTime() === d3.time.minute(ticks[i + 1]).getTime()) {
+			displaySeconds = true;
+			break;
+		}
+	}
+
+	var timeFormat = displaySeconds ? '%I:%M:%S %p' : '%I:%M %p';
+	var timeFormatter = d3.time.format(timeFormat);
+
+	// Now actually create appropriate svg objects to draw the ticks
+	for (i = 0; i < ticks.length; ++i) {
+		text = svg.subTicks.append('text');
+		text.datum(ticks[i]);
+
+		text.attr('x', timeTickDraw.textXFunc)
 			.attr('dy', '1em')
-			.attr('fill', 'white')
-			.attr('text-anchor', 'middle')
-			.text(d3.time.format('%I:%M %p')(dateObj));
-		
-		svg.subTicks.append('text')
-			.attr('x', screenPixel)
+			.attr('fill', TICK_TEXT_COLOR)
+			.attr('text-anchor', 'left')
+			.text(timeFormatter(ticks[i]));
+
+		var tickMark = svg.subTicks.append('line');
+		tickMark.datum(ticks[i]);
+
+		tickMark
+			.attr('x1', timeTickDraw.xFunc)
+			.attr('x2', timeTickDraw.xFunc)
+			.attr('y1', 0)
+			.attr('y2', TICKMARK_SIZE)
+			.attr('stroke-width', TICKMARK_WIDTH)
+			.attr('stroke', TICKMARK_COLOR);
+	}
+
+	for (i = 0; i < dates.length; ++i) {
+		text = svg.subTicks.append('text');
+		text.datum(dates[i]);
+
+		text.attr('x', timeTickDraw.xFunc)
 			.attr('dy', '2em')
 			.attr('fill', 'white')
-			.attr('text-anchor', 'middle')
-			.text(d3.time.format('%x')(dateObj));
+			.attr('text-anchor', 'left')
+			.text(dateFormatter(dates[i]));
+	}
+
+	global.ticks = ticks;
+	global.dates = dates;
+}
+
+function getTicksMaxInterval() {
+	return getSvgWidth() * (1.0 - FILES_PORTION) / 2;
+}
+
+function dateFormatter(dateObj) {
+	var today = d3.time.day(new Date());
+	var target = d3.time.day(dateObj);
+	var diffDays = (today.getTime() - target.getTime()) / (24 * 60 * 60 * 1000);
+
+	var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+	if (diffDays === 0) {
+		return 'Today';
+	} else if (diffDays === 1) {
+		return 'Yesterday';
+	} else if (diffDays < 7) {
+		return 'Last ' + days[target.getDay()];
+	} else {
+		return d3.time.format('%x')(target);
 	}
 }
 
-function test(count) {
+function test(count, dayoff) {
 	if (count === undefined) { count = 1; }
 	
 	for (var i =0; i < count; ++i) {
-		var sid = new Date().valueOf();
+		var date = new Date();
+		if (dayoff !== undefined) {
+			date.setDate(date.getDate() - dayoff);
+		}
+
+		var sid = date.getTime();
 		// This must be bigger than the last known operation timestamp.
 		if (global.lastOperation !== null && sid < global.lastOperation.getAbsT2()) {
 			sid = global.lastOperation.getAbsT2() + Math.floor(Math.random() * 5000);
@@ -2141,9 +2530,11 @@ function showAllFilesInProject() {
 }
 
 function jumpToLocation() {
-	if (global.selected.length === 0) { return; }
+	if (global.selectedRects.length === 0) {
+		return;
+	}
 	
-	var selection = global.selected[0];
+	var selection = global.selectedRects[0];
 	var rect = $('rect#' + selection.sid + '_' + selection.id).get(0);
 	
 	if (rect !== null) {
@@ -2156,19 +2547,29 @@ function jumpToLocation() {
 }
 
 function showAllFilesEditedTogether() {
-	if (global.selected.length <= 1) { return; }
+	if (global.selectedRects.length <= 1) {
+		return;
+	}
 	
-	var sortedSelection = global.selected.slice(0);
+	var sortedSelection = global.selectedRects.slice(0);
 	sortedSelection.sort(function (lhs, rhs) {
-		if (lhs.sid < rhs.sid) { return -1; }
-		if (lhs.sid > rhs.sid) { return 1; }
-		if (lhs.id < rhs.id) { return -1; }
-		if (lhs.id > rhs.id) { return 1; }
+		if (lhs.sid < rhs.sid) {
+			return -1;
+		}
+		if (lhs.sid > rhs.sid) {
+			return 1;
+		}
+		if (lhs.id < rhs.id) {
+			return -1;
+		}
+		if (lhs.id > rhs.id) {
+			return 1;
+		}
 		return 0;
 	});
 	
-	var start = global.selected[0];
-	var end = global.selected[global.selected.length - 1];
+	var start = global.selectedRects[0];
+	var end = global.selectedRects[global.selectedRects.length - 1];
 	
 	var startRect = $('rect#' + start.sid + '_' + start.id).get(0);
 	var endRect = $('rect#' + end.sid + '_' + end.id).get(0);
@@ -2197,36 +2598,174 @@ function showAllFilesEditedTogether() {
 	layout();
 }
 
-function updateAnnotations() {
-	svg.subAnnotations.selectAll('.annotation_line')
-		.attr('x1', annotationDraw.xFunc)
-		.attr('x2', annotationDraw.xFunc);
-	svg.subAnnotations.selectAll('.annotation_tag')
-		.attr('d', annotationDraw.dFunc);
+function showAllFilesEditedInRange() {
+	if (global.selectedTimestampRange === null) {
+		return;
+	}
+
+	var start = global.selectedTimestampRange[0];
+	var end = global.selectedTimestampRange[1];
+
+	var rects = svg.subRects.selectAll('rect.op_rect')[0].slice(0);
+	var filteredRects = rects.filter(function (element) {
+		var absTimestamp = element.__data__.sid + element.__data__.t1;
+		return start <= absTimestamp && absTimestamp < end;
+	});
+	
+	// Make all files invisible for the moment.
+	var i;
+	for (i = 0; i < global.files.length; ++i) {
+		global.files[i].visible = false;
+	}
+
+	for (i = 0; i < filteredRects.length; ++i) {
+		filteredRects[i].__data__.fileGroup.file.visible = true;
+	}
+
+	layoutFiles();
+	layout();
 }
 
-function showMarker(absTimestamp) {
+function openAllFilesEditedInRange() {
+	azurite.openAllFilesEditedInRange(getAllFilesEditedInRange());
+}
+
+function getAllFilesEditedInRange() {
+	if (global.selectedTimestampRange === null) {
+		return [];
+	}
+
+	var start = global.selectedTimestampRange[0];
+	var end = global.selectedTimestampRange[1];
+
+	var rects = svg.subRects.selectAll('rect.op_rect')[0].slice(0);
+	var filteredRects = rects.filter(function (element) {
+		var absTimestamp = element.__data__.sid + element.__data__.t1;
+		return start <= absTimestamp && absTimestamp < end;
+	});
+
+	var filePaths = [];
+	for (var i = 0; i < filteredRects.length; ++i) {
+		filePaths.push(filteredRects[i].__data__.fileGroup.file.path);
+	}
+
+	return filePaths;
+}
+
+function updateEvents() {
+	svg.subEvents.selectAll('.event_line')
+		.attr('x1', eventDraw.xFunc)
+		.attr('x2', eventDraw.xFunc);
+	svg.subEvents.selectAll('.event_icon')
+		.attr('x', eventDraw.iconXFunc);
+}
+
+function showMarkerAtPixel(pixel, notify) {
+	if (isNaN(pixel)) {
+		// Don't show the marker at all.
+		svg.subMarker.style('display', 'none');
+		return;
+	}
+
+	global.markerPos = pixel;
+	global.markerTimestamp = pixelToTimestamp(pixel);
+
+	var timeFormat = '%I:%M:%S %p';
+	var timeFormatter = d3.time.format(timeFormat);
+	
+	svg.subMarker.attr('transform', 'translate(' + pixel + ' 0)');
+	svg.subMarkerText.text(timeFormatter(new Date(global.markerTimestamp)));
+
+	svg.subMarker.style('display', '');
+
+	if (notify === true || notify === undefined) {
+		// Tell Azurite about this marker move!
+		azurite.markerMove(global.markerTimestamp);
+	}
+}
+
+function showMarkerAtTimestamp(absTimestamp, notify) {
 	if (absTimestamp !== undefined) {
 		global.markerTimestamp = absTimestamp;
 	}
 	
-	updateMarkerPosition();
+	updateMarkerPosition(notify);
 	svg.subMarker.style('display', '');
 }
 
-function updateMarkerPosition() {
+function updateMarkerPosition(notify) {
 	var t = global.markerTimestamp;
 	var tx = timestampToPixel(t);
-	global.markerPos = tx;
-	svg.subMarker.attr('transform', 'translate(' + tx + ' 0)');
+
+	if (notify === undefined) {
+		notify = false;
+	}
+
+	showMarkerAtPixel(tx, notify);
 }
 
 function hideMarker() {
 	svg.subMarker.style('display', 'none');
 }
 
+function selectPixelRange(startPixel, endPixel) {
+	global.selectedPixelRange = [startPixel, endPixel];
+	global.selectedTimestampRange = [pixelToTimestamp(startPixel), pixelToTimestamp(endPixel)];
+
+	updateRangeSelectionBox();
+}
+
+function updateEndPixelRange(endPixel) {
+	if (global.selectedPixelRange !== null) {
+		selectPixelRange(global.selectedPixelRange[0], endPixel);
+	}
+}
+
+function deselectRange() {
+	global.selectedPixelRange = null;
+	global.selectedTimestampRange = null;
+
+	updateRangeSelectionBox();
+}
+
+function updateRangeSelectionBox() {
+	if (global.selectedPixelRange !== null) {
+		svg.subRangeBox
+			.attr('x', (Math.min(global.selectedPixelRange[0], global.selectedPixelRange[1])))
+			.attr('width', (Math.abs(global.selectedPixelRange[1] - global.selectedPixelRange[0])))
+			.style('display', '');
+		svg.subRangeStartLine
+			.attr('x1', global.selectedPixelRange[0])
+			.attr('x2', global.selectedPixelRange[0])
+			.style('display', '');
+	}
+	else {
+		svg.subRangeBox
+			.style('display', 'none');
+		svg.subRangeStartLine
+			.style('display', 'none');
+	}
+}
+
 function hideFirebugUI() {
 	$('#FirebugUI').css('display', 'none');
+}
+
+function activateFirebugLite() {
+	// Firebug lite 1.3 bookmarklet turned into a function.
+	// For some unknown reason, 1.4 doesn't work on Safari.
+	(function(F,i,r,e,b,u,g,L,I,T,E) {
+		if(F.getElementById(b))
+			return;
+		E=F[i+'NS']&&F.documentElement.namespaceURI;
+		E=E?F[i+'NS'](E,'script'):F[i]('script');
+		E[r]('id',b);
+		E[r]('src',I+g+T);
+		E[r](b,u);
+		(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);
+		E=new Image();
+		E[r]('src',I+L);
+	})(document,'createElement','setAttribute','getElementsByTagName','FirebugLite','3','releases/lite/1.3/firebug-lite.js','releases/lite/latest/skin/xp/sprite.png','https://getfirebug.com/','#startOpened');
 }
 
 function pushCurrentFile() {
@@ -2261,4 +2800,15 @@ function popCurrentFile() {
 			global.currentFileIndex = -1;
 		}
 	}
+}
+
+function testMarker() {
+	test();
+	showMarkerAtTimestamp();
+	translateX(0);
+}
+
+function showEvents(show) {
+	var displayValue = show === true ? '' : 'none';
+	svg.subEventsWrap.style('display', displayValue);
 }

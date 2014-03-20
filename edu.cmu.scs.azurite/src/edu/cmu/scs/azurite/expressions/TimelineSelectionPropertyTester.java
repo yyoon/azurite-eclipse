@@ -31,6 +31,10 @@ public class TimelineSelectionPropertyTester extends PropertyTester {
 			return numSelected > 1;
 		}
 		
+		case "rangeSelected": {
+			return timeline.isRangeSelected();
+		}
+		
 		default:
 			break;
 		}

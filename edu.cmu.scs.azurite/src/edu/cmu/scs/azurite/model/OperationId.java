@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
-import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 
 public class OperationId implements Comparable<OperationId> {
 
@@ -27,26 +26,47 @@ public class OperationId implements Comparable<OperationId> {
 
 	@Override
 	public boolean equals(Object obj) {
-		if (this == obj)
+		if (this == obj) {
 			return true;
-		if (obj == null)
+		}
+		
+		if (obj == null) {
 			return false;
-		if (getClass() != obj.getClass())
+		}
+		
+		if (getClass() != obj.getClass()) {
 			return false;
+		}
+		
 		OperationId other = (OperationId) obj;
-		if (id != other.id)
+		if (id != other.id) {
 			return false;
-		if (sid != other.sid)
+		}
+		
+		if (sid != other.sid) {
 			return false;
+		}
+		
 		return true;
 	}
 
 	@Override
 	public int compareTo(OperationId other) {
-		if (this.sid < other.sid) { return -1; }
-		if (this.sid > other.sid) { return 1; }
-		if (this.id < other.id) { return -1; }
-		if (this.id > other.id) { return 1; }
+		if (this.sid < other.sid) {
+			return -1;
+		}
+		
+		if (this.sid > other.sid) {
+			return 1;
+		}
+		
+		if (this.id < other.id) {
+			return -1;
+		}
+		
+		if (this.id > other.id) {
+			return 1;
+		}
 		
 		return 0;
 	}
@@ -54,10 +74,14 @@ public class OperationId implements Comparable<OperationId> {
 	public static List<OperationId> getOperationIdsFromRuntimeDCs(List<RuntimeDC> dcs) {
 		List<OperationId> ids = new ArrayList<OperationId>();
 		for (RuntimeDC dc : dcs) {
-			BaseDocumentChangeEvent original = dc.getOriginal();
-			ids.add(new OperationId(original.getSessionId(), original.getCommandIndex()));
+			ids.add(dc.getOperationId());
 		}
 		return ids;
+	}
+
+	@Override
+	public String toString() {
+		return Long.toString(this.sid) + "_" + Long.toString(this.id);
 	}
 	
 }

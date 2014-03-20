@@ -123,4 +123,14 @@ public class RuntimeReplace extends RuntimeDC {
 		return builder.toString().replace("\n", "<br>");
 	}
 
+	@Override
+	public String getTypeString() {
+		return "replace";
+	}
+	
+	@Override
+	public String getMarkerMessage() {
+		return "Replaced code: \"" + getOriginal().getDeletedText() + "\" -> \"" + getOriginal().getInsertedText() + "\"";
+	}
+
 }

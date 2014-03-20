@@ -25,8 +25,6 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.SWTException;
 import org.eclipse.swt.browser.Browser;
 import org.eclipse.swt.browser.BrowserFunction;
-import org.eclipse.swt.browser.ProgressEvent;
-import org.eclipse.swt.browser.ProgressListener;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
@@ -47,12 +45,14 @@ import edu.cmu.scs.azurite.model.RuntimeDCListener;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
 import edu.cmu.scs.azurite.plugin.Activator;
-import edu.cmu.scs.fluorite.commands.AnnotateCommand;
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 import edu.cmu.scs.fluorite.commands.Delete;
+import edu.cmu.scs.fluorite.commands.EclipseCommand;
 import edu.cmu.scs.fluorite.commands.FileOpenCommand;
 import edu.cmu.scs.fluorite.commands.ICommand;
+import edu.cmu.scs.fluorite.commands.ITimestampOverridable;
 import edu.cmu.scs.fluorite.commands.Insert;
+import edu.cmu.scs.fluorite.commands.JUnitCommand;
 import edu.cmu.scs.fluorite.commands.Replace;
 import edu.cmu.scs.fluorite.model.CommandExecutionListener;
 import edu.cmu.scs.fluorite.model.EventRecorder;
@@ -61,8 +61,15 @@ import edu.cmu.scs.fluorite.util.Utilities;
 
 public class TimelineViewPart extends ViewPart implements RuntimeDCListener, CommandExecutionListener {
 	
-	private static TimelineViewPart me = null;
+	private static final String RETURN_CODE_OK = "ok";
+	private static final String RETURN_CODE_FAIL = "fail";
+	private static final String RETURN_CODE_UNKNOWN = "unknown";
+	
+	private static final String EXECUTE_JS_CODE_COMMAND_ID = "edu.cmu.scs.azurite.ui.commands.executeJSCode";
+	private static final String EXECUTE_JS_CODE_COMMAND_PARAM_ID = "edu.cmu.scs.azurite.ui.commands.executeJSCode.codeToExecute";
 	private static String BROWSER_FUNC_PREFIX = "__AZURITE__";
+
+	private static TimelineViewPart me = null;
 	
 	/**
 	 * Not a singleton pattern per se.
@@ -77,10 +84,14 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	private Browser browser;
 	private ListenerList rectSelectionListenerList;
 	
+	private RectMarkerManager rectMarkerManager;
+	
 	public TimelineViewPart() {
 		super();
 		
 		this.rectSelectionListenerList = new ListenerList();
+		this.rectMarkerManager = new RectMarkerManager();
+		addRectSelectionListener(this.rectMarkerManager);
 	}
 	
 	public void addRectSelectionListener(RectSelectionListener listener) {
@@ -105,15 +116,6 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		browser = new Browser(parent, SWT.NONE);
 		addBrowserFunctions();
 		moveToIndexPage();
-		
-		browser.addProgressListener(new ProgressListener() {
-            
-            public void completed(ProgressEvent event) {
-            }
-            
-            public void changed(ProgressEvent event) {
-            }
-        });
 		
 		setupContextMenu();
 
@@ -146,31 +148,31 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 				"edu.cmu.scs.azurite.ui.commands.jumpToTheAffectedCodeCommand");
 
 		paramMap.clear();
-		paramMap.put("edu.cmu.scs.azurite.ui.commands.executeJSCode.codeToExecute", "showAllFilesEditedTogether();");
+		paramMap.put(EXECUTE_JS_CODE_COMMAND_PARAM_ID, "showAllFilesEditedTogether();");
 		final Action showAllFilesEditedTogetherAction = new CommandAction(
 				"Show All Files Edited Together",
-				"edu.cmu.scs.azurite.ui.commands.executeJSCode",
+				EXECUTE_JS_CODE_COMMAND_ID,
 				paramMap);
 		
 		paramMap.clear();
-		paramMap.put("edu.cmu.scs.azurite.ui.commands.executeJSCode.codeToExecute", "showSelectedFile();");
+		paramMap.put(EXECUTE_JS_CODE_COMMAND_PARAM_ID, "showSelectedFile();");
 		final Action showThisFileOnlyAction = new CommandAction(
 				"Show This File Only",
-				"edu.cmu.scs.azurite.ui.commands.executeJSCode",
+				EXECUTE_JS_CODE_COMMAND_ID,
 				paramMap);
 		
 		paramMap.clear();
-		paramMap.put("edu.cmu.scs.azurite.ui.commands.executeJSCode.codeToExecute", "showAllFilesInProject();");
+		paramMap.put(EXECUTE_JS_CODE_COMMAND_PARAM_ID, "showAllFilesInProject();");
 		final Action showAllFilesInTheSameProjectAction = new CommandAction(
 				"Show All Files in the Same Project",
-				"edu.cmu.scs.azurite.ui.commands.executeJSCode",
+				EXECUTE_JS_CODE_COMMAND_ID,
 				paramMap);
 		
 		paramMap.clear();
-		paramMap.put("edu.cmu.scs.azurite.ui.commands.executeJSCode.codeToExecute", "showAllFiles();");
+		paramMap.put(EXECUTE_JS_CODE_COMMAND_PARAM_ID, "showAllFiles();");
 		final Action showAllFilesAction = new CommandAction(
 				"Show All Files",
-				"edu.cmu.scs.azurite.ui.commands.executeJSCode",
+				EXECUTE_JS_CODE_COMMAND_ID,
 				paramMap);
 		
 		// Setup the dynamic context menu
@@ -218,20 +220,18 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 							break;
 						}
 						
-						case "annotation": {
-							long sid = ((Number) browser.evaluate("return global.lastAnnotation.sid;")).longValue();
-							long id = ((Number) browser.evaluate("return global.lastAnnotation.id;")).longValue();
-							String oidString = Long.toString(sid) + "_" + Long.toString(id);
+						case "marker": {
+							long absTimestamp = ((Number) browser.evaluate("return global.selectedTimestamp;")).longValue();
 							
 							paramMap.clear();
-							paramMap.put("edu.cmu.scs.azurite.ui.commands.undoAllFilesToThisPoint.annotationId", oidString);
+							paramMap.put("edu.cmu.scs.azurite.ui.commands.undoAllFilesToThisPoint.absTimestamp", Long.toString(absTimestamp));
 							Action undoAllFilesToThisPointAction = new CommandAction(
 									"Undo All Files to This Point",
 									"edu.cmu.scs.azurite.ui.commands.undoAllFilesToThisPoint",
 									paramMap);
 							
 							paramMap.clear();
-							paramMap.put("edu.cmu.scs.azurite.ui.commands.undoCurrentFileToThisPoint.annotationId", oidString);
+							paramMap.put("edu.cmu.scs.azurite.ui.commands.undoCurrentFileToThisPoint.absTimestamp", Long.toString(absTimestamp));
 							Action undoCurrentFileToThisPointAction = new CommandAction(
 									"Undo Current File to This Point",
 									"edu.cmu.scs.azurite.ui.commands.undoCurrentFileToThisPoint",
@@ -244,8 +244,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 					}
 					
 					manager.add(new Separator(IWorkbenchActionConstants.MB_ADDITIONS));
-				}
-				catch (Exception e) {
+				} catch (Exception e) {
 					// Do nothing.
 				}
 			}
@@ -273,6 +272,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		new LogFunction(browser, BROWSER_FUNC_PREFIX + "log");
 		new GetInfoFunction(browser, BROWSER_FUNC_PREFIX + "getInfo");
 		new MarkerMoveFunction(browser, BROWSER_FUNC_PREFIX + "markerMove");
+		new OpenAllFilesEditedInRangeFunction(browser, BROWSER_FUNC_PREFIX + "openAllFilesEditedInRange");
 		
 		new EclipseCommandFunction(browser, BROWSER_FUNC_PREFIX + "eclipseCommand");
 		
@@ -283,6 +283,8 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	public void dispose() {
 		RuntimeHistoryManager.getInstance().removeRuntimeDocumentChangeListener(this);
 		EventRecorder.getInstance().removeCommandExecutionListener(this);
+		this.rectMarkerManager.removeAllMarkers();
+		removeRectSelectionListener(this.rectMarkerManager);
 		
 		me = null;
 		
@@ -304,7 +306,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		@Override
 		public Object function(Object[] arguments) {
 			if (arguments == null || arguments.length != 1 || arguments[0] == null) {
-				return "fail";
+				return RETURN_CODE_FAIL;
 			}
 			
 			try {
@@ -317,11 +319,10 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 				SelectiveUndoEngine.getInstance()
 						.doSelectiveUndoOnMultipleFiles(params);
 				
-				return "ok";
-			}
-			catch (Exception e) {
+				return RETURN_CODE_OK;
+			} catch (Exception e) {
 				e.printStackTrace();
-				return "fail";
+				return RETURN_CODE_FAIL;
 			}
 		}
 
@@ -338,22 +339,21 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 			if (arguments == null || arguments.length != 2
 					|| !(arguments[0] instanceof Number)
 					|| !(arguments[1] instanceof Number)) {
-				return "fail";
+				return RETURN_CODE_FAIL;
 			}
 			
 			try {
 				long sid = ((Number)arguments[0]).longValue();
 				long id = ((Number)arguments[1]).longValue();
 				
-				SelectiveUndoEngine.getInstance().doSelectiveUndo(
-						RuntimeHistoryManager.getInstance()
-								.filterDocumentChangesGreaterThanId(
-										new OperationId(sid, id)));				
+				RuntimeHistoryManager rhm = RuntimeHistoryManager.getInstance();
 				
-				return "ok";
-			}
-			catch (Exception e) {
-				return "fail";
+				SelectiveUndoEngine.getInstance().doSelectiveUndo(
+						rhm.filterDocumentChangesGreaterThanId(new OperationId(sid, id)));				
+				
+				return RETURN_CODE_OK;
+			} catch (Exception e) {
+				return RETURN_CODE_FAIL;
 			}
 		}
 		
@@ -371,18 +371,27 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 			final long currentTimestamp = EventRecorder.getInstance().getStartTimestamp();
 			
             // Read the existing runtime document changes.
-            RuntimeHistoryManager.getInstance().scheduleTask(new Runnable() {
+			final RuntimeHistoryManager manager = RuntimeHistoryManager.getInstance();
+            manager.scheduleTask(new Runnable() {
             	public void run() {
             		Display.getDefault().asyncExec(new Runnable() {
             			public void run() {
-                    		RuntimeHistoryManager manager = RuntimeHistoryManager.getInstance(); 
                     		for (FileKey key : manager.getFileKeys()) {
-                    			if (key.getProjectName() == null || key.getFilePath() == null) { continue; }
+                    			if (key.getProjectName() == null || key.getFilePath() == null) {
+                    				continue;
+                				}
                     			
                     			addFile(key.getProjectName(), key.getFilePath());
                     			for (RuntimeDC dc : manager.getRuntimeDocumentChanges(key)) {
                     				addOperation(dc.getOriginal(), false, dc.getOriginal().getSessionId() == currentTimestamp);
                     			}
+                    		}
+                    		
+                    		// TODO figure out the current file and activate that file in the timeline.
+                    		
+                    		// Add all the events
+                    		for (ICommand eventToBeDisplayed : manager.getEventsToBeDisplayed()) {
+                    			addEventToTimeline(eventToBeDisplayed);
                     		}
                     		
                     		scrollToEnd();
@@ -391,9 +400,9 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
             	}
             });
             
-            browser.execute("layout();");
+            performLayout();
             
-			return "ok";
+			return RETURN_CODE_OK;
 		}
 	}
 	
@@ -407,7 +416,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		public Object function(Object[] arguments) {
 			System.out.println( arguments[0] );
 			
-			return "ok";
+			return RETURN_CODE_OK;
 		}
 	}
 	
@@ -424,7 +433,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 					|| !(arguments[1] instanceof String)
 					|| !(arguments[2] instanceof Number)
 					|| !(arguments[3] instanceof Number)) {
-				return "fail";
+				return RETURN_CODE_FAIL;
 			}
 			
 			try {
@@ -457,7 +466,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 
 				// Cannot retrieve the associated file.
 				if (runtimeDC == null) {
-					return "fail";
+					return RETURN_CODE_FAIL;
 				}
 				
 				int offset = runtimeDC.getAllSegments().get(0).getOffset();
@@ -470,10 +479,9 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 					styledText.setFocus();
 				}
 				
-				return "ok";
-			}
-			catch (Exception e) {
-				return "fail";
+				return RETURN_CODE_OK;
+			} catch (Exception e) {
+				return RETURN_CODE_FAIL;
 			}
 		}
 		
@@ -492,7 +500,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 					|| !(arguments[1] instanceof String)
 					|| !(arguments[2] instanceof Number)
 					|| !(arguments[3] instanceof Number)) {
-				return "fail";
+				return RETURN_CODE_FAIL;
 			}
 			
 			try {
@@ -514,10 +522,9 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 					}
 				}
 				
-				return "unknown";
-			}
-			catch (Exception e) {
-				return "unknown";
+				return RETURN_CODE_UNKNOWN;
+			} catch (Exception e) {
+				return RETURN_CODE_UNKNOWN;
 			}
 		}
 		
@@ -532,7 +539,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		@Override
 		public Object function(Object[] arguments) {
 			if (arguments.length != 1 || !(arguments[0] instanceof Number)) {
-				return "fail";
+				return RETURN_CODE_FAIL;
 			}
 			
 			long absTimestamp = ((Number)arguments[0]).longValue();
@@ -542,7 +549,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 				view.selectVersionWithAbsTimestamp(absTimestamp);
 			}
 			
-			return "ok";
+			return RETURN_CODE_OK;
 		}
 		
 	}
@@ -556,7 +563,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		@Override
 		public Object function(Object[] arguments) {
 			if (arguments.length != 1 || !(arguments[0] instanceof String)) {
-				return "fail";
+				return RETURN_CODE_FAIL;
 			}
 			
 			String eclipseCmdId = (String)arguments[0];
@@ -564,12 +571,11 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 			IHandlerService handlerService = (IHandlerService) getSite().getService(IHandlerService.class);
 			try {
 				handlerService.executeCommand(eclipseCmdId, null);
-			}
-			catch (Exception e) {
+			} catch (Exception e) {
 				e.printStackTrace();
 			}
 			
-			return "ok";
+			return RETURN_CODE_OK;
 		}
 	}
 	
@@ -583,14 +589,53 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		public Object function(Object[] arguments) {
 			try {
 				fireRectSelectionChanged();
-			}
-			catch (Exception e) {
+			} catch (Exception e) {
 				e.printStackTrace();
 			}
 			
-			return "ok";
+			return RETURN_CODE_OK;
 		}
 		
+	}
+	
+	class OpenAllFilesEditedInRangeFunction extends BrowserFunction {
+		
+		public OpenAllFilesEditedInRangeFunction(Browser browser, String name) {
+			super(browser, name);
+		}
+		
+		@Override
+		public Object function(Object[] arguments) {
+			if (arguments.length != 1) {
+				return RETURN_CODE_FAIL;
+			}
+			
+			try {
+				Object[] filePaths = (Object[]) arguments[0];
+				
+				for (Object element : filePaths) {
+					String filePath = (String) element;
+					File fileToOpen = new File(filePath);
+					
+					if (fileToOpen.exists() && fileToOpen.isFile()) {
+					    IFileStore fileStore = EFS.getLocalFileSystem().getStore(fileToOpen.toURI());
+					    IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
+					 
+					    try {
+					        IDE.openEditorOnFileStore( page, fileStore );
+					    } catch ( PartInitException e ) {
+					        //Put your exception handler here if you wish to
+					    }
+					} else {
+					    //Do something if the file does not exist
+					}
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			
+			return RETURN_CODE_OK;
+		}
 	}
 	
 	@Override
@@ -625,22 +670,39 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		return executeStr;
 	}
 	
-	private void addAnnotation(AnnotateCommand annotate) {
-		String executeStr = getAddAnnotationString(annotate);
-		browser.execute(executeStr);
+	private void addEventToTimeline(ICommand event) {
+		final String executeStr = getAddEventString(event);
+		Display.getDefault().syncExec(new Runnable() {
+			public void run() {
+				browser.execute(executeStr);
+			}
+		});
 	}
 	
-	private String getAddAnnotationString(AnnotateCommand annotate) {
-		String comment = annotate.getComment();
-		if (comment == null) {
-			comment = "unnamed";
+	private String getAddEventString(ICommand event) {
+		long sessionId = event.getSessionId();
+		long timestamp = event.getTimestamp();
+		long displayTimestamp = event instanceof ITimestampOverridable
+				? ((ITimestampOverridable) event).getTimestampForDisplay()
+				: sessionId + timestamp;
+		String type = "EclipseCommand".equals(event.getCommandType())
+				? ((EclipseCommand) event).getCommandID()
+				: event.getCommandType();
+		
+		if (event instanceof JUnitCommand) {
+			JUnitCommand junitCommand = (JUnitCommand) event;
+			if (junitCommand.getRootData() != null) {
+				type += "(" + Boolean.toString(junitCommand.getRootData().getSucceeded()) + ")";
+			}
 		}
 		
-		String executeStr = String.format("addAnnotation(%1$d, %2$d, %3$d, \'%4$s\');",
-				annotate.getSessionId(),
-				annotate.getCommandIndex(),
-				annotate.getTimestamp(),
-				comment);
+		String executeStr = String.format("addEvent(%1$d, %2$d, %3$d, %4$d, '%5$s', '%6$s');",
+				sessionId,
+				event.getCommandIndex(),
+				timestamp,
+				displayTimestamp,
+				type,
+				event.getDescription());
 		
 		return executeStr;
 	}
@@ -660,11 +722,6 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		long start = System.currentTimeMillis();
 		
 		for (ICommand command : events.getCommands()) {
-			if (command instanceof AnnotateCommand) {
-				addAnnotation((AnnotateCommand)command);
-				continue;
-			}
-			
 			if (!(command instanceof BaseDocumentChangeEvent)) {
 				continue;
 			}
@@ -675,10 +732,8 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 				if (foc.getFilePath() != null) {
 					builder.append(getAddFileString(foc.getProjectName(), foc.getFilePath()));
 				}
-//				activeFileChanged(foc.getProjectName(), foc.getFilePath());
 			} else {
 				builder.append(getAddOperationString(docChange, false, false, false));
-//				addOperation(docChange, false);
 			}
 		}
 		
@@ -710,17 +765,26 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		return executeStr;
 	}
 	
+	private void addEvents(Events events) {
+		StringBuilder builder = new StringBuilder();
+		
+		for (ICommand command : events.getCommands()) {
+			if (RuntimeHistoryManager.shouldCommandBeDisplayed(command)) {
+				builder.append(getAddEventString(command));
+			}
+		}
+		
+		browser.execute(builder.toString());
+	}
+	
 	private int getTypeIndex(BaseDocumentChangeEvent docChange) {
 		if (docChange instanceof Insert) {
 			return 0;
-		}
-		else if (docChange instanceof Delete) {
+		} else if (docChange instanceof Delete) {
 			return 1;
-		}
-		else if (docChange instanceof Replace) {
+		} else if (docChange instanceof Replace) {
 			return 2;
-		}
-		else {
+		} else {
 			return -1;
 		}
 	}
@@ -728,12 +792,26 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	@Override
 	public void documentChangeUpdated(BaseDocumentChangeEvent docChange) {
 		String executeStr = String.format(
-				"updateOperation(%1$d, %2$d, %3$d, %4$f, %5$f, true);",
+				"updateOperation(%1$d, %2$d, %3$d, %4$f, %5$f, %6$d, true);",
 				docChange.getSessionId(),
 				docChange.getCommandIndex(),
 				docChange.getTimestamp2(),
 				docChange.getY1(),
-				docChange.getY2());
+				docChange.getY2(),
+				getTypeIndex(docChange));
+		browser.execute(executeStr);
+	}
+	
+	@Override
+	public void documentChangeAmended(BaseDocumentChangeEvent oldDocChange, BaseDocumentChangeEvent newDocChange) {
+		String executeStr = String.format(
+				"updateOperation(%1$d, %2$d, %3$d, %4$f, %5$f, %6$d, true);",
+				oldDocChange.getSessionId(),
+				oldDocChange.getCommandIndex(),
+				newDocChange.getTimestamp2(),
+				newDocChange.getY1(),
+				newDocChange.getY2(),
+				getTypeIndex(newDocChange));
 		browser.execute(executeStr);
 	}
 
@@ -791,7 +869,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	}
 	
 	public void activateFirebugLite() {
-        browser.setUrl("javascript:(function(F,i,r,e,b,u,g,L,I,T,E){if(F.getElementById(b))return;E=F[i+'NS']&&F.documentElement.namespaceURI;E=E?F[i+'NS'](E,'script'):F[i]('script');E[r]('id',b);E[r]('src',I+g+T);E[r](b,u);(F[e]('head')[0]||F[e]('body')[0]).appendChild(E);E=new%20Image;E[r]('src',I+L);})(document,'createElement','setAttribute','getElementsByTagName','FirebugLite','3','releases/lite/1.3/firebug-lite.js','releases/lite/latest/skin/xp/sprite.png','https://getfirebug.com/','#startOpened');");
+		browser.execute("activateFirebugLite();");
 	}
 
 	@Override
@@ -804,13 +882,16 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 			return;
 		}
 
-		// Add all the things.
 		for (Events events : listEvents) {
+			// Add all the operations.
 			addOperations(events);
+			
+			// Add all the events, such as Run, unit tests, etc.
+			addEvents(events);
 		}
 		
 		// Update the data.
-		browser.execute("layout();");
+		performLayout();
 	}
 	
 	private void scrollToEnd() {
@@ -829,8 +910,8 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		moveToIndexPage();
 	}
 	
-	public void showMarker(long absTimestamp) {
-		browser.execute("showMarker(" + absTimestamp + ");");
+	public void showMarkerAtTimestamp(long absTimestamp) {
+		browser.execute("showMarkerAtTimestamp(" + absTimestamp + ");");
 	}
 	
 	public void hideMarker() {
@@ -839,11 +920,10 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	
 	public int getSelectedRectsCount() {
 		try {
-			Object result = evaluateJSCode("return global.selected.length;");
+			Object result = evaluateJSCode("return global.selectedRects.length;");
 			if (result instanceof Number) {
 				return ((Number) result).intValue();
-			}
-			else {
+			} else {
 				return 0;
 			}
 		} catch (SWTException e) {
@@ -855,13 +935,28 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		Object selected = evaluateJSCode("return getStandardRectSelection();");
 		return translateSelection(selected);
 	}
+	
+	public boolean isRangeSelected() {
+		try {
+			Object result = evaluateJSCode("return global.selectedTimestampRange !== null;");
+			if (result instanceof Boolean) {
+				return ((Boolean) result).booleanValue();
+			} else {
+				return false;
+			}
+		} catch (SWTException e) {
+			return false;
+		}
+	}
 
 	public static List<OperationId> translateSelection(Object selected) {
 		Object[] selectedArray = (Object[]) selected;
 		
 		List<OperationId> ids = new ArrayList<OperationId>();
 		for (Object element : selectedArray) {
-			if (!(element instanceof Object[])) { continue; }
+			if (!(element instanceof Object[])) {
+				continue;
+			}
 			
 			Object[] idComponents = (Object[])element;
 			if (idComponents.length == 2 &&
@@ -878,13 +973,14 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 
 	@Override
 	public void commandExecuted(ICommand command) {
-		// Somehow add the annotation.
-		if (command instanceof AnnotateCommand) {
-			AnnotateCommand annotate = (AnnotateCommand) command;
-			if (annotate.getId() != AnnotateCommand.CANCEL) {
-				addAnnotation(annotate);
-			}
+		// Some events should be displayed in the timeline
+		if (RuntimeHistoryManager.shouldCommandBeDisplayed(command)) {
+			addEventToTimeline(command);
 		}
+	}
+	
+	private void performLayout() {
+		browser.execute("layout();");
 	}
 	
 }

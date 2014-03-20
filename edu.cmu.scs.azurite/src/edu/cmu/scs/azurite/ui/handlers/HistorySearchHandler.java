@@ -14,7 +14,6 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.IEditorPart;
 
-import edu.cmu.scs.azurite.commands.HistorySearchCommand;
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.commands.runtime.Segment;
 import edu.cmu.scs.azurite.jface.dialogs.HistorySearchDialog;
@@ -24,11 +23,14 @@ import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.azurite.model.undo.Chunk;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
 import edu.cmu.scs.azurite.views.TimelineViewPart;
-import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
+import edu.cmu.scs.fluorite.commands.HistorySearchCommand;
 import edu.cmu.scs.fluorite.model.EventRecorder;
 import edu.cmu.scs.fluorite.util.Utilities;
 
 public class HistorySearchHandler extends AbstractHandler {
+
+	private static final String HISTORY_SEARCH = "History Search";
+	private static final String NO_RESULTS_FOUND = "No results found.";
 
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
@@ -55,10 +57,14 @@ public class HistorySearchHandler extends AbstractHandler {
 				searchText, caseSensitive, scopeSelectedCode, currentSession));
 		
 		IEditorPart editor = EventRecorder.getInstance().getEditor();
-		if (editor == null) { return null; }
+		if (editor == null) {
+			return null;
+		}
 		
 		IDocument doc = Utilities.getDocument(editor);
-		if (doc == null) { return null; }
+		if (doc == null) {
+			return null;
+		}
 		
 		List<RuntimeDC> dcs = scopeSelectedCode ? HandlerUtilities.getOperationsInSelectedRegion()
 				: RuntimeHistoryManager.getInstance().filterDocumentChanges(new IRuntimeDCFilter() {
@@ -68,7 +74,7 @@ public class HistorySearchHandler extends AbstractHandler {
 					}
 				});
 		if (dcs == null || dcs.isEmpty()) {
-			MessageDialog.openInformation(parentShell, "History Search", "No results found.");
+			MessageDialog.openInformation(parentShell, HISTORY_SEARCH, NO_RESULTS_FOUND);
 			return null;
 		}
 		
@@ -86,7 +92,7 @@ public class HistorySearchHandler extends AbstractHandler {
 		
 		// There was no document changes in the selected scope.
 		if (dcs.isEmpty()) {
-			MessageDialog.openInformation(parentShell, "History Search", "No results found.");
+			MessageDialog.openInformation(parentShell, HISTORY_SEARCH, NO_RESULTS_FOUND);
 			return null;
 		}
 
@@ -115,25 +121,10 @@ public class HistorySearchHandler extends AbstractHandler {
 			
 			if (version == dcs.size()) {
 				resultingCode = codeContent;
-			}
-			else {
+			} else {
 				// Get the previous versions by performing undo.
 				List<RuntimeDC> subList = dcs.subList(version, dcs.size());
-				Chunk chunk = new Chunk();
-				for (RuntimeDC dc : subList) {
-					for (Segment segment : dc.getAllSegments()) {
-						if (segment.isDeletion()) {
-							if (selectionStart < segment.getOffset() && segment.getOffset() < selectionEnd) {
-								chunk.add(segment);
-							}
-						}
-						else {
-							if (segment.getOffset() < selectionEnd && segment.getEndOffset() > selectionStart) {
-								chunk.add(segment);
-							}
-						}
-					}
-				}
+				Chunk chunk = getChunkFromSublist(subList, selectionStart, selectionEnd);
 				Collections.sort(chunk, Segment.getLocationComparator());
 				
 				int startOffset = chunk.getStartOffset();
@@ -164,8 +155,7 @@ public class HistorySearchHandler extends AbstractHandler {
 				if (resultingCode.contains(searchText)) {
 					resultDCs.add(dcs.get(version - 1));
 				}
-			}
-			else {
+			} else {
 				if (resultingCode.toLowerCase().contains(searchTextLowerCase)) {
 					resultDCs.add(dcs.get(version - 1));
 				}
@@ -177,12 +167,11 @@ public class HistorySearchHandler extends AbstractHandler {
 		// Extract the ids.
 		List<OperationId> ids = new ArrayList<OperationId>();
 		for (RuntimeDC dc : resultDCs) {
-			BaseDocumentChangeEvent original = dc.getOriginal();
-			ids.add(new OperationId(original.getSessionId(), original.getCommandIndex()));
+			ids.add(dc.getOperationId());
 		}
 		
 		if (ids.isEmpty()) {
-			MessageDialog.openInformation(parentShell, "History Search", "No results found.");
+			MessageDialog.openInformation(parentShell, HISTORY_SEARCH, NO_RESULTS_FOUND);
 			return null;
 		}
 		
@@ -194,6 +183,19 @@ public class HistorySearchHandler extends AbstractHandler {
 		}
 		
 		return null;
+	}
+
+	private Chunk getChunkFromSublist(List<RuntimeDC> subList,
+			int selectionStart, int selectionEnd) {
+		Chunk chunk = new Chunk();
+		for (RuntimeDC dc : subList) {
+			for (Segment segment : dc.getAllSegments()) {
+				if (segment.inSelectionRange(selectionStart, selectionEnd)) {
+					chunk.add(segment);
+				}
+			}
+		}
+		return chunk;
 	}
 
 }

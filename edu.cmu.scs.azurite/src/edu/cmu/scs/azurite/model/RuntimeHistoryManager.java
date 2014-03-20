@@ -12,20 +12,27 @@ import org.eclipse.core.runtime.ListenerList;
 import edu.cmu.scs.azurite.commands.diff.IDiffDC;
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.commands.runtime.Segment;
+import edu.cmu.scs.fluorite.commands.AnnotateCommand;
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
+import edu.cmu.scs.fluorite.commands.EclipseCommand;
 import edu.cmu.scs.fluorite.commands.FileOpenCommand;
 import edu.cmu.scs.fluorite.commands.ICommand;
+import edu.cmu.scs.fluorite.commands.JUnitCommand;
+import edu.cmu.scs.fluorite.commands.RunCommand;
+import edu.cmu.scs.fluorite.model.CommandExecutionListener;
 import edu.cmu.scs.fluorite.model.DocumentChangeListener;
 import edu.cmu.scs.fluorite.model.EventRecorder;
 import edu.cmu.scs.fluorite.model.Events;
 
-public class RuntimeHistoryManager implements DocumentChangeListener {
+public class RuntimeHistoryManager implements DocumentChangeListener, CommandExecutionListener {
 	
 	// used for keeping track of the last index of the DC
 	private Map<FileKey, Integer> mNextIndexToApply;
 	
 	private Map<FileKey, List<RuntimeDC>> mDocumentChanges;
 	private FileKey mCurrentFileKey;
+	
+	private List<ICommand> mEventsToBeDisplayed;
 	
 	private ListenerList mRuntimeDocumentChangeListeners;
 
@@ -59,13 +66,13 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		mDocumentChanges = new HashMap<FileKey, List<RuntimeDC>>();
 		mNextIndexToApply = new HashMap<FileKey, Integer>();
 		mCurrentFileKey = null;
+		mEventsToBeDisplayed = new ArrayList<ICommand>();
 	}
 
 	public void scheduleTask(Runnable runnable) {
 		if (mStarted) {
 			runnable.run();
-		}
-		else {
+		} else {
 			mScheduledTasks.add(runnable);
 		}
 	}
@@ -90,6 +97,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 	public void start() {
 		EventRecorder.getInstance().addDocumentChangeListener(this);
 		EventRecorder.getInstance().addDocumentChangeListener(PastHistoryManager.getInstance());
+		EventRecorder.getInstance().addCommandExecutionListener(this);
 		mStarted = true;
 		
 		// Execute all the scheduled tasks.
@@ -151,6 +159,12 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		}
 	}
 	
+	private void fireDocumentChangeAmendedEvent(BaseDocumentChangeEvent oldDocChange, BaseDocumentChangeEvent newDocChange) {
+		for (Object listenerObj : mRuntimeDocumentChangeListeners.getListeners()) {
+			((RuntimeDCListener)listenerObj).documentChangeAmended(oldDocChange, newDocChange);
+		}
+	}
+	
 	public Set<FileKey> getFileKeys() {
 		return mDocumentChanges.keySet();
 	}
@@ -206,6 +220,10 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 	
 	private void setCurrentFileKey(FileKey newFileKey) {
 		mCurrentFileKey = newFileKey;
+	}
+	
+	public List<ICommand> getEventsToBeDisplayed() {
+		return Collections.unmodifiableList(mEventsToBeDisplayed);
 	}
 
 	@Override
@@ -288,6 +306,10 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 	}
 	
 	private void addRuntimeDCFromOriginalDC(BaseDocumentChangeEvent docChange, FileKey key) {
+		addRuntimeDCFromOriginalDC(docChange, key, true);
+	}
+	
+	private void addRuntimeDCFromOriginalDC(BaseDocumentChangeEvent docChange, FileKey key, boolean fireEvent) {
 		RuntimeDC runtimeDocChange = RuntimeDC.createRuntimeDocumentChange(docChange);
 		runtimeDocChange.setBelongsTo(key);
 		
@@ -298,7 +320,9 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		list.add(runtimeDocChange);
 		
 		// Fire runtime document change event
-		fireRuntimeDCAddedEvent(runtimeDocChange);
+		if (fireEvent) {
+			fireRuntimeDCAddedEvent(runtimeDocChange);
+		}
 	}
 	
 	public List<RuntimeDC> filterDocumentChangesByIds(FileKey key, final List<OperationId> ids) {
@@ -309,11 +333,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		return filterDocumentChanges(key, new IRuntimeDCFilter() {
 			@Override
 			public boolean filter(RuntimeDC runtimeDC) {
-				OperationId oid = new OperationId(
-						runtimeDC.getOriginal().getSessionId(),
-						runtimeDC.getOriginal().getCommandIndex());
-				
-				return ids.contains(oid);
+				return ids.contains(runtimeDC.getOperationId());
 			}
 		});
 	}
@@ -331,18 +351,13 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 				new IRuntimeDCFilter() {
 			@Override
 			public boolean filter(RuntimeDC runtimeDC) {
-				OperationId oid = new OperationId(
-						runtimeDC.getOriginal().getSessionId(),
-						runtimeDC.getOriginal().getCommandIndex());
-
-				return id.equals(oid);
+				return id.equals(runtimeDC.getOperationId());
 			}
 		});
 		
 		if (intermediateResult == null || intermediateResult.isEmpty()) {
 			return null;
-		}
-		else {
+		} else {
 			return intermediateResult.get(0);
 		}
 	}
@@ -359,11 +374,26 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		return filterDocumentChanges(key, new IRuntimeDCFilter() {
 			@Override
 			public boolean filter(RuntimeDC runtimeDC) {
-				OperationId oid = new OperationId(
-						runtimeDC.getOriginal().getSessionId(),
-						runtimeDC.getOriginal().getCommandIndex());
+				return id.compareTo(runtimeDC.getOperationId()) < 0;
+			}
+		});
+	}
+	
+	public List<RuntimeDC> filterDocumentChangesLaterThanTimestamp(final long absTimestamp) {
+		return filterDocumentChangesLaterThanTimestamp(getCurrentFileKey(), absTimestamp);
+	}
+	
+	public List<RuntimeDC> filterDocumentChangesLaterThanTimestamp(FileKey key, final long absTimestamp) {
+		if (key == null) {
+			throw new IllegalArgumentException();
+		}
+		
+		return filterDocumentChanges(key, new IRuntimeDCFilter() {
+			@Override
+			public boolean filter(RuntimeDC runtimeDC) {
+				long timestamp = runtimeDC.getOriginal().getSessionId() + runtimeDC.getOriginal().getTimestamp();
 				
-				return id.compareTo(oid) < 0;
+				return absTimestamp < timestamp;
 			}
 		});
 	}
@@ -377,18 +407,13 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 				new IRuntimeDCFilter() {
 			@Override
 			public boolean filter(RuntimeDC runtimeDC) {
-				OperationId oid = new OperationId(
-						runtimeDC.getOriginal().getSessionId(),
-						runtimeDC.getOriginal().getCommandIndex());
-
-				return id.equals(oid);
+				return id.equals(runtimeDC.getOperationId());
 			}
 		}, false);
 		
 		if (intermediateResult == null || intermediateResult.isEmpty()) {
 			return null;
-		}
-		else {
+		} else {
 			return intermediateResult.get(0);
 		}
 	}
@@ -427,6 +452,10 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		if (key == null || filter == null) {
 			throw new IllegalArgumentException();
 		}
+		
+		// It's a little bit odd, but make sure that there's no pending document changes
+		// in the EventRecorder side
+		EventRecorder.getInstance().fireLastDocumentChangeFinalizedEvent();
 		
 		// Lazy-evaluation of the dynamic segments!
 		List<RuntimeDC> list = calculate ? calculateDynamicSegments(key) :
@@ -473,6 +502,11 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		for (Events events : listAllEvents) {
 			List<ICommand> commands = events.getCommands();
 			for (ICommand command : commands) {
+				if (shouldCommandBeDisplayed(command)) {
+					mEventsToBeDisplayed.add(command);
+					continue;
+				}
+				
 				if (!(command instanceof BaseDocumentChangeEvent)) {
 					continue;
 				}
@@ -481,15 +515,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 				if (docChange instanceof FileOpenCommand) {
 					processFileOpenCommand((FileOpenCommand)docChange);
 				} else {
-					// Doc Change generated by Diff. (see PastHistoryManager)
-					if (docChange instanceof IDiffDC) {
-						addRuntimeDCFromOriginalDC(docChange,
-								((IDiffDC) docChange).getFileKey());
-					}
-					// Normal Doc Changes.
-					else {
-						addRuntimeDCFromOriginalDC(docChange);
-					}
+					processDocumentChange(docChange);
 				}
 			}
 		}
@@ -499,6 +525,17 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		firePastLogsReadEvent(listEvents);
 	}
 
+	private void processDocumentChange(BaseDocumentChangeEvent docChange) {
+		// Doc Change generated by Diff. (see PastHistoryManager)
+		if (docChange instanceof IDiffDC) {
+			addRuntimeDCFromOriginalDC(docChange,
+					((IDiffDC) docChange).getFileKey());
+		} else {
+		// Normal Doc Changes.
+			addRuntimeDCFromOriginalDC(docChange);
+		}
+	}
+
 	public Map<FileKey, List<RuntimeDC>> extractFileDCMapFromOperationIds(
 			List<OperationId> ids) {
 		// Filter only the files that contain one or more selected rectangles.
@@ -506,11 +543,83 @@ public class RuntimeHistoryManager implements DocumentChangeListener {
 		Map<FileKey, List<RuntimeDC>> params = new HashMap<FileKey, List<RuntimeDC>>();
 		for (FileKey key : fileKeys) {
 			List<RuntimeDC> filteredIds = filterDocumentChangesByIds(key, ids);
-			if (filteredIds.size() == 0) { continue; }
+			if (filteredIds.size() == 0) {
+				continue;
+			}
 			
 			params.put(key, filteredIds);
 		}
 		return params;
+	}
+
+	public static boolean shouldCommandBeDisplayed(ICommand command) {
+		if (command instanceof JUnitCommand) {
+			return true;
+		} else if (command instanceof RunCommand) {
+			return true;
+		} else if (command instanceof AnnotateCommand) {
+			return true;
+		} else if (command instanceof EclipseCommand) {
+			EclipseCommand eclipseCommand = (EclipseCommand) command;
+			switch (eclipseCommand.getCommandID()) {
+				case "org.eclipse.ui.file.save":
+					
+				// Egit commands
+				case "org.eclipse.egit.ui.team.Commit":
+				case "org.eclipse.egit.ui.team.Pull":
+				case "org.eclipse.egit.ui.team.Fetch":
+				case "org.eclipse.egit.ui.team.Push":
+				case "org.eclipse.egit.ui.team.Merge":
+				case "org.eclipse.egit.ui.team.Reset":
+				case "org.eclipse.egit.ui.team.Rebase":
+				case "org.eclipse.egit.ui.CheckoutCommand":
+					return true;
+					
+				default:
+					return false;
+			}
+		}
+		
+		return false;
+	}
+
+	@Override
+	public void commandExecuted(ICommand command) {
+		if (shouldCommandBeDisplayed(command)) {
+			mCurrentSessionEvents.addCommand(command);
+			mEventsToBeDisplayed.add(command);
+		}
+	}
+
+	@Override
+	public void documentChangeAmended(BaseDocumentChangeEvent oldDocChange, BaseDocumentChangeEvent newDocChange) {
+		// Find out the runtime DC associated with the oldDocChange,
+		// and replace the originalDC to the new one.
+		// Presumably, this is the last runtime DC associated with the current file.
+		List<RuntimeDC> dcs = getRuntimeDocumentChanges();
+		if (dcs == null || dcs.isEmpty()) {
+			throw new IllegalStateException("Could not find the runtimeDC associated with the oldDocChange.");
+		}
+		
+		RuntimeDC candidateDC = dcs.get(dcs.size() - 1);
+		if (candidateDC.getOriginal() != oldDocChange) {
+			throw new IllegalStateException("The last runtime DC is not the desired one!");
+		}
+		
+		if (mNextIndexToApply.get(getCurrentFileKey()) >= dcs.size()) {
+			throw new IllegalStateException("The dynamic segment calculation is already done!");
+		}
+		
+		// Delete the last one from dcs, and add a new one.
+		dcs.remove(dcs.size() - 1);
+		addRuntimeDCFromOriginalDC(newDocChange, getCurrentFileKey(), false);
+		
+		// Also, amend the current session events.
+		int oldIndex = mCurrentSessionEvents.getCommands().indexOf(oldDocChange);
+		mCurrentSessionEvents.getCommands().set(oldIndex, newDocChange);
+		
+		// Finally, notify the listeners
+		fireDocumentChangeAmendedEvent(oldDocChange, newDocChange);
 	}
 	
 }

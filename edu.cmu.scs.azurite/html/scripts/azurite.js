@@ -15,6 +15,7 @@ try {
 	azurite.jump = __AZURITE__jump;
 	azurite.getInfo = __AZURITE__getInfo;
 	azurite.markerMove = __AZURITE__markerMove;
+	azurite.openAllFilesEditedInRange = __AZURITE__openAllFilesEditedInRange;
     
     azurite.eclipseCommand = __AZURITE__eclipseCommand;
 	
@@ -62,6 +63,11 @@ try {
 	
 	azurite.markerMove = function (absTimestamp) {
 		alertFn('azurite.markerMove(' + absTimestamp + ') call');
+	};
+
+	azurite.openAllFilesEditedInRange = function (arrayOfPaths) {
+		alertFn('azurite.openAllFiledEditedInRange() call');
+		alertFn(arrayOfPaths);
 	};
     
     azurite.eclipseCommand = function(eclipseCmdId) {

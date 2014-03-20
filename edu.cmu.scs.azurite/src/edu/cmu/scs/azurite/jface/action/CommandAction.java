@@ -51,8 +51,7 @@ public class CommandAction extends Action {
 				for (IParameter param : command.getParameters()) {
 					if (parameters.containsKey(param.getId())) {
 						paramList.add(new Parameterization(param, parameters.get(param.getId())));
-					}
-					else {
+					} else {
 						paramList.add(new Parameterization(param, null));
 					}
 				}
@@ -67,8 +66,7 @@ public class CommandAction extends Action {
 					| NotEnabledException | NotHandledException e) {
 				e.printStackTrace();
 			}
-		}
-		else {
+		} else {
 			try {
 				handlerService.executeCommand(getActionDefinitionId(), null);
 			} catch (ExecutionException | NotDefinedException | NotEnabledException

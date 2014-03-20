@@ -10,7 +10,6 @@ import org.eclipse.core.commands.ExecutionException;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.model.FileKey;
-import edu.cmu.scs.azurite.model.OperationId;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
 
@@ -18,17 +17,16 @@ public class UndoAllFilesToThisPointHandler extends AbstractHandler {
 
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
-		String oidString = event
-				.getParameter("edu.cmu.scs.azurite.ui.commands.undoAllFilesToThisPoint.annotationId");
+		String timestampString = event
+				.getParameter("edu.cmu.scs.azurite.ui.commands.undoAllFilesToThisPoint.absTimestamp");
 		
-		String[] tokens = oidString.split("_");
-		OperationId oid = new OperationId(Long.parseLong(tokens[0]), Long.parseLong(tokens[1]));
+		long absTimestamp = Long.parseLong(timestampString);
 		
 		Map<FileKey, List<RuntimeDC>> params = new HashMap<FileKey, List<RuntimeDC>>();
 		RuntimeHistoryManager history = RuntimeHistoryManager.getInstance();
 		
 		for (FileKey key : history.getFileKeys()) {
-			params.put(key, history.filterDocumentChangesGreaterThanId(key, oid));
+			params.put(key, history.filterDocumentChangesLaterThanTimestamp(key, absTimestamp));
 		}
 		
 		SelectiveUndoEngine.getInstance().doSelectiveUndoOnMultipleFiles(params);

@@ -84,8 +84,9 @@ public class SelectiveUndoEngine {
 			// Don't do anything further.
 		}
 		
-		if (document == null)
+		if (document == null) {
 			throw new IllegalStateException("Failed to get the active document");
+		}
 		
 		doSelectiveUndo(runtimeDocChanges, document);
 	}
@@ -130,12 +131,10 @@ public class SelectiveUndoEngine {
 					if (alternatives.size() <= 2) {
 						document.replace(initialOffset, initialContent.length(),
 								alternatives.get(0).getResultingCode());
-					}
-					else if (alternativeChoices != null && alternativeChoices.get(chunk) != null) {
+					} else if (alternativeChoices != null && alternativeChoices.get(chunk) != null) {
 						UndoAlternative chosenAlternative = alternativeChoices.get(chunk);
 						document.replace(initialOffset, initialContent.length(), chosenAlternative.getResultingCode());
-					}
-					else {
+					} else {
 						final Shell parentShell = Display.getDefault().getActiveShell();
 						
 						ConflictResolutionDialog conflictDialog = new ConflictResolutionDialog(
@@ -144,17 +143,15 @@ public class SelectiveUndoEngine {
 						conflictDialog.create();
 						conflictDialog.open();
 					}
-				}
+				} else {
 				// No conflicts. just undo them backwards.
-				else {
 					String resultingContent = doSelectiveUndoChunkWithoutConflicts(
 							chunk, initialContent);
 
 					document.replace(initialOffset, initialContent.length(),
 							resultingContent);
 				}
-			}
-			catch (Exception e) {
+			} catch (Exception e) {
 				e.printStackTrace();
 				return;
 			}
@@ -178,8 +175,9 @@ public class SelectiveUndoEngine {
 		
 		// Revert this chunk to the way it was before, including the unselected conflicting operations.
 		for (int i = 1; i <= MAX_EXPANSION_DEPTH; ++i) {
-			if (i == 0)
+			if (i == 0) {
 				continue;
+			}
 			
 			result.add(new UndoAlternative(
 					"Revert this code including the non-selected conflicting operations with depth "
@@ -251,57 +249,7 @@ public class SelectiveUndoEngine {
 			while (it.hasNext()) {
 				Segment segmentUnderUndo = it.next();
 				
-				if (segmentUnderUndo.isDeletion()) {
-					// Insert the text back at the offset.
-					buffer.replace(
-							segmentUnderUndo.getOffset() - initialOffset,
-							segmentUnderUndo.getOffset() - initialOffset,
-							segmentUnderUndo.getText());
-					
-					// Re-adjust all the following segments' offsets.
-					for (Segment chunkSegment : copyChunk) {
-						if (chunkSegment.equals(segmentUnderUndo)) {
-							continue;
-						}
-						if (Segment.getLocationComparator().compare(chunkSegment, segmentUnderUndo) < 0) {
-							continue;
-						}
-
-						chunkSegment.incrementOffset(segmentUnderUndo.getLength());
-					}
-					
-					// Re-open all the closed segments.
-					for (Segment closedSegment : segmentUnderUndo.getSegmentsClosedByMe()) {
-						if (copyChunk.contains(closedSegment)) {
-							closedSegment.reopen(segmentUnderUndo.getOffset());
-						}
-					}
-					
-					for (Segment right : segmentUnderUndo.getRight()) {
-						if (copyChunk.contains(right)) {
-							right.setOffset(segmentUnderUndo.getOffset() + segmentUnderUndo.getLength());
-						}
-					}
-				}	// if(segmentUnderUndo.isDeletion())
-				else {
-					// Delete this segment.
-					buffer.replace(
-							segmentUnderUndo.getOffset() - initialOffset,
-							segmentUnderUndo.getEndOffset() - initialOffset,
-							"");
-					
-					// Re-adjust all the following segments' offsets.
-					for (Segment chunkSegment : copyChunk) {
-						if (chunkSegment.equals(segmentUnderUndo)) {
-							continue;
-						}
-						if (Segment.getLocationComparator().compare(chunkSegment, segmentUnderUndo) < 0) {
-							continue;
-						}
-						
-						chunkSegment.decrementOffset(segmentUnderUndo.getLength());
-					}
-				}
+				undoSegment(segmentUnderUndo, copyChunk, initialOffset, buffer);
 				
 				it.remove();
 				copyChunk.remove(segmentUnderUndo);
@@ -309,6 +257,70 @@ public class SelectiveUndoEngine {
 		}
 
 		return buffer.toString();
+	}
+
+	private void undoSegment(Segment segmentUnderUndo, Chunk copyChunk,
+			int initialOffset, StringBuffer buffer) {
+		if (segmentUnderUndo.isDeletion()) {
+			undoDeleteSegment(segmentUnderUndo, copyChunk, initialOffset, buffer);
+		} else {
+			undoInsertSegment(segmentUnderUndo, copyChunk, initialOffset, buffer);
+		}
+	}
+
+	private void undoInsertSegment(Segment segmentUnderUndo, Chunk copyChunk,
+			int initialOffset, StringBuffer buffer) {
+		// Delete this segment.
+		buffer.replace(
+				segmentUnderUndo.getOffset() - initialOffset,
+				segmentUnderUndo.getEndOffset() - initialOffset,
+				"");
+		
+		// Re-adjust all the following segments' offsets.
+		for (Segment chunkSegment : copyChunk) {
+			if (chunkSegment.equals(segmentUnderUndo)) {
+				continue;
+			}
+			if (Segment.getLocationComparator().compare(chunkSegment, segmentUnderUndo) < 0) {
+				continue;
+			}
+			
+			chunkSegment.decrementOffset(segmentUnderUndo.getLength());
+		}
+	}
+
+	private void undoDeleteSegment(Segment segmentUnderUndo, Chunk copyChunk,
+			int initialOffset, StringBuffer buffer) {
+		// Insert the text back at the offset.
+		buffer.replace(
+				segmentUnderUndo.getOffset() - initialOffset,
+				segmentUnderUndo.getOffset() - initialOffset,
+				segmentUnderUndo.getText());
+		
+		// Re-adjust all the following segments' offsets.
+		for (Segment chunkSegment : copyChunk) {
+			if (chunkSegment.equals(segmentUnderUndo)) {
+				continue;
+			}
+			if (Segment.getLocationComparator().compare(chunkSegment, segmentUnderUndo) < 0) {
+				continue;
+			}
+
+			chunkSegment.incrementOffset(segmentUnderUndo.getLength());
+		}
+		
+		// Re-open all the closed segments.
+		for (Segment closedSegment : segmentUnderUndo.getSegmentsClosedByMe()) {
+			if (copyChunk.contains(closedSegment)) {
+				closedSegment.reopen(segmentUnderUndo.getOffset());
+			}
+		}
+		
+		for (Segment right : segmentUnderUndo.getRight()) {
+			if (copyChunk.contains(right)) {
+				right.setOffset(segmentUnderUndo.getOffset() + segmentUnderUndo.getLength());
+			}
+		}
 	}
 	
 	public void doSelectiveUndoWithParams(SelectiveUndoParams params) {
@@ -385,8 +397,9 @@ public class SelectiveUndoEngine {
 				chunk.add(segments.get(k));
 			}
 			
-			if (chunk != prevChunk)
+			if (chunk != prevChunk) {
 				chunks.add(chunk);
+			}
 			
 			// advance the loop index.
 			i = j;

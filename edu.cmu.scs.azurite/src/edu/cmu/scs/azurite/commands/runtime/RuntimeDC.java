@@ -5,6 +5,7 @@ import java.util.Comparator;
 import java.util.List;
 
 import edu.cmu.scs.azurite.model.FileKey;
+import edu.cmu.scs.azurite.model.OperationId;
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 import edu.cmu.scs.fluorite.commands.Delete;
 import edu.cmu.scs.fluorite.commands.Insert;
@@ -25,14 +26,11 @@ public abstract class RuntimeDC {
 	public static RuntimeDC createRuntimeDocumentChange(BaseDocumentChangeEvent original) {
 		if (original instanceof Insert) {
 			return new RuntimeInsert((Insert) original);
-		}
-		else if (original instanceof Delete) {
+		} else if (original instanceof Delete) {
 			return new RuntimeDelete((Delete) original);
-		}
-		else if (original instanceof Replace) {
+		} else if (original instanceof Replace) {
 			return new RuntimeReplace((Replace) original);
-		}
-		else {
+		} else {
 			throw new IllegalArgumentException("argument should be one of Insert / Delete / Replace");
 		}
 	}
@@ -102,8 +100,13 @@ public abstract class RuntimeDC {
 				@Override
 				public int compare(RuntimeDC lhs,
 						RuntimeDC rhs) {
-					if (lhs.getOriginal().getSessionId() < rhs.getOriginal().getSessionId()) { return -1; }
-					if (lhs.getOriginal().getSessionId() > rhs.getOriginal().getSessionId()) { return 1; }
+					if (lhs.getOriginal().getSessionId() < rhs.getOriginal().getSessionId()) {
+						return -1;
+					}
+					
+					if (lhs.getOriginal().getSessionId() > rhs.getOriginal().getSessionId()) {
+						return 1;
+					}
 					
 					int lindex = lhs.getOriginal().getCommandIndex();
 					int rindex = rhs.getOriginal().getCommandIndex();
@@ -120,5 +123,18 @@ public abstract class RuntimeDC {
 	
 	protected String transformToHtmlString(String originalCode) {
 		return originalCode.replace("\r\n", "\n").replace("\r", "\n").replace("\n", "&crarr;<br>");
+	}
+	
+	public abstract String getTypeString();
+	
+	public abstract String getMarkerMessage();
+	
+	private OperationId mOperationId;
+	public OperationId getOperationId() {
+		if (mOperationId == null) {
+			mOperationId = new OperationId(getOriginal().getSessionId(), getOriginal().getCommandIndex());
+		}
+		
+		return mOperationId;
 	}
 }

@@ -22,10 +22,8 @@ public class HistorySearchDialog extends Dialog {
 	
 	private Button mButtonCaseSensitive;
 	
-	private Button mButtonAll;
 	private Button mButtonSelectedCode;
 	
-	private Button mButtonAllSessions;
 	private Button mButtonCurrentSession;
 
 	private String mInitialSearchString;
@@ -86,8 +84,8 @@ public class HistorySearchDialog extends Dialog {
 		locScopeGroup.setLayout(new GridLayout());
 		locScopeGroup.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
 
-		mButtonAll = new Button(locScopeGroup, SWT.RADIO);
-		mButtonAll.setText("All");
+		Button buttonAll = new Button(locScopeGroup, SWT.RADIO);
+		buttonAll.setText("All");
 		
 		mButtonSelectedCode = new Button(locScopeGroup, SWT.RADIO);
 		mButtonSelectedCode.setText("Selected code");
@@ -97,8 +95,8 @@ public class HistorySearchDialog extends Dialog {
 		sessionScopeGroup.setLayout(new GridLayout());
 		sessionScopeGroup.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
 		
-		mButtonAllSessions = new Button(sessionScopeGroup, SWT.RADIO);
-		mButtonAllSessions.setText("All sessions");
+		Button buttonAllSessions = new Button(sessionScopeGroup, SWT.RADIO);
+		buttonAllSessions.setText("All sessions");
 		
 		mButtonCurrentSession = new Button(sessionScopeGroup, SWT.RADIO);
 		mButtonCurrentSession.setText("Latest session");
@@ -125,13 +123,13 @@ public class HistorySearchDialog extends Dialog {
 		if (prefStore.getBoolean(Initializer.Pref_HistorySearchSelectedCode)) {
 			mButtonSelectedCode.setSelection(true);
 		} else {
-			mButtonAll.setSelection(true);
+			buttonAll.setSelection(true);
 		}
 
 		if (prefStore.getBoolean(Initializer.Pref_HistorySearchCurrentSession)) {
 			mButtonCurrentSession.setSelection(true);
 		} else {
-			mButtonAllSessions.setSelection(true);
+			buttonAllSessions.setSelection(true);
 		}
 
 		mButtonCaseSensitive.setSelection(prefStore

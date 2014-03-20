@@ -59,11 +59,10 @@ public class DeleteComponent implements EditComponent {
 			// adjust all the subsequent segments' offsets.
 			segment.incrementOffset(lengthDiff);
 			
-		}
+		} else if (deleteSegment.getOffset() < segment.getOffset()
+				&& segment.getOffset() < deleteSegment.getEndOffset()) {
 		//        | existing segment |
 		// |---------- replacement ----------|
-		else if (deleteSegment.getOffset() < segment.getOffset()
-				&& segment.getOffset() < deleteSegment.getEndOffset()) {
 			
 			// In this case, the delete segment should not be a dummy.
 			if (deleteSegment.getLength() == 0) {
@@ -73,14 +72,13 @@ public class DeleteComponent implements EditComponent {
 			deleteSegment.closeSegment(segment);
 			
 			conflict = true;
-		}
+		} else if (segment.getOffset() <= deleteSegment.getOffset()) {
 		// |     existing segment     |
 		//                                |---------- replacement ----------|
-		else if (segment.getOffset() <= deleteSegment.getOffset()) {
+			
 			// Do nothing
-		}
+		} else {
 		// Should not fall to this else clause
-		else {
 			throw new IllegalStateException();
 		}
 		

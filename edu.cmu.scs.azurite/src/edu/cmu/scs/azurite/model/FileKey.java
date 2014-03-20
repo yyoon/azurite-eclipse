@@ -44,23 +44,35 @@ public class FileKey {
 
 	@Override
 	public boolean equals(Object obj) {
-		if (this == obj)
+		if (this == obj) {
 			return true;
-		if (obj == null)
+		}
+		
+		if (obj == null) {
 			return false;
-		if (getClass() != obj.getClass())
+		}
+		
+		if (getClass() != obj.getClass()) {
 			return false;
+		}
+		
 		FileKey other = (FileKey) obj;
 		if (mFilePath == null) {
-			if (other.mFilePath != null)
+			if (other.mFilePath != null) {
 				return false;
-		} else if (!mFilePath.equals(other.mFilePath))
+			}
+		} else if (!mFilePath.equals(other.mFilePath)) {
 			return false;
+		}
+		
 		if (mProjectName == null) {
-			if (other.mProjectName != null)
+			if (other.mProjectName != null) {
 				return false;
-		} else if (!mProjectName.equals(other.mProjectName))
+			}
+		} else if (!mProjectName.equals(other.mProjectName)) {
 			return false;
+		}
+		
 		return true;
 	}
 

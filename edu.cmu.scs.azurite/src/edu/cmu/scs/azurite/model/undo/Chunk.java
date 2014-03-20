@@ -87,16 +87,20 @@ public class Chunk extends ArrayList<Segment> {
 		while (!queue.isEmpty()) {
 			RuntimeDC dc = queue.remove();
 			
-			if (isInRange(dc, getStartOffset(), getEndOffset())) {
-				if (!set.contains(dc)) {
-					set.add(dc);
-					result.addAll(dc.getAllSegments());
-					
-					for (RuntimeDC conflict : dc.getConflicts()) {
-						if (!set.contains(conflict)) {
-							queue.add(conflict);
-						}
-					}
+			if (!isInRange(dc, getStartOffset(), getEndOffset())) {
+				continue;
+			}
+			
+			if (set.contains(dc)) {
+				continue;
+			}
+			
+			set.add(dc);
+			result.addAll(dc.getAllSegments());
+			
+			for (RuntimeDC conflict : dc.getConflicts()) {
+				if (!set.contains(conflict)) {
+					queue.add(conflict);
 				}
 			}
 		}
@@ -119,25 +123,30 @@ public class Chunk extends ArrayList<Segment> {
 		
 		// Flood fill.
 		Queue<Pair<RuntimeDC, Integer>> queue = new LinkedList<Pair<RuntimeDC, Integer>>();
-		for (RuntimeDC dc : getInvolvedChanges())
+		for (RuntimeDC dc : getInvolvedChanges()) {
 			queue.add(new Pair<RuntimeDC, Integer>(dc, 0));
+		}
 		Set<RuntimeDC> set = new HashSet<RuntimeDC>();
 		
 		while (!queue.isEmpty()) {
 			Pair<RuntimeDC, Integer> pair = queue.remove();
 			RuntimeDC dc = pair.getFirst();
+			
+			if (set.contains(dc)) {
+				continue;
+			}
 
-			if (!set.contains(dc)) {
-				set.add(dc);
-				result.addAll(dc.getAllSegments());
+			set.add(dc);
+			result.addAll(dc.getAllSegments());
+			
+			if (depth != -1 && pair.getSecond().compareTo(depth) >= 0) {
+				continue;
+			}
 
-				if (depth == -1 || pair.getSecond().compareTo(depth) < 0) {
-					for (RuntimeDC conflict : dc.getConflicts()) {
-						if (!set.contains(conflict)) {
-							queue.add(new Pair<RuntimeDC, Integer>(conflict,
-									pair.getSecond() + 1));
-						}
-					}
+			for (RuntimeDC conflict : dc.getConflicts()) {
+				if (!set.contains(conflict)) {
+					queue.add(new Pair<RuntimeDC, Integer>(conflict,
+							pair.getSecond() + 1));
 				}
 			}
 		}
@@ -223,14 +232,11 @@ public class Chunk extends ArrayList<Segment> {
 				public int compare(Chunk lhs, Chunk rhs) {
 					if (lhs.getStartOffset() < rhs.getStartOffset()) {
 						return -1;
-					}
-					else if (lhs.getStartOffset() > rhs.getStartOffset()) {
+					} else if (lhs.getStartOffset() > rhs.getStartOffset()) {
 						return 1;
-					}
-					else if (lhs.getEndOffset() < rhs.getEndOffset()) {
+					} else if (lhs.getEndOffset() < rhs.getEndOffset()) {
 						return -1;
-					}
-					else if (lhs.getEndOffset() > rhs.getEndOffset()) {
+					} else if (lhs.getEndOffset() > rhs.getEndOffset()) {
 						return 1;
 					}
 					

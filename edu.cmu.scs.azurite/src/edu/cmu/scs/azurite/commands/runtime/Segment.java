@@ -456,6 +456,20 @@ public class Segment {
 		return copy;
 	}
 	
+	/**
+	 * Determines whether this segment is in the given selection range
+	 * @param selectionStart the start offset of the selection range
+	 * @param selectionEnd the end offset of the selection range
+	 * @return true if this segment is within the selection range, false otherwise.
+	 */
+	public boolean inSelectionRange(int selectionStart, int selectionEnd) {
+		if (isDeletion()) {
+			return selectionStart < getOffset() && getOffset() < selectionEnd;
+		} else {
+			return getOffset() < selectionEnd && getEndOffset() > selectionStart;
+		}
+	}
+	
 	private static Comparator<Segment> locationComparator;
 	
 	/**
@@ -471,26 +485,19 @@ public class Segment {
 				public int compare(Segment lhs, Segment rhs) {
 					if (lhs.getOffset() < rhs.getOffset()) {
 						return -1;
-					}
-					else if (lhs.getOffset() > rhs.getOffset()) {
+					} else if (lhs.getOffset() > rhs.getOffset()) {
 						return 1;
-					}
-					else if (lhs.getEffectiveEndOffset() < rhs.getEffectiveEndOffset()) {
+					} else if (lhs.getEffectiveEndOffset() < rhs.getEffectiveEndOffset()) {
 						return -1;
-					}
-					else if (lhs.getEffectiveEndOffset() > rhs.getEffectiveEndOffset()) {
+					} else if (lhs.getEffectiveEndOffset() > rhs.getEffectiveEndOffset()) {
 						return 1;
-					}
-					else if (lhs.getOwner().getOriginal().getSessionId() < rhs.getOwner().getOriginal().getSessionId()) {
+					} else if (lhs.getOwner().getOriginal().getSessionId() < rhs.getOwner().getOriginal().getSessionId()) {
 						return -1;
-					}
-					else if (lhs.getOwner().getOriginal().getSessionId() > rhs.getOwner().getOriginal().getSessionId()) {
+					} else if (lhs.getOwner().getOriginal().getSessionId() > rhs.getOwner().getOriginal().getSessionId()) {
 						return 1;
-					}
-					else if (lhs.getOwner().getOriginal().getCommandIndex() < rhs.getOwner().getOriginal().getCommandIndex()) {
+					} else if (lhs.getOwner().getOriginal().getCommandIndex() < rhs.getOwner().getOriginal().getCommandIndex()) {
 						return -1;
-					}
-					else if (lhs.getOwner().getOriginal().getCommandIndex() > rhs.getOwner().getOriginal().getCommandIndex()) {
+					} else if (lhs.getOwner().getOriginal().getCommandIndex() > rhs.getOwner().getOriginal().getCommandIndex()) {
 						return 1;
 					}
 					
@@ -502,4 +509,5 @@ public class Segment {
 		
 		return locationComparator;
 	}
+
 }

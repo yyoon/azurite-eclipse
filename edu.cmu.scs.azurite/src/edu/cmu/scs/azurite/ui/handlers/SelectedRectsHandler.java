@@ -74,8 +74,7 @@ public class SelectedRectsHandler extends AbstractHandler {
 				IHandlerService handlerService = (IHandlerService) PlatformUI.getWorkbench().getService(IHandlerService.class);
 				try {
 					handlerService.executeCommand(commandId, null);
-				}
-				catch (Exception e) {
+				} catch (Exception e) {
 					e.printStackTrace();
 				}
 			}
@@ -88,10 +87,12 @@ public class SelectedRectsHandler extends AbstractHandler {
 
 		@Override
 		public void dispose() {
+			// Do nothing
 		}
 
 		@Override
 		public void inputChanged(Viewer viewer, Object oldInput, Object newInput) {
+			// Do nothing
 		}
 
 		@Override

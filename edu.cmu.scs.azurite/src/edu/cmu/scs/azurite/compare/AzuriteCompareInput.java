@@ -48,15 +48,18 @@ public class AzuriteCompareInput implements ICompareInput {
 	@Override
 	public void addCompareInputChangeListener(
 			ICompareInputChangeListener listener) {
+		// Do nothing
 	}
 
 	@Override
 	public void removeCompareInputChangeListener(
 			ICompareInputChangeListener listener) {
+		// Do nothing
 	}
 
 	@Override
 	public void copy(boolean leftToRight) {
+		// Do nothing
 	}
 
 }
