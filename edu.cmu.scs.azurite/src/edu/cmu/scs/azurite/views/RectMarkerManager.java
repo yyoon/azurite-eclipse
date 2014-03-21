@@ -2,6 +2,7 @@ package edu.cmu.scs.azurite.views;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -23,27 +24,30 @@ public class RectMarkerManager implements RectSelectionListener {
 	
 	private static final String BASE_MARKER_ID = "edu.cmu.scs.azurite.baseMarker";
 	
-	private Map<OperationId, IMarker> currentMarkers;
+	private Map<OperationId, List<IMarker>> currentMarkers;
 	
 	public RectMarkerManager() {
-		this.currentMarkers = new HashMap<OperationId, IMarker>();
+		this.currentMarkers = new HashMap<OperationId, List<IMarker>>();
 	}
 
 	@Override
 	public void rectSelectionChanged() {
 		try {
-			// Remove all the markers
+			// Get the workspace root.
 			IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
-			root.deleteMarkers(BASE_MARKER_ID, true, IResource.DEPTH_INFINITE);
 			
 			// Get the current selection
 			List<OperationId> ids = TimelineViewPart.getInstance().getRectSelection();
 			
 			// Remove all the stale markers
-			for (OperationId oid : this.currentMarkers.keySet()) {
+			Iterator<OperationId> it = this.currentMarkers.keySet().iterator();
+			while (it.hasNext()) {
+				OperationId oid = it.next();
 				if (!ids.contains(oid)) {
-					this.currentMarkers.get(oid).delete();
-					this.currentMarkers.remove(oid);
+					for (IMarker marker : this.currentMarkers.get(oid)) {
+						marker.delete();
+					}
+					it.remove();
 				}
 			}
 			
@@ -67,6 +71,9 @@ public class RectMarkerManager implements RectSelectionListener {
 				IDocument doc = edu.cmu.scs.azurite.util.Utilities.findDocumentForKey(fileKey);
 				
 				for (RuntimeDC dc : fileDCMap.get(fileKey)) {
+					List<IMarker> markers = new ArrayList<IMarker>();
+					this.currentMarkers.put(dc.getOperationId(), markers);
+					
 					for (Segment segment : dc.getAllSegments()) {
 						IMarker marker = fileResource.createMarker("edu.cmu.scs.azurite." + dc.getTypeString() + "Marker");
 						marker.setAttribute(IMarker.SEVERITY, IMarker.SEVERITY_INFO);
@@ -74,6 +81,8 @@ public class RectMarkerManager implements RectSelectionListener {
 						marker.setAttribute(IMarker.LINE_NUMBER, doc.getLineOfOffset(segment.getOffset()));
 						marker.setAttribute(IMarker.CHAR_START, segment.getOffset());
 						marker.setAttribute(IMarker.CHAR_END, segment.getEffectiveEndOffset());
+						
+						markers.add(marker);
 					}
 				}
 			}
