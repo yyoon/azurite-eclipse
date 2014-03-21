@@ -239,6 +239,36 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 							
 							manager.add(undoAllFilesToThisPointAction);
 							manager.add(undoCurrentFileToThisPointAction);
+							
+							manager.add(new Separator());
+							
+							paramMap.clear();
+							paramMap.put("edu.cmu.scs.azurite.ui.commands.absTimestamp", Long.toString(absTimestamp));
+							Action selectAllAfter = new CommandAction(
+									"Select All Rectangles After This Point",
+									"edu.cmu.scs.azurite.ui.commands.selectAllAfterCommand",
+									paramMap);
+							
+							Action selectAllBefore = new CommandAction(
+									"Select All Rectangles Before This Point",
+									"edu.cmu.scs.azurite.ui.commands.selectAllBeforeCommand",
+									paramMap);
+							
+							Action deselectAllAfter = new CommandAction(
+									"Deselect All Rectangles After This Point",
+									"edu.cmu.scs.azurite.ui.commands.deselectAllAfterCommand",
+									paramMap);
+							
+							Action deselectAllBefore = new CommandAction(
+									"Deselect All Rectangles Before This Point",
+									"edu.cmu.scs.azurite.ui.commands.deselectAllBeforeCommand",
+									paramMap);
+							
+							manager.add(selectAllAfter);
+							manager.add(selectAllBefore);
+							manager.add(deselectAllAfter);
+							manager.add(deselectAllBefore);
+							
 							break;
 						}
 					}
