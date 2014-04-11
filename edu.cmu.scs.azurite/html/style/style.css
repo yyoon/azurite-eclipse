@@ -1,19 +1,3 @@
-#sel_box {
-display: none;
-position: absolute;
-border: 1px solid #000000;
-background: transparent;
-width: 0;
-height: 0;
-}
-
-.extent {
-stroke: #fff;
-fill-opacity: .125;
-fill: blue;
-shape-rendering: crispEdges;
-}
-
 body {
 background-color:black;
 font-family:helvetica;
@@ -27,35 +11,6 @@ height: 100%;
 
 margin: 0px;
 padding: 0px;
-}
-
-.file_title {
-
-}
-
-.menu_panel {
-display: none;
-
-background-color:grey;
-padding: 5px;
-width: 100%;
-height: 0px;
-margin-top: 0px;
-
--moz-box-sizing:    border-box;
--webkit-box-sizing: border-box;
-box-sizing:         border-box;
-}
-
-.menu_subpanel {
-display: inline-block;
-vertical-align: top;
-margin-right: 50px;
-}
-
-.menu_debugpanel {
-display: inline-block;
-float: right;
 }
 
 #main {
@@ -92,18 +47,6 @@ overflow: hidden;
 #svg_inner_wrapper {
 width: 100%;
 height: 100%;
-}
-
-button.menu {
-width: 50px;
-height: 30px;
-margin: 0px;
-padding: 0px;
-}
-
-.cmenu {
-margin: 0;
-list-style-type: none;
 }
 
 #scroll_wrapper {
@@ -302,127 +245,3 @@ background-image: url('../images/down_rollover.png');
 text {
 	pointer-events: none;
 }
-
-.context_menu {
-	display: none;
-	position: absolute;
-}
-
-/* Some stylesheet reset */
-.context_menu > ul{
-	list-style: none;
-	margin: 0;
-	padding: 0;
-	vertical-align: baseline;
-	line-height: 1;
-}
-
-/* The container */
-.context_menu > ul {
-	display: block;
-	position: relative;
-}
-
-	/* The list elements which contain the links */
-	.context_menu > ul li {
-		display: block;
-		position: relative;
-		margin: 0;
-		padding: 0;
-	}
-
-		/* General link styling */
-		.context_menu > ul li a {
-			/* Layout */
-			display: block;
-			position: relative;
-			margin: 0;
-			border-top: 1px dotted #fff;
-			border-bottom: 1px dotted #d9d9d9;
-			padding: 10px 10px;
-
-			/* Typography */
-			font-family:  Helvetica, Arial, sans-serif;
-			color: #3dafea;
-			text-decoration: none;
-			text-transform: uppercase;
-			text-shadow: 0 1px 0 #fff;
-			font-size: 13px;
-			font-weight: 300;
-
-			/* Background & effects */
-			background: #eaeaea;
-		}
-		
-		.context_menu > ul li.disabled a {
-			color: gray;
-		}
-
-		/* Rounded corners for the first link of the menu/submenus */
-		.context_menu > ul li:first-child>a {
-			border-top-left-radius: 2px;
-			border-top-right-radius: 2px;
-			border-top: 0;
-		}
-
-		/* Rounded corners for the last link of the menu/submenus */
-		.context_menu > ul li:last-child>a {
-			border-bottom-left-radius: 2px;
-			border-bottom-right-radius: 2px;
-			border-bottom: 0;
-		}
-
-
-		/* The hover state of the menu/submenu links */
-		.context_menu > ul li>a:hover, .context_menu > ul li:hover>a {
-			color: #fff;
-			text-shadow: 0 1px 0 rgba(0, 0, 0, .3);
-			background: #54cdf1;
-			background: -webkit-linear-gradient(bottom, #54cdf1, #74d7f3);
-			background: -ms-linear-gradient(bottom, #54cdf1, #74d7f3); 
-			background: -moz-linear-gradient(bottom, #54cdf1, #74d7f3);
-			background: -o-linear-gradient(bottom, #54cdf1, #74d7f3);
-			border-color: transparent;
-		}
-		
-		.context_menu > ul li.disabled>a:hover, #cssmenu > ul li.disabled:hover>a {
-			color: gray;
-			text-shadow: 0 1px 0 #fff;
-		}
-
-		/* The arrow indicating a submenu */
-		.context_menu > ul .has-sub>a::after {
-			content: '';
-			position: absolute;
-			top: 16px;
-			right: 10px;
-			width: 0px;
-			height: 0px;
-
-			/* Creating the arrow using borders */
-			border: 4px solid transparent;
-			border-left: 4px solid #3dafea; 
-		}
-
-		/* The same arrow, but with a darker color, to create the shadow effect */
-		.context_menu > ul .has-sub>a::before {
-			content: '';
-			position: absolute;
-			top: 17px;
-			right: 10px;
-			width: 0px;
-			height: 0px;
-
-			/* Creating the arrow using borders */
-			border: 4px solid transparent;
-			border-left: 4px solid #fff;
-		}
-
-		/* Changing the color of the arrow on hover */
-		.context_menu > ul li>a:hover::after, .context_menu > ul li:hover>a::after {
-			border-left: 4px solid #fff;
-		}
-
-		.context_menu > ul li>a:hover::before, .context_menu > ul li:hover>a::before {
-			border-left: 4px solid rgba(0, 0, 0, .25);
-		}
