@@ -155,6 +155,13 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 				paramMap);
 		
 		paramMap.clear();
+		paramMap.put(EXECUTE_JS_CODE_COMMAND_PARAM_ID, "removeAllSelections();");
+		final Action deselectAllRectanglesAction = new CommandAction(
+				"Deselect All Rectangles",
+				EXECUTE_JS_CODE_COMMAND_ID,
+				paramMap);
+		
+		paramMap.clear();
 		paramMap.put(EXECUTE_JS_CODE_COMMAND_PARAM_ID, "showSelectedFile();");
 		final Action showThisFileOnlyAction = new CommandAction(
 				"Show This File Only",
@@ -197,6 +204,10 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 							manager.add(interactiveSelectiveUndoAction);
 							manager.add(undoEverythingAfterSelectionAction);
 							manager.add(jumpToTheAffectedCodeAction);
+							
+							manager.add(new Separator());
+							
+							manager.add(deselectAllRectanglesAction);
 							break;
 						}
 							
@@ -205,6 +216,10 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 							manager.add(interactiveSelectiveUndoAction);
 							manager.add(undoEverythingAfterSelectionAction);
 							manager.add(showAllFilesEditedTogetherAction);
+							
+							manager.add(new Separator());
+							
+							manager.add(deselectAllRectanglesAction);
 							break;
 						}
 							
@@ -217,6 +232,41 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 							
 						case "file_out": {
 							manager.add(showAllFilesAction);
+							break;
+						}
+						
+						case "time_range": {
+							long absTimestampStart = ((Number) browser.evaluate("return global.selectedTimestampRange[0];")).longValue();
+							long absTimestampEnd = ((Number) browser.evaluate("return global.selectedTimestampRange[1];")).longValue();
+							
+							paramMap.clear();
+							paramMap.put("edu.cmu.scs.azurite.ui.commands.absTimestampStart", Long.toString(absTimestampStart));
+							paramMap.put("edu.cmu.scs.azurite.ui.commands.absTimestampEnd", Long.toString(absTimestampEnd));
+							Action selectAllInside = new CommandAction(
+									"Select All Rectangles Inside This Range",
+									"edu.cmu.scs.azurite.ui.commands.selectAllInsideCommand",
+									paramMap);
+							
+							Action selectAllOutside = new CommandAction(
+									"Select All Rectangles Outside This Range",
+									"edu.cmu.scs.azurite.ui.commands.selectAllOutsideCommand",
+									paramMap);
+							
+							Action deselectAllInside = new CommandAction(
+									"Deselect All Rectangles Inside This Range",
+									"edu.cmu.scs.azurite.ui.commands.deselectAllInsideCommand",
+									paramMap);
+							
+							Action deselectAllOutside = new CommandAction(
+									"Deselect All Rectangles Outside This Range",
+									"edu.cmu.scs.azurite.ui.commands.deselectAllOutsideCommand",
+									paramMap);
+							
+							manager.add(selectAllInside);
+							manager.add(selectAllOutside);
+							manager.add(deselectAllInside);
+							manager.add(deselectAllOutside);
+							
 							break;
 						}
 						
@@ -239,6 +289,36 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 							
 							manager.add(undoAllFilesToThisPointAction);
 							manager.add(undoCurrentFileToThisPointAction);
+							
+							manager.add(new Separator());
+							
+							paramMap.clear();
+							paramMap.put("edu.cmu.scs.azurite.ui.commands.absTimestamp", Long.toString(absTimestamp));
+							Action selectAllAfter = new CommandAction(
+									"Select All Rectangles After This Point",
+									"edu.cmu.scs.azurite.ui.commands.selectAllAfterCommand",
+									paramMap);
+							
+							Action selectAllBefore = new CommandAction(
+									"Select All Rectangles Before This Point",
+									"edu.cmu.scs.azurite.ui.commands.selectAllBeforeCommand",
+									paramMap);
+							
+							Action deselectAllAfter = new CommandAction(
+									"Deselect All Rectangles After This Point",
+									"edu.cmu.scs.azurite.ui.commands.deselectAllAfterCommand",
+									paramMap);
+							
+							Action deselectAllBefore = new CommandAction(
+									"Deselect All Rectangles Before This Point",
+									"edu.cmu.scs.azurite.ui.commands.deselectAllBeforeCommand",
+									paramMap);
+							
+							manager.add(selectAllAfter);
+							manager.add(selectAllBefore);
+							manager.add(deselectAllAfter);
+							manager.add(deselectAllBefore);
+							
 							break;
 						}
 					}

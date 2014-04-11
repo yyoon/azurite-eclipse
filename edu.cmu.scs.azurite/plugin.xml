@@ -577,6 +577,106 @@
                optional="false">
          </commandParameter>
       </command>
+      <command
+            defaultHandler="edu.cmu.scs.azurite.ui.handlers.SelectAllAfterHandler"
+            id="edu.cmu.scs.azurite.ui.commands.selectAllAfterCommand"
+            name="Select All Rectangles After This Point">
+         <commandParameter
+               id="edu.cmu.scs.azurite.ui.commands.absTimestamp"
+               name="Absolute timestamp of the base point"
+               optional="false">
+         </commandParameter>
+      </command>
+      <command
+            defaultHandler="edu.cmu.scs.azurite.ui.handlers.SelectAllBeforeHandler"
+            id="edu.cmu.scs.azurite.ui.commands.selectAllBeforeCommand"
+            name="Select All Rectangles Before This Point">
+         <commandParameter
+               id="edu.cmu.scs.azurite.ui.commands.absTimestamp"
+               name="Absolute timestamp of the base point"
+               optional="false">
+         </commandParameter>
+      </command>
+      <command
+            defaultHandler="edu.cmu.scs.azurite.ui.handlers.DeselectAllAfterHandler"
+            id="edu.cmu.scs.azurite.ui.commands.deselectAllAfterCommand"
+            name="Deselect All Rectangles After This Point">
+         <commandParameter
+               id="edu.cmu.scs.azurite.ui.commands.absTimestamp"
+               name="Absolute timestamp of the base point"
+               optional="false">
+         </commandParameter>
+      </command>
+      <command
+            defaultHandler="edu.cmu.scs.azurite.ui.handlers.DeselectAllBeforeHandler"
+            id="edu.cmu.scs.azurite.ui.commands.deselectAllBeforeCommand"
+            name="Deselect All Rectangles Before This Point">
+         <commandParameter
+               id="edu.cmu.scs.azurite.ui.commands.absTimestamp"
+               name="Absolute timestamp of the base point"
+               optional="false">
+         </commandParameter>
+      </command>
+      <command
+            defaultHandler="edu.cmu.scs.azurite.ui.handlers.SelectAllInsideHandler"
+            id="edu.cmu.scs.azurite.ui.commands.selectAllInsideCommand"
+            name="Select All Rectangles Inside This Range">
+         <commandParameter
+               id="edu.cmu.scs.azurite.ui.commands.absTimestampStart"
+               name="Absolute timestamp of the starting point"
+               optional="false">
+         </commandParameter>
+         <commandParameter
+               id="edu.cmu.scs.azurite.ui.commands.absTimestampEnd"
+               name="Absolute timestamp of the ending point"
+               optional="false">
+         </commandParameter>
+      </command>
+      <command
+            defaultHandler="edu.cmu.scs.azurite.ui.handlers.SelectAllOutsideHandler"
+            id="edu.cmu.scs.azurite.ui.commands.selectAllOutsideCommand"
+            name="Select All Rectangles Outside This Range">
+         <commandParameter
+               id="edu.cmu.scs.azurite.ui.commands.absTimestampStart"
+               name="Absolute timestamp of the starting point"
+               optional="false">
+         </commandParameter>
+         <commandParameter
+               id="edu.cmu.scs.azurite.ui.commands.absTimestampEnd"
+               name="Absolute timestamp of the ending point"
+               optional="false">
+         </commandParameter>
+      </command>
+      <command
+            defaultHandler="edu.cmu.scs.azurite.ui.handlers.DeselectAllInsideHandler"
+            id="edu.cmu.scs.azurite.ui.commands.deselectAllInsideCommand"
+            name="Deselect All Rectangles Inside This Range">
+         <commandParameter
+               id="edu.cmu.scs.azurite.ui.commands.absTimestampStart"
+               name="Absolute timestamp of the starting point"
+               optional="false">
+         </commandParameter>
+         <commandParameter
+               id="edu.cmu.scs.azurite.ui.commands.absTimestampEnd"
+               name="Absolute timestamp of the ending point"
+               optional="false">
+         </commandParameter>
+      </command>
+      <command
+            defaultHandler="edu.cmu.scs.azurite.ui.handlers.DeselectAllOutsideHandler"
+            id="edu.cmu.scs.azurite.ui.commands.deselectAllOutsideCommand"
+            name="Deselect All Rectangles Outside This Range">
+         <commandParameter
+               id="edu.cmu.scs.azurite.ui.commands.absTimestampStart"
+               name="Absolute timestamp of the starting point"
+               optional="false">
+         </commandParameter>
+         <commandParameter
+               id="edu.cmu.scs.azurite.ui.commands.absTimestampEnd"
+               name="Absolute timestamp of the ending point"
+               optional="false">
+         </commandParameter>
+      </command>
    </extension>
    <extension
          point="org.eclipse.ui.bindings">

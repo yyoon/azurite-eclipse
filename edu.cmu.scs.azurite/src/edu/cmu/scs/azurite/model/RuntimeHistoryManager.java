@@ -398,6 +398,82 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 		});
 	}
 	
+	public List<RuntimeDC> filterDocumentChangesLaterThanOrEqualToTimestamp(final long absTimestamp) {
+		return filterDocumentChangesLaterThanOrEqualToTimestamp(getCurrentFileKey(), absTimestamp);
+	}
+	
+	public List<RuntimeDC> filterDocumentChangesLaterThanOrEqualToTimestamp(FileKey key, final long absTimestamp) {
+		if (key == null) {
+			throw new IllegalArgumentException();
+		}
+		
+		return filterDocumentChanges(key, new IRuntimeDCFilter() {
+			@Override
+			public boolean filter(RuntimeDC runtimeDC) {
+				long timestamp = runtimeDC.getOriginal().getSessionId() + runtimeDC.getOriginal().getTimestamp();
+				
+				return absTimestamp <= timestamp;
+			}
+		});
+	}
+	
+	public List<RuntimeDC> filterDocumentChangesEarlierThanTimestamp(final long absTimestamp) {
+		return filterDocumentChangesEarlierThanTimestamp(getCurrentFileKey(), absTimestamp);
+	}
+	
+	public List<RuntimeDC> filterDocumentChangesEarlierThanTimestamp(FileKey key, final long absTimestamp) {
+		if (key == null) {
+			throw new IllegalArgumentException();
+		}
+		
+		return filterDocumentChanges(key, new IRuntimeDCFilter() {
+			@Override
+			public boolean filter(RuntimeDC runtimeDC) {
+				long timestamp = runtimeDC.getOriginal().getSessionId() + runtimeDC.getOriginal().getTimestamp();
+				
+				return absTimestamp > timestamp;
+			}
+		});
+	}
+	
+	public List<RuntimeDC> filterDocumentChangesEarlierThanOrEqualToTimestamp(final long absTimestamp) {
+		return filterDocumentChangesEarlierThanOrEqualToTimestamp(getCurrentFileKey(), absTimestamp);
+	}
+	
+	public List<RuntimeDC> filterDocumentChangesEarlierThanOrEqualToTimestamp(FileKey key, final long absTimestamp) {
+		if (key == null) {
+			throw new IllegalArgumentException();
+		}
+		
+		return filterDocumentChanges(key, new IRuntimeDCFilter() {
+			@Override
+			public boolean filter(RuntimeDC runtimeDC) {
+				long timestamp = runtimeDC.getOriginal().getSessionId() + runtimeDC.getOriginal().getTimestamp();
+				
+				return absTimestamp >= timestamp;
+			}
+		});
+	}
+	
+	public List<RuntimeDC> filterDocumentChangesLaterThanOrEqualToAndEarlierThanTimestamps(final long absTimestampStart, final long absTimestampEnd) {
+		return filterDocumentChangesLaterThanOrEqualToAndEarlierThanTimestamps(getCurrentFileKey(), absTimestampStart, absTimestampEnd);
+	}
+	
+	public List<RuntimeDC> filterDocumentChangesLaterThanOrEqualToAndEarlierThanTimestamps(FileKey key, final long absTimestampStart, final long absTimestampEnd) {
+		if (key == null) {
+			throw new IllegalArgumentException();
+		}
+		
+		return filterDocumentChanges(key, new IRuntimeDCFilter() {
+			@Override
+			public boolean filter(RuntimeDC runtimeDC) {
+				long timestamp = runtimeDC.getOriginal().getSessionId() + runtimeDC.getOriginal().getTimestamp();
+				
+				return absTimestampStart <= timestamp && timestamp < absTimestampEnd;
+			}
+		});
+	}
+	
 	public RuntimeDC filterDocumentChangeByIdWithoutCalculating(FileKey key, final OperationId id) {
 		if (key == null || id == null) {
 			throw new IllegalArgumentException();

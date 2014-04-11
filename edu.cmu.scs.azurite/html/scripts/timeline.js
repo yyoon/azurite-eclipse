@@ -1459,15 +1459,6 @@ function initMouseDownHandler() {
 			global.draggingMarker = false;
 			global.draggingMarkerInTimeTickArea = false;
 
-			if (!global.isCtrlDown) {
-				global.prevSelectedRects = global.selectedRects.slice(0);
-
-				global.selectedRects = [];
-				svg.subRects.selectAll('rect.highlight_rect').remove();
-
-				checkAndNotifySelectionChanged();
-			}
-
 			d3.select('.selection_box').attr('x', mouseX).attr('y', mouseY);
 
 			return;
@@ -1799,6 +1790,19 @@ function cursorInEvent(x, y) {
 	return d3.selectAll(list).filter('.event_icon')[0].length > 0;
 }
 
+function cursorInRangeSelectionBox(x, y) {
+	var rect = svg.main.node().createSVGRect();
+	rect.x = x;
+	rect.y = y;
+	rect.width = 1;
+	rect.height = 1;
+
+	// Get all the intersecting objects in the SVG.
+	var list = svg.main.node().getIntersectionList(rect, null);
+
+	return d3.selectAll(list).filter('#range_selection_box')[0].length > 0;
+}
+
 function cursorInArea(x, y, area) {
 	return x >= area.left && x < area.right && y >= area.top && y < area.bottom;
 }
@@ -1815,7 +1819,10 @@ function showContextMenu(e) {
 	
 	cmenu.mousePos = [mouseX, mouseY];
 	
-	if (cursorInArea(mouseX, mouseY, global.draggableArea)) {
+	if (cursorInRangeSelectionBox(mouseX, mouseY)) {
+		cmenu.typeName = 'time_range';
+	}
+	else if (cursorInArea(mouseX, mouseY, global.draggableArea)) {
 		if (global.selectedRects.length === 0) {
 			addSelections(mouseX, mouseY, mouseX + 1, mouseY + 1);
 		}
@@ -1887,6 +1894,15 @@ function removeSelectionsByIds(sids, ids) {
 	}
 	
 	updateHighlight();
+	checkAndNotifySelectionChanged();
+}
+
+function removeAllSelections() {
+	global.prevSelectedRects = global.selectedRects.slice(0);
+
+	global.selectedRects = [];
+	svg.subRects.selectAll('rect.highlight_rect').remove();
+
 	checkAndNotifySelectionChanged();
 }
 
