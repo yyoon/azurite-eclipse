@@ -152,13 +152,6 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		final Action jumpToTheAffectedCodeAction = new CommandAction(
 				"Jump to the Affected Code in the Editor",
 				"edu.cmu.scs.azurite.ui.commands.jumpToTheAffectedCodeCommand");
-
-		paramMap.clear();
-		paramMap.put(EXECUTE_JS_CODE_COMMAND_PARAM_ID, "showAllFilesEditedTogether();");
-		final Action showAllFilesEditedTogetherAction = new CommandAction(
-				"Show All Files Edited Together",
-				EXECUTE_JS_CODE_COMMAND_ID,
-				paramMap);
 		
 		paramMap.clear();
 		paramMap.put(EXECUTE_JS_CODE_COMMAND_PARAM_ID, "removeAllSelections();");
@@ -212,7 +205,6 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 							manager.add(jumpToTheAffectedCodeAction);
 							
 							manager.add(new Separator());
-							
 							manager.add(deselectAllRectanglesAction);
 							break;
 						}
@@ -221,10 +213,8 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 							manager.add(selectiveUndoAction);
 							manager.add(interactiveSelectiveUndoAction);
 							manager.add(undoEverythingAfterSelectionAction);
-							manager.add(showAllFilesEditedTogetherAction);
 							
 							manager.add(new Separator());
-							
 							manager.add(deselectAllRectanglesAction);
 							break;
 						}
@@ -268,10 +258,22 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 									"edu.cmu.scs.azurite.ui.commands.deselectAllOutsideCommand",
 									paramMap);
 							
+							Action showAllFilesEditedInRange = new CommandAction(
+									"Show All Files Edited In This Range",
+									"edu.cmu.scs.azurite.ui.commands.showFilesInRangeCommand");
+							
+							Action openAllFilesEditedInRange = new CommandAction(
+									"Open All Files Edited In This Range",
+									"edu.cmu.scs.azurite.ui.commands.openFilesInRangeCommand");
+							
 							manager.add(selectAllInside);
 							manager.add(selectAllOutside);
 							manager.add(deselectAllInside);
 							manager.add(deselectAllOutside);
+							
+							manager.add(new Separator());
+							manager.add(showAllFilesEditedInRange);
+							manager.add(openAllFilesEditedInRange);
 							
 							break;
 						}
