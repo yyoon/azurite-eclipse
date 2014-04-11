@@ -12,8 +12,13 @@ import java.util.Map;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.runtime.FileLocator;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.ListenerList;
 import org.eclipse.core.runtime.Platform;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.core.runtime.jobs.ISchedulingRule;
+import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IMenuListener;
 import org.eclipse.jface.action.IMenuManager;
@@ -36,6 +41,7 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.handlers.IHandlerService;
 import org.eclipse.ui.ide.IDE;
 import org.eclipse.ui.part.ViewPart;
+import org.eclipse.ui.progress.UIJob;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.jface.action.CommandAction;
@@ -611,6 +617,48 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	}
 	
 	class MarkerMoveFunction extends BrowserFunction {
+		
+		class CodeHistoryViewUpdateRule implements ISchedulingRule {
+
+			@Override
+			public boolean contains(ISchedulingRule rule) {
+				return (rule instanceof CodeHistoryViewUpdateRule);
+			}
+
+			@Override
+			public boolean isConflicting(ISchedulingRule rule) {
+				return (rule instanceof CodeHistoryViewUpdateRule);
+			}
+			
+		}
+		
+		class CodeHistoryViewUpdateJob extends UIJob {
+			
+			static final String JOB_NAME = "Code History View Update";
+			
+			public CodeHistoryViewUpdateJob(long absTimestamp) {
+				super(JOB_NAME);
+				this.absTimestamp = absTimestamp;
+			}
+			
+			private long absTimestamp;
+
+			@Override
+			public IStatus runInUIThread(IProgressMonitor monitor) {
+				for (CodeHistoryDiffViewPart view : CodeHistoryDiffViewPart.getInstances()) {
+					view.selectVersionWithAbsTimestamp(this.absTimestamp);
+				}
+
+				return Status.OK_STATUS;
+			}
+
+			@Override
+			public boolean belongsTo(Object family) {
+				return JOB_NAME.equals(family);
+			}
+		}
+		
+		private CodeHistoryViewUpdateRule rule = new CodeHistoryViewUpdateRule();
 
 		public MarkerMoveFunction(Browser browser, String name) {
 			super(browser, name);
@@ -622,12 +670,22 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 				return RETURN_CODE_FAIL;
 			}
 			
-			long absTimestamp = ((Number)arguments[0]).longValue();
+			final long absTimestamp = ((Number)arguments[0]).longValue();
 			
-			for (CodeHistoryDiffViewPart view : 
-					CodeHistoryDiffViewPart.getInstances()) {
-				view.selectVersionWithAbsTimestamp(absTimestamp);
+			UIJob job = new CodeHistoryViewUpdateJob(absTimestamp);
+			
+			// Discard all the waiting jobs in this family.
+			for (Job existingJob : Job.getJobManager().find("Code History View Update")) {
+				if (existingJob.getState() == Job.WAITING) {
+					existingJob.cancel();
+				}
 			}
+			
+			// Schedule this new job.
+			job.setSystem(true);
+			job.setUser(false);
+			job.setRule(this.rule);	// avoid running the same type of job concurrently.
+			job.schedule();
 			
 			return RETURN_CODE_OK;
 		}
