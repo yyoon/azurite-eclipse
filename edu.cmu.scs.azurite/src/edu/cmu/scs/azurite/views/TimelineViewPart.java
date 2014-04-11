@@ -220,6 +220,41 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 							break;
 						}
 						
+						case "time_range": {
+							long absTimestampStart = ((Number) browser.evaluate("return global.selectedTimestampRange[0];")).longValue();
+							long absTimestampEnd = ((Number) browser.evaluate("return global.selectedTimestampRange[1];")).longValue();
+							
+							paramMap.clear();
+							paramMap.put("edu.cmu.scs.azurite.ui.commands.absTimestampStart", Long.toString(absTimestampStart));
+							paramMap.put("edu.cmu.scs.azurite.ui.commands.absTimestampEnd", Long.toString(absTimestampEnd));
+							Action selectAllInside = new CommandAction(
+									"Select All Rectangles Inside This Range",
+									"edu.cmu.scs.azurite.ui.commands.selectAllInsideCommand",
+									paramMap);
+							
+							Action selectAllOutside = new CommandAction(
+									"Select All Rectangles Outside This Range",
+									"edu.cmu.scs.azurite.ui.commands.selectAllOutsideCommand",
+									paramMap);
+							
+							Action deselectAllInside = new CommandAction(
+									"Deselect All Rectangles Inside This Range",
+									"edu.cmu.scs.azurite.ui.commands.deselectAllInsideCommand",
+									paramMap);
+							
+							Action deselectAllOutside = new CommandAction(
+									"Deselect All Rectangles Outside This Range",
+									"edu.cmu.scs.azurite.ui.commands.deselectAllOutsideCommand",
+									paramMap);
+							
+							manager.add(selectAllInside);
+							manager.add(selectAllOutside);
+							manager.add(deselectAllInside);
+							manager.add(deselectAllOutside);
+							
+							break;
+						}
+						
 						case "marker": {
 							long absTimestamp = ((Number) browser.evaluate("return global.selectedTimestamp;")).longValue();
 							
