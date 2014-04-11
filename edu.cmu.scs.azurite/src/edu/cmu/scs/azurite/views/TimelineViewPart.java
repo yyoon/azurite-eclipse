@@ -155,6 +155,13 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 				paramMap);
 		
 		paramMap.clear();
+		paramMap.put(EXECUTE_JS_CODE_COMMAND_PARAM_ID, "removeAllSelections();");
+		final Action deselectAllRectanglesAction = new CommandAction(
+				"Deselect All Rectangles",
+				EXECUTE_JS_CODE_COMMAND_ID,
+				paramMap);
+		
+		paramMap.clear();
 		paramMap.put(EXECUTE_JS_CODE_COMMAND_PARAM_ID, "showSelectedFile();");
 		final Action showThisFileOnlyAction = new CommandAction(
 				"Show This File Only",
@@ -197,6 +204,10 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 							manager.add(interactiveSelectiveUndoAction);
 							manager.add(undoEverythingAfterSelectionAction);
 							manager.add(jumpToTheAffectedCodeAction);
+							
+							manager.add(new Separator());
+							
+							manager.add(deselectAllRectanglesAction);
 							break;
 						}
 							
@@ -205,6 +216,10 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 							manager.add(interactiveSelectiveUndoAction);
 							manager.add(undoEverythingAfterSelectionAction);
 							manager.add(showAllFilesEditedTogetherAction);
+							
+							manager.add(new Separator());
+							
+							manager.add(deselectAllRectanglesAction);
 							break;
 						}
 							

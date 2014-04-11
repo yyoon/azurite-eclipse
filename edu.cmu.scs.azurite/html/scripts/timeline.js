@@ -1459,15 +1459,6 @@ function initMouseDownHandler() {
 			global.draggingMarker = false;
 			global.draggingMarkerInTimeTickArea = false;
 
-			if (!global.isCtrlDown) {
-				global.prevSelectedRects = global.selectedRects.slice(0);
-
-				global.selectedRects = [];
-				svg.subRects.selectAll('rect.highlight_rect').remove();
-
-				checkAndNotifySelectionChanged();
-			}
-
 			d3.select('.selection_box').attr('x', mouseX).attr('y', mouseY);
 
 			return;
@@ -1903,6 +1894,15 @@ function removeSelectionsByIds(sids, ids) {
 	}
 	
 	updateHighlight();
+	checkAndNotifySelectionChanged();
+}
+
+function removeAllSelections() {
+	global.prevSelectedRects = global.selectedRects.slice(0);
+
+	global.selectedRects = [];
+	svg.subRects.selectAll('rect.highlight_rect').remove();
+
 	checkAndNotifySelectionChanged();
 }
 
