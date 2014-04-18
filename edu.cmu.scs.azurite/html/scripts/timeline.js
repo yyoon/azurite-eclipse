@@ -1206,6 +1206,8 @@ function layoutFiles() {
 	rects.enter().insert('rect', ':first-child')
 		.attr('class', 'file_rect')
 		.attr('fill', 'lightgray')
+		.attr('rx', '2')
+		.attr('ry', '2')
 		.attr('stroke', 'gray')
 		.attr('stroke-width', '1')
 		.attr('vector-effect', 'non-scaling-stroke');
@@ -1731,7 +1733,7 @@ function initMouseUpHandler() {
 				y2 = global.dragStart[1];
 			}
 
-			addSelections(x1, y1, x2, y2, true);
+			addSelections(x1, y1, x2, y2, true, !global.isCtrlDown);
 			global.dragStart = [];
 		}
 
@@ -1909,7 +1911,7 @@ function removeAllSelections() {
 	checkAndNotifySelectionChanged();
 }
 
-function addSelections(x1, y1, x2, y2, toggle) {
+function addSelections(x1, y1, x2, y2, toggle, clearPrevSelections) {
 	global.prevSelectedRects = global.selectedRects.slice(0);
 
 	var rect = svg.main.node().createSVGRect();
@@ -1922,7 +1924,13 @@ function addSelections(x1, y1, x2, y2, toggle) {
 	var list = svg.main.node().getIntersectionList(rect, null);
 
 	// Filter only the operation rects.
-	d3.selectAll(list).filter('.op_rect').each(function(d, i) {
+	var opRects = d3.selectAll(list).filter('.op_rect');
+	if (clearPrevSelections === true && opRects.empty() === false) {
+		global.prevSelectedRects = global.selectedRects.slice(0);
+		global.selectedRects = [];
+	}
+
+	opRects.each(function(d, i) {
 		var sid = d.sid;
 		var id = d.id;
 		
