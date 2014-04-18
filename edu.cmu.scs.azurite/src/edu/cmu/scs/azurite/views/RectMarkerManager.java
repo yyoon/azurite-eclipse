@@ -69,6 +69,9 @@ public class RectMarkerManager implements RectSelectionListener {
 				}
 				
 				IDocument doc = edu.cmu.scs.azurite.util.Utilities.findDocumentForKey(fileKey);
+				if (doc == null) {
+					continue;
+				}
 				
 				for (RuntimeDC dc : fileDCMap.get(fileKey)) {
 					List<IMarker> markers = new ArrayList<IMarker>();
