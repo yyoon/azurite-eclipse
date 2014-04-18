@@ -1205,11 +1205,9 @@ function layoutFiles() {
 	var rects = svg.subFiles.selectAll('rect.file_rect').data(visibleFiles);
 	rects.enter().insert('rect', ':first-child')
 		.attr('class', 'file_rect')
-		.attr('rx', '10')
-		.attr('ry', '10')
 		.attr('fill', 'lightgray')
 		.attr('stroke', 'gray')
-		.attr('stroke-width', '2')
+		.attr('stroke-width', '1')
 		.attr('vector-effect', 'non-scaling-stroke');
 	
 	rects.exit().remove();
@@ -1228,6 +1226,7 @@ function layoutFiles() {
 		.attr('y', fileDraw.yFunc)
 		.attr('dy', '1em')
 		.attr('fill', 'black')
+		.attr('font-family', 'courier')
 		.text(function(d) {
 			return d.fileName;
 		});
@@ -1240,7 +1239,7 @@ function layoutFiles() {
 		.attr('class', 'separating_line')
 		.attr('x1', '0')
 		.attr('stroke', 'gray')
-		.attr('stroke-width', '2');
+		.attr('stroke-width', '1');
 	
 	lines.exit().remove();
 	
