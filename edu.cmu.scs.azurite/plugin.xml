@@ -448,10 +448,6 @@
                style="push">
          </command>
          <command
-               commandId="edu.cmu.scs.azurite.ui.commands.undoEverythingAfterSelectionCommand"
-               style="push">
-         </command>
-         <command
                commandId="edu.cmu.scs.azurite.ui.commands.jumpToTheAffectedCodeCommand"
                style="push">
          </command>
@@ -492,10 +488,6 @@
       <command
             id="edu.cmu.scs.azurite.ui.commands.highlightCodeCommand"
             name="Highlight Code Affected by the Selected Rectangles (not implemented yet)">
-      </command>
-      <command
-            id="edu.cmu.scs.azurite.ui.commands.undoEverythingAfterSelectionCommand"
-            name="Undo Everything After the Last Selected Rectangle">
       </command>
       <command
             id="edu.cmu.scs.azurite.ui.commands.jumpToTheAffectedCodeCommand"
@@ -811,15 +803,6 @@
       </handler>
       <handler
             commandId="edu.cmu.scs.azurite.ui.commands.highlightCodeCommand">
-         <enabledWhen>
-            <reference
-                  definitionId="rectSelected">
-            </reference>
-         </enabledWhen>
-      </handler>
-      <handler
-            class="edu.cmu.scs.azurite.ui.handlers.UndoEverythingAfterSelectionHandler"
-            commandId="edu.cmu.scs.azurite.ui.commands.undoEverythingAfterSelectionCommand">
          <enabledWhen>
             <reference
                   definitionId="rectSelected">

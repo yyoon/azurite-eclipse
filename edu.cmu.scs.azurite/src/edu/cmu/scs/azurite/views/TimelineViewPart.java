@@ -145,10 +145,6 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 				"edu.cmu.scs.azurite.ui.commands.interactiveSelectiveUndoCommand");
 		interactiveSelectiveUndoAction.setImageDescriptor(isuIcon);
 		
-		final Action undoEverythingAfterSelectionAction = new CommandAction(
-				"Undo Everything After Selection",
-				"edu.cmu.scs.azurite.ui.commands.undoEverythingAfterSelectionCommand");
-		
 		final Action jumpToTheAffectedCodeAction = new CommandAction(
 				"Jump to the Affected Code in the Editor",
 				"edu.cmu.scs.azurite.ui.commands.jumpToTheAffectedCodeCommand");
@@ -201,7 +197,6 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 						case "main_single": {
 							manager.add(selectiveUndoAction);
 							manager.add(interactiveSelectiveUndoAction);
-							manager.add(undoEverythingAfterSelectionAction);
 							manager.add(jumpToTheAffectedCodeAction);
 							
 							manager.add(new Separator());
@@ -212,7 +207,6 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 						case "main_multi": {
 							manager.add(selectiveUndoAction);
 							manager.add(interactiveSelectiveUndoAction);
-							manager.add(undoEverythingAfterSelectionAction);
 							
 							manager.add(new Separator());
 							manager.add(deselectAllRectanglesAction);
@@ -354,7 +348,6 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 
 	private void addBrowserFunctions() {
 		new UndoFunction(browser, BROWSER_FUNC_PREFIX + "selectiveUndo");
-		new UndoEverythingAfterSelectionFunction(browser, BROWSER_FUNC_PREFIX + "undoEverythingAfterSelection");
 		new InitializeFunction(browser, BROWSER_FUNC_PREFIX + "initialize");
 		new JumpFunction(browser, BROWSER_FUNC_PREFIX + "jump");
 		new LogFunction(browser, BROWSER_FUNC_PREFIX + "log");
@@ -414,37 +407,6 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 			}
 		}
 
-	}
-	
-	class UndoEverythingAfterSelectionFunction extends BrowserFunction {
-
-		public UndoEverythingAfterSelectionFunction(Browser browser, String name) {
-			super(browser, name);
-		}
-
-		@Override
-		public Object function(Object[] arguments) {
-			if (arguments == null || arguments.length != 2
-					|| !(arguments[0] instanceof Number)
-					|| !(arguments[1] instanceof Number)) {
-				return RETURN_CODE_FAIL;
-			}
-			
-			try {
-				long sid = ((Number)arguments[0]).longValue();
-				long id = ((Number)arguments[1]).longValue();
-				
-				RuntimeHistoryManager rhm = RuntimeHistoryManager.getInstance();
-				
-				SelectiveUndoEngine.getInstance().doSelectiveUndo(
-						rhm.filterDocumentChangesGreaterThanId(new OperationId(sid, id)));				
-				
-				return RETURN_CODE_OK;
-			} catch (Exception e) {
-				return RETURN_CODE_FAIL;
-			}
-		}
-		
 	}
 	
 	class InitializeFunction extends BrowserFunction {

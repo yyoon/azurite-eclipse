@@ -2092,24 +2092,6 @@ function getStandardRectSelection() {
 	return result;
 }
 
-function undoEverythingAfterSelection() {
-	// close context menu if there is any
-	// hideContextMenu();
-	
-	// Do nothing if there is no selection.
-	if (global.selectedRects.length === 0) {
-		return;
-	}
-	
-	// find the last selected item.
-	var selectedCopy = global.selectedRects.slice(0);
-	selectedCopy.sort(global.oidCompareFunc);
-
-	// Call the function in the plug-in side.
-	var lastOid = selectedCopy[selectedCopy.length - 1];
-	azurite.undoEverythingAfterSelection(lastOid.sid, lastOid.id);
-}
-
 function clamp(value, min, max) {
 	if (value < min) {
 		value = min;
