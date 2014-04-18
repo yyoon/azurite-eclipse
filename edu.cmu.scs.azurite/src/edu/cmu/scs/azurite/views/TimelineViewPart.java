@@ -146,7 +146,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		interactiveSelectiveUndoAction.setImageDescriptor(isuIcon);
 		
 		final Action jumpToTheAffectedCodeAction = new CommandAction(
-				"Jump to the Affected Code in the Editor",
+				"Jump to the Code",
 				"edu.cmu.scs.azurite.ui.commands.jumpToTheAffectedCodeCommand");
 		
 		paramMap.clear();
