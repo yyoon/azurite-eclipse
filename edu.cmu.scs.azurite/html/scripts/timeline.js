@@ -113,12 +113,12 @@ rectDraw.fillFunc = function(d) {
 
 var fileDraw = {};
 fileDraw.yFunc = function(d, i) {
-	return ROW_HEIGHT * (i + global.translateY) * global.scaleY + FILE_NAME_OFFSET_Y;
+	return (ROW_HEIGHT * i + global.translateY) * global.scaleY + FILE_NAME_OFFSET_Y;
 };
 
 var fileRectDraw = {};
 fileRectDraw.yFunc = function (d, i) {
-	return ROW_HEIGHT * (i + global.translateY) * global.scaleY;
+	return (ROW_HEIGHT * i + global.translateY) * global.scaleY;
 };
 fileRectDraw.wFunc = function (d) {
 	return getSvgWidth() * FILES_PORTION;
@@ -132,7 +132,7 @@ lineDraw.x2Func = function(d) {
 	return getSvgWidth() * (1.0 - FILES_PORTION);
 };
 lineDraw.yFunc = function(d) {
-	return ROW_HEIGHT * (d + global.translateY) * global.scaleY;
+	return (ROW_HEIGHT * d + global.translateY) * global.scaleY;
 };
 
 var indicatorDraw = {};
@@ -1314,9 +1314,9 @@ function updateAreas() {
 	global.hscrollArea.bottom = CHART_MARGINS.top + CHART_MARGINS.bottom + svgHeight + SCROLLBAR_WIDTH;
 
 	global.vscrollArea.left = CHART_MARGINS.left + CHART_MARGINS.right + svgWidth;
-	global.vscrollArea.top = SCROLLBAR_WIDTH;
+	global.vscrollArea.top = CHART_MARGINS.top + SCROLLBAR_WIDTH;
 	global.vscrollArea.right = CHART_MARGINS.left + CHART_MARGINS.right + svgWidth + SCROLLBAR_WIDTH;
-	global.vscrollArea.bottom = CHART_MARGINS.top + CHART_MARGINS.bottom + svgHeight - SCROLLBAR_WIDTH;
+	global.vscrollArea.bottom = CHART_MARGINS.top + svgHeight - TICKS_HEIGHT - EVENTS_HEIGHT - SCROLLBAR_WIDTH;
 
 	global.eventArea.left = CHART_MARGINS.left + svgWidth * FILES_PORTION;
 	global.eventArea.top = CHART_MARGINS.top + svgHeight - TICKS_HEIGHT - EVENTS_HEIGHT;
@@ -1351,11 +1351,7 @@ function initMouseWheelHandler() {
 				fileZoomOut();
 			}
 		} else if (d3.event.shiftKey) {
-			if (d3.event.wheelDelta > 0) {
-				showUp();
-			} else {
-				showDown();
-			}
+			scrollDown(d3.event.wheelDelta / 10);
 		} else if (d3.event.ctrlKey) {
 			if (d3.event.wheelDelta < 0) {
 				barZoomOut();
@@ -1655,7 +1651,8 @@ function initMouseMoveHandler() {
 				ratio = clamp(ratio, 0.0, 1.0);
 
 				var newTy = getMinTranslateY() * ratio;
-				newTy = Math.round(newTy);
+				// Uncomment this to make vertical scrolling discrete.
+				// newTy = Math.round(newTy / ROW_HEIGHT) * ROW_HEIGHT;
 				translateY(newTy);
 			}());
 		}
@@ -1840,8 +1837,8 @@ function showContextMenu(e) {
 		}
 	}
 	else if (cursorInArea(mouseX, mouseY, global.fileArea)) {
-		var numVisibleFiles = global.getVisibleFiles().length + global.translateY;
-		if (mouseY < numVisibleFiles * ROW_HEIGHT * global.scaleY) {
+		var visiblePixels = global.getVisibleFiles().length * ROW_HEIGHT + global.translateY;
+		if (mouseY < visiblePixels * global.scaleY) {
 			// showContextMenu(e, '#cmenu_file_in');
 			cmenu.typeName = 'file_in';
 		}
@@ -2039,6 +2036,10 @@ function scrollRight(pixels) {
 	translateX(global.translateX + pixels);
 }
 
+function scrollDown(pixels) {
+	translateY(global.translateY + pixels);
+}
+
 function scrollToEnd() {
 	translateX(getMinTranslateX());
 }
@@ -2052,21 +2053,21 @@ function fileZoomOut() {
 }
 
 function showUp() {
-	translateY(global.translateY + 1);
+	translateY(global.translateY + 1 * ROW_HEIGHT);
 }
 
 function showDown() {
-	translateY(global.translateY - 1);
+	translateY(global.translateY - 1 * ROW_HEIGHT);
 }
 
 function showPageUp() {
 	var extent = Math.floor(getSvgHeight() / (ROW_HEIGHT * global.scaleY));
-	translateY(global.translateY + extent - 1);
+	translateY(global.translateY + (extent - 1) * ROW_HEIGHT);
 }
 
 function showPageDown() {
 	var extent = Math.floor(getSvgHeight() / (ROW_HEIGHT * global.scaleY));
-	translateY(global.translateY - extent + 1);
+	translateY(global.translateY - (extent - 1) * ROW_HEIGHT);
 }
 
 function undo() {
@@ -2164,6 +2165,8 @@ function scaleY(sy) {
 
 	updateSeparatingLines();
 
+	updateVScroll();
+
 	updateHighlight();
 }
 
@@ -2212,7 +2215,7 @@ function translateY(ty) {
 	// profiling
 	var _startTick = new Date().valueOf();
 	if (global.profile) {
-		console.log("translateX() start: " + _startTick);
+		console.log("translateY() start: " + _startTick);
 	}
 	
 	ty = clamp(ty, getMinTranslateY(), 0);
@@ -2229,19 +2232,18 @@ function translateY(ty) {
 	// profiling
 	var _endTick = new Date().valueOf();
 	if (global.profile) {
-		console.log("translateX() end: " + _endTick);
-		console.log("translateX() took: " + (_endTick - _startTick));
+		console.log("translateY() end: " + _endTick);
+		console.log("translateY() took: " + (_endTick - _startTick));
 	}
 }
 
+// Use the pixels.
 function getMinTranslateY() {
-	return 1 - global.files.filter(function (e, i, a) {
-		return e.visible;
-	}).length;
+	return Math.min((getSvgHeight() - TICKS_HEIGHT - EVENTS_HEIGHT - (global.getVisibleFiles().length * ROW_HEIGHT * global.scaleY)) / global.scaleY, 0);
 }
 
 function updateSubRectsTransform() {
-	svg.subRects.attr('transform', 'translate(' + global.translateX + ' ' + (global.translateY * ROW_HEIGHT * global.scaleY) + ') ' + 'scale(' + global.scaleX + ' ' + global.scaleY + ')');
+	svg.subRects.attr('transform', 'translate(' + global.translateX + ' ' + (global.translateY * global.scaleY) + ') ' + 'scale(' + global.scaleX + ' ' + global.scaleY + ')');
 	svg.subMarkers.attr('transform', 'translate(' + global.translateX + ' 0)');
 	svg.subEvents.attr('transform', 'translate(' + global.translateX + ' 0)');
 	svg.subTicks.attr('transform', 'translate(' + global.translateX + ' 0)');
@@ -2282,8 +2284,8 @@ function updateHScroll() {
 function updateVScroll() {
 	var trackSize = $('#vscroll_thumbtrack').height();
 
-	var extent = Math.floor(getSvgHeight() / (ROW_HEIGHT * global.scaleY));
-	var thumbSize = clamp(Math.floor(trackSize * extent / (global.files.length + extent - 1)), MIN_SCROLL_THUMB_SIZE, trackSize);
+	var areaHeight = getSvgHeight() - TICKS_HEIGHT - EVENTS_HEIGHT;
+	var thumbSize = clamp(trackSize * areaHeight / (global.getVisibleFiles().length * ROW_HEIGHT * global.scaleY), MIN_SCROLL_THUMB_SIZE, trackSize);
 
 	var thumbRelativePos = global.translateY / getMinTranslateY();
 	if (global.translateY === 0 || getMinTranslateY() === 0) {
