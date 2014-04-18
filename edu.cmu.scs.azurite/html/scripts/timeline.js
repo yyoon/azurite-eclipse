@@ -2,7 +2,7 @@
 /*global d3, azurite */
 
 /* Things to be called from Azurite */
-/*exported updateOperation, getRightmostTimestamp, addSelectionsByIds, removeSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarkerAtTimestamp, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile, addEvent, activateFirebugLite, showAllFilesEditedInRange, openAllFilesEditedInRange */
+/*exported updateOperation, getRightmostTimestamp, addSelectionsByIds, removeSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarkerAtTimestamp, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile, addEvent, activateFirebugLite, showAllFilesEditedInRange, openAllFilesEditedInRange, removeAllSelections, showUp, showDown */
 
 /* Things to be called manually when debugging */
 /*exported test, testMarker, showEvents */
