@@ -8,6 +8,7 @@ import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IWorkspace;
 import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.jface.text.IDocument;
@@ -69,8 +70,9 @@ public class Utilities {
 				doc = buffer.getDocument();
 			}
 			return doc;
-		} catch (Exception e) {
-			e.printStackTrace();
+		} catch (CoreException e) {
+			// This means that manager.connect() has failed because the file could not be found.
+			// Just return null.
 			return null;
 		}
 	}
