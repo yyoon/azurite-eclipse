@@ -414,6 +414,13 @@ global.domainArray = [];
 global.rangeArray = [];
 global.timeScale.clamp(true);
 
+// Move to front function for d3 selection.
+d3.selection.prototype.moveToFront = function() {
+	return this.each(function(){
+		this.parentNode.appendChild(this);
+	});
+};
+
 /**
  * SVG Setup.
  */
@@ -1983,8 +1990,10 @@ function indexOfSelected(sid, id) {
 function updateHighlight() {
 	svg.subRects.selectAll('rect.highlight_rect').remove();
 
-	for ( var i = 0; i < global.selectedRects.length; ++i) {
-		var idString = '#' + global.selectedRects[i].sid + '_' + global.selectedRects[i].id;
+	var i, idString;
+
+	for (i = 0; i < global.selectedRects.length; ++i) {
+		idString = '#' + global.selectedRects[i].sid + '_' + global.selectedRects[i].id;
 
 		var $ref = $(idString);
 		if ($ref.length === 0) {
@@ -2002,6 +2011,12 @@ function updateHighlight() {
 			.attr('ry', RECT_RADIUS)
 			.attr('width', refBBox.width + HIGHLIGHT_WIDTH * 2 / global.scaleX)
 			.attr('height', refBBox.height + HIGHLIGHT_WIDTH * 2 / global.scaleY);
+	}
+
+	svg.subRects.selectAll('rect.highlight_rect').moveToFront();
+	for (i = 0; i < global.selectedRects.length; ++i) {
+		idString = '#' + global.selectedRects[i].sid + '_' + global.selectedRects[i].id;
+		d3.select($(idString)[0]).moveToFront();
 	}
 }
 
