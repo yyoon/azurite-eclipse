@@ -30,7 +30,7 @@ var TYPE_DELETE = 1;
 var TYPE_REPLACE = 2;
 
 var RECT_RADIUS = 1;
-var MIN_WIDTH = 6;
+var MIN_WIDTH = 7;
 var MIN_HEIGHT = MIN_WIDTH;
 var ROW_HEIGHT = 30;
 var DEFAULT_RATIO = 100;
@@ -48,7 +48,7 @@ var FILE_NAME_OFFSET_Y = 5;
 
 var FILES_PORTION = 0.15;
 
-var HIGHLIGHT_WIDTH = 3;
+var HIGHLIGHT_WIDTH = 2;
 
 var INDICATOR_WIDTH = 2;
 
@@ -1998,6 +1998,8 @@ function updateHighlight() {
 			.attr('fill', 'yellow')
 			.attr('x', refBBox.x - (HIGHLIGHT_WIDTH / global.scaleX))
 			.attr('y', refBBox.y - (HIGHLIGHT_WIDTH / global.scaleY))
+			.attr('rx', RECT_RADIUS)
+			.attr('ry', RECT_RADIUS)
 			.attr('width', refBBox.width + HIGHLIGHT_WIDTH * 2 / global.scaleX)
 			.attr('height', refBBox.height + HIGHLIGHT_WIDTH * 2 / global.scaleY);
 	}
