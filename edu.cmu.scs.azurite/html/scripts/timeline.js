@@ -1153,7 +1153,12 @@ function layout(newLayout) {
 		global.tempSessionTx += session.g.node().getBBox().width;
 	}
 
-	global.timeScale.domain(global.domainArray).range(global.rangeArray);
+	if (global.domainArray.length == 0) {
+		global.timeScale.domain([new Date(0), new Date()]).range([0, 0]);
+	}
+	else {
+		global.timeScale.domain(global.domainArray).range(global.rangeArray);
+	}
 	
 	updateHighlight();
 	updateHScroll();
