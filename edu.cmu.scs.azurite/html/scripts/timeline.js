@@ -1104,10 +1104,12 @@ function layout(newLayout) {
 	global.domainArray = [];
 	global.rangeArray = [];
 	var addScaleFunc = function (d, i) {
-		global.domainArray.push(new Date(d.sid + d.t1));
-		global.domainArray.push(new Date(d.sid + d.t2));
-		global.rangeArray.push(global.tempSessionTx + this.getBBox().x);
-		global.rangeArray.push(global.tempSessionTx + this.getBBox().x + this.getBBox().width);
+		if (d.isVisible()) {
+			global.domainArray.push(new Date(d.sid + d.t1));
+			global.domainArray.push(new Date(d.sid + d.t2));
+			global.rangeArray.push(global.tempSessionTx + this.getBBox().x);
+			global.rangeArray.push(global.tempSessionTx + this.getBBox().x + this.getBBox().width);
+		}
 	};
 	
 	for (i = 0; i < global.sessions.length; ++i) {
@@ -1153,7 +1155,7 @@ function layout(newLayout) {
 		global.tempSessionTx += session.g.node().getBBox().width;
 	}
 
-	if (global.domainArray.length == 0) {
+	if (global.domainArray.length === 0) {
 		global.timeScale.domain([new Date(0), new Date()]).range([0, 0]);
 	}
 	else {
@@ -1162,13 +1164,23 @@ function layout(newLayout) {
 	
 	updateHighlight();
 	updateHScroll();
-	updateMarkerPosition();
 	updateEvents();
 	updateTicks();
 	
 	// Restore the scroll position.
 	showFrom(leftmostTimestamp);
-	
+
+	// Marker / range selection box
+	global.markerPos = timestampToPixel(global.markerTimestamp);
+	if (global.selectedTimestampRange !== null) {
+		global.selectedPixelRange = [
+			timestampToPixel(global.selectedTimestampRange[0]),
+			timestampToPixel(global.selectedTimestampRange[1])
+		];
+	}
+	updateMarkerPosition(false, true);
+	updateRangeSelectionBox();
+
 	// profiling
 	var _endTick = new Date().valueOf();
 	if (global.profile) {
@@ -2695,7 +2707,7 @@ function updateEvents() {
 		.attr('x', eventDraw.iconXFunc);
 }
 
-function showMarkerAtPixel(pixel, notify) {
+function showMarkerAtPixel(pixel, notify, noupdate) {
 	if (isNaN(pixel)) {
 		// Don't show the marker at all.
 		svg.subMarker.style('display', 'none');
@@ -2703,7 +2715,9 @@ function showMarkerAtPixel(pixel, notify) {
 	}
 
 	global.markerPos = pixel;
-	global.markerTimestamp = pixelToTimestamp(pixel);
+	if (noupdate !== true) {
+		global.markerTimestamp = pixelToTimestamp(pixel);
+	}
 
 	var timeFormat = '%I:%M:%S %p';
 	var timeFormatter = d3.time.format(timeFormat);
@@ -2728,7 +2742,7 @@ function showMarkerAtTimestamp(absTimestamp, notify) {
 	svg.subMarker.style('display', '');
 }
 
-function updateMarkerPosition(notify) {
+function updateMarkerPosition(notify, noupdate) {
 	var t = global.markerTimestamp;
 	var tx = timestampToPixel(t);
 
@@ -2736,7 +2750,7 @@ function updateMarkerPosition(notify) {
 		notify = false;
 	}
 
-	showMarkerAtPixel(tx, notify);
+	showMarkerAtPixel(tx, notify, noupdate);
 }
 
 function hideMarker() {
