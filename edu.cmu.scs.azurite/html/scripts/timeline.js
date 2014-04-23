@@ -1186,6 +1186,8 @@ function make_filter(file) {
 function layoutFiles() {
 	var i;
 	var visibleFiles = [];
+
+	var hiddenFileExists = false;
 	
 	for (i = 0; i < global.files.length; ++i) {
 		var file = global.files[i];
@@ -1198,6 +1200,7 @@ function layoutFiles() {
 		}
 		else {
 			fileGroups.style('display', 'none');
+			hiddenFileExists = true;
 			continue;
 		}
 		
@@ -1257,6 +1260,9 @@ function layoutFiles() {
 
 	// VScroll
 	updateVScroll();
+
+	// Show or Hide the unhide all button.
+	d3.selectAll('#unhide_button').style('display', hiddenFileExists ? 'inline-block' : 'none');
 }
 
 function getLeftmostTimestamp() {

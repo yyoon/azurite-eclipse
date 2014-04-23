@@ -245,3 +245,21 @@ background-image: url('../images/down_rollover.png');
 text {
 	pointer-events: none;
 }
+
+#button_wrapper {
+position: absolute;
+
+bottom: 15px;
+width: 15%;
+height: 30px;
+
+text-align: center;
+vertical-align: middle;
+}
+
+#unhide_button {
+display: none;	/* Initially Hidden */
+
+height: 20px;
+margin: 5px 0px;
+}
