@@ -61,7 +61,12 @@ public class Utilities {
 				IWorkspaceRoot root = workspace.getRoot();
 				
 				IPath absPath = new Path(fileKey.getFilePath());
-				IPath relPath = absPath.makeRelativeTo(root.getLocation());
+				IFile file = root.getFileForLocation(absPath);
+				if (file == null) {
+					return null;
+				}
+				
+				IPath relPath = file.getFullPath();
 				
 				ITextFileBufferManager manager = FileBuffers.getTextFileBufferManager();
 				manager.connect(relPath, LocationKind.IFILE, null);
