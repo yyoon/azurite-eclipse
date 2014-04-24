@@ -2216,6 +2216,33 @@ function translateX(tx) {
 	updateHScroll();
 	
 	global.diffWhileDraggingMarker -= diff;
+
+	if (global.dates !== null && global.dates.length > 0) {
+		// Restore the last one.
+		if (global.lastMovedDate !== undefined && global.lastMovedDate !== null) {
+			d3.selectAll('#date_' + global.lastMovedDate.getTime()).attr('x', timeTickDraw.textXFunc(global.lastMovedDate));
+		}
+
+		var leftDate = global.dates[0];
+		var nextDate = null;
+		var leftTimestamp = screenPixelToTimestamp(0);
+		for (var i = 0; i < global.dates.length; ++i) {
+			if (global.dates[i].getTime() >= leftTimestamp) {
+				nextDate = global.dates[i];
+				break;
+			}
+
+			leftDate = global.dates[i];
+		}
+
+		if (nextDate !== null && timestampToPixel(leftTimestamp) + $('#date_' + leftDate.getTime())[0].getBBox().width > timestampToPixel(nextDate.getTime())) {
+			d3.selectAll('#date_' + leftDate.getTime()).attr('x', timeTickDraw.textXFunc(leftDate));
+		} else {
+			d3.selectAll('#date_' + leftDate.getTime()).attr('x', timeTickDraw.textXFunc(new Date(leftTimestamp)));
+		}
+
+		global.lastMovedDate = leftDate;
+	}
 	
 	// profiling
 	var _endTick = new Date().valueOf();
@@ -2354,6 +2381,7 @@ function updateTicks() {
 		// Always add the start of the session
 		ticks.push(new Date(start));
 		dates.push(new Date(start));
+		var lastDate = dates[dates.length - 1];
 
 		var startPixel = timestampToPixel(start);
 		var endPixel = timestampToPixel(end);
@@ -2376,6 +2404,11 @@ function updateTicks() {
 				if (nextSession === null || nextSessionStartPixel - candidatePixel >= minInterval) {
 					ticks.push(candidates[j]);
 					lastTickPixel = candidatePixel;
+
+					if (d3.time.day(lastDate).getTime() !== d3.time.day(candidates[j]).getTime()) {
+						dates.push(candidates[j]);
+						lastDate = candidates[j];
+					}
 				}
 			}
 		}
@@ -2442,7 +2475,8 @@ function updateTicks() {
 		text = svg.subTicks.append('text');
 		text.datum(dates[i]);
 
-		text.attr('x', timeTickDraw.xFunc)
+		text.attr('x', timeTickDraw.textXFunc)
+			.attr('id', 'date_' + dates[i].getTime())
 			.attr('dy', '2em')
 			.attr('fill', 'white')
 			.attr('text-anchor', 'left')
@@ -2468,7 +2502,7 @@ function dateFormatter(dateObj) {
 		return 'Today';
 	} else if (diffDays === 1) {
 		return 'Yesterday';
-	} else if (diffDays < 7) {
+	} else if (0 < diffDays && diffDays < 7) {
 		return 'Last ' + days[target.getDay()];
 	} else {
 		return d3.time.format('%x')(target);
