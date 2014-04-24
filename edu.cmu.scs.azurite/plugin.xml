@@ -444,10 +444,6 @@
                style="push">
          </command>
          <command
-               commandId="edu.cmu.scs.azurite.ui.commands.highlightCodeCommand"
-               style="push">
-         </command>
-         <command
                commandId="edu.cmu.scs.azurite.ui.commands.jumpToTheAffectedCodeCommand"
                style="push">
          </command>
@@ -484,10 +480,6 @@
       <command
             id="edu.cmu.scs.azurite.ui.commands.selectiveUndoCommand"
             name="Selective Undo">
-      </command>
-      <command
-            id="edu.cmu.scs.azurite.ui.commands.highlightCodeCommand"
-            name="Highlight Code Affected by the Selected Rectangles (not implemented yet)">
       </command>
       <command
             id="edu.cmu.scs.azurite.ui.commands.jumpToTheAffectedCodeCommand"
