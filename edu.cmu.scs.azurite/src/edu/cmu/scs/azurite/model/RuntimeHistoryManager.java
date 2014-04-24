@@ -547,6 +547,56 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 		
 		return result;
 	}
+	
+	public boolean hasDocumentChangesLaterThanTimestamp(final long absTimestamp) {
+		return hasDocumentChangesLaterThanTimestamp(getCurrentFileKey(), absTimestamp);
+	}
+	
+	public boolean hasDocumentChangesLaterThanTimestamp(FileKey key, final long absTimestamp) {
+		if (key == null) {
+			throw new IllegalArgumentException();
+		}
+		
+		return hasDocumentChanges(key, new IRuntimeDCFilter() {
+			@Override
+			public boolean filter(RuntimeDC runtimeDC) {
+				long timestamp = runtimeDC.getOriginal().getSessionId() + runtimeDC.getOriginal().getTimestamp();
+				
+				return absTimestamp < timestamp;
+			}
+		});
+	}
+	
+	public boolean hasDocumentChanges(IRuntimeDCFilter filter) {
+		return hasDocumentChanges(getCurrentFileKey(), filter);
+	}
+	
+	public boolean hasDocumentChanges(FileKey key, IRuntimeDCFilter filter) {
+		return hasDocumentChanges(key, filter, true);
+	}
+	
+	public boolean hasDocumentChanges(FileKey key, IRuntimeDCFilter filter, boolean calculate) {
+		if (key == null || filter == null) {
+			throw new IllegalArgumentException();
+		}
+		
+		// It's a little bit odd, but make sure that there's no pending document changes
+		// in the EventRecorder side
+		EventRecorder.getInstance().fireLastDocumentChangeFinalizedEvent();
+		
+		// Lazy-evaluation of the dynamic segments!
+		List<RuntimeDC> list = calculate ? calculateDynamicSegments(key) :
+			getRuntimeDocumentChanges(key);
+		
+		// Then filter the results.
+		for (RuntimeDC dc : list) {
+			if (filter.filter(dc)) {
+				return true;
+			}
+		}
+		
+		return false;
+	}
 
 	public List<RuntimeDC> calculateDynamicSegments(FileKey fileKey) {
 		List<RuntimeDC> list = getRuntimeDocumentChanges(fileKey);

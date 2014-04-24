@@ -33,7 +33,9 @@ import org.eclipse.swt.browser.BrowserFunction;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorPart;
+import org.eclipse.ui.IFileEditorInput;
 import org.eclipse.ui.IWorkbenchActionConstants;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PartInitException;
@@ -42,6 +44,7 @@ import org.eclipse.ui.handlers.IHandlerService;
 import org.eclipse.ui.ide.IDE;
 import org.eclipse.ui.part.ViewPart;
 import org.eclipse.ui.progress.UIJob;
+import org.eclipse.ui.texteditor.AbstractTextEditor;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.jface.action.CommandAction;
@@ -282,15 +285,41 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 									"edu.cmu.scs.azurite.ui.commands.undoAllFilesToThisPoint",
 									paramMap);
 							
-							paramMap.clear();
-							paramMap.put("edu.cmu.scs.azurite.ui.commands.undoCurrentFileToThisPoint.absTimestamp", Long.toString(absTimestamp));
-							Action undoCurrentFileToThisPointAction = new CommandAction(
-									"Undo Current File to This Point",
-									"edu.cmu.scs.azurite.ui.commands.undoCurrentFileToThisPoint",
-									paramMap);
-							
 							manager.add(undoAllFilesToThisPointAction);
-							manager.add(undoCurrentFileToThisPointAction);
+
+							// Get the active editor, and display the file name.
+							IEditorPart activeEditor = Utilities.getActiveEditor();
+							String fileName = null;
+							if (activeEditor != null && (activeEditor instanceof AbstractTextEditor)) {
+								IEditorInput editorInput = activeEditor.getEditorInput();
+								if (editorInput instanceof IFileEditorInput) {
+									IFileEditorInput fileEditorInput = (IFileEditorInput) editorInput;
+									fileName = fileEditorInput.getFile().getName();
+								}
+							}
+							
+							if (fileName != null) {
+								paramMap.clear();
+								paramMap.put("edu.cmu.scs.azurite.ui.commands.undoCurrentFileToThisPoint.absTimestamp", Long.toString(absTimestamp));
+								Action undoCurrentFileToThisPointAction = new CommandAction(
+										"Undo \"" + fileName + "\" to This Point",
+										"edu.cmu.scs.azurite.ui.commands.undoCurrentFileToThisPoint",
+										paramMap);
+								
+								// Determine whether there are operations to be undone.
+								if (!RuntimeHistoryManager.getInstance()
+										.hasDocumentChangesLaterThanTimestamp(absTimestamp)) {
+									undoCurrentFileToThisPointAction.setEnabled(false);
+								}
+								
+								manager.add(undoCurrentFileToThisPointAction);
+							} else {
+								Action undoCurrentFileToThisPointAction = new Action(
+										"Undo Current File to This Point") {};
+								undoCurrentFileToThisPointAction.setEnabled(false);
+								
+								manager.add(undoCurrentFileToThisPointAction);
+							}
 							
 							manager.add(new Separator());
 							
