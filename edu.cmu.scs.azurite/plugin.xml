@@ -483,7 +483,7 @@
       </command>
       <command
             id="edu.cmu.scs.azurite.ui.commands.jumpToTheAffectedCodeCommand"
-            name="Jump to the Affected Code in the Editor">
+            name="Jump to the Code">
       </command>
       <command
             id="edu.cmu.scs.azurite.ui.commands.showFilesInRangeCommand"

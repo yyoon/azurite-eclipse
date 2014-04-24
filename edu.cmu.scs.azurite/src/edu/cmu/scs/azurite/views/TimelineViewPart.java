@@ -548,14 +548,23 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 					return RETURN_CODE_FAIL;
 				}
 				
-				int offset = runtimeDC.getAllSegments().get(0).getOffset();
 				if (editor != null) {
-					ITextViewerExtension5 textViewerExt5 = Utilities
-							.getTextViewerExtension5(editor);
+					final ITextViewerExtension5 textViewerExt5 = Utilities.getTextViewerExtension5(editor);
 					
-					StyledText styledText = Utilities.getStyledText(editor);
-					styledText.setSelection(textViewerExt5.modelOffset2WidgetOffset(offset));
-					styledText.setFocus();
+					final int offset = runtimeDC.getAllSegments().get(0).getOffset();
+					final StyledText styledText = Utilities.getStyledText(editor);
+					UIJob job = new UIJob("Jump to the Code") {
+						
+						@Override
+						public IStatus runInUIThread(IProgressMonitor monitor) {
+							styledText.setSelection(textViewerExt5.modelOffset2WidgetOffset(offset));
+							styledText.setFocus();
+							styledText.showSelection();
+							return Status.OK_STATUS;
+						}
+					};
+					
+					job.schedule();
 				}
 				
 				return RETURN_CODE_OK;
