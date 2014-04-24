@@ -2742,7 +2742,7 @@ function updateEvents() {
 }
 
 function showMarkerAtPixel(pixel, notify, noupdate) {
-	if (isNaN(pixel)) {
+	if (isNaN(pixel) || (noupdate === true && global.markerTimestamp === 0)) {
 		// Don't show the marker at all.
 		svg.subMarker.style('display', 'none');
 		return;
