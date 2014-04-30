@@ -1,8 +1,12 @@
 package edu.cmu.scs.azurite.views;
 
-import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import org.eclipse.compare.CompareConfiguration;
 import org.eclipse.swt.SWT;
@@ -16,28 +20,43 @@ import edu.cmu.scs.azurite.model.FileKey;
 
 public class CodeHistoryDiffViewPart extends ViewPart {
 	
-	private static int viewerId = 0;
+	// NOTE: Whenever changing this max value,
+	// also make sure that all the placeholders for the subviews are in place within plugin.xml.
+	// See org.eclipse.ui.perspectiveExtensions extension point.
+	private static final int MAX_VIEWS = 10;
 	
-	private static List<CodeHistoryDiffViewPart> mes =
-			new ArrayList<CodeHistoryDiffViewPart>();
+	private static final Deque<Integer> availableViewerIds;
+	
+	static {
+		availableViewerIds = new LinkedList<Integer>();
+		for (int i = 0; i < MAX_VIEWS; ++i) {
+			availableViewerIds.addLast(i);
+		}
+	}
+	
+	private static Map<Integer, CodeHistoryDiffViewPart> mes =
+			new HashMap<Integer, CodeHistoryDiffViewPart>();
+	
+	private int viewerId = -1;
 	
 	private CodeHistoryDiffViewer viewer;
 	
 	private CompareConfiguration mConfiguration;
 	
-	public static List<CodeHistoryDiffViewPart> getInstances() {
-		return Collections.unmodifiableList(mes);
+	public static Collection<CodeHistoryDiffViewPart> getInstances() {
+		return Collections.unmodifiableCollection(mes.values());
 	}
 	
-	public static int getViewerId() {
-		return viewerId;
+	public static Integer getNextViewerId() {
+		return availableViewerIds.peekFirst();
 	}
 
 	@Override
 	public void createPartControl(Composite parent) {
-		mes.add(this);
+		this.viewerId = getNextViewerId();
+		mes.put(this.viewerId, this);
 		
-		++viewerId;
+		availableViewerIds.removeFirst();
 		
 		viewer = new CodeHistoryDiffViewer(parent, SWT.NONE);
 		
@@ -51,7 +70,9 @@ public class CodeHistoryDiffViewPart extends ViewPart {
 
 	@Override
 	public void dispose() {
-		mes.remove(this);
+		mes.remove(this.viewerId);
+		
+		availableViewerIds.addLast(this.viewerId);
 
 		if (mes.isEmpty()) {
 			hideMarker();
