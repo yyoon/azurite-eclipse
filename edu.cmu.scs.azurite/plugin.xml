@@ -100,14 +100,6 @@
                      style="push">
                </command>
                <command
-                     commandId="edu.cmu.scs.azurite.ui.commands.highlightCodeCommand"
-                     style="push">
-               </command>
-               <command
-                     commandId="edu.cmu.scs.azurite.ui.commands.undoEverythingAfterSelectionCommand"
-                     style="push">
-               </command>
-               <command
                      commandId="edu.cmu.scs.azurite.ui.commands.jumpToTheAffectedCodeCommand"
                      style="push">
                </command>
