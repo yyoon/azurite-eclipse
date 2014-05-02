@@ -76,7 +76,7 @@
                   icon="icons/selected_code.png"
                   label="Selected Code in the Editor">
                <command
-                     commandId="edu.cmu.scs.azurite.ui.commands.codeDummy"
+                     commandId="edu.cmu.scs.azurite.ui.commands.dummy"
                      label="(No code selected in the editor)"
                      style="push">
                   <visibleWhen
@@ -113,7 +113,7 @@
                   icon="icons/selected_rects.png"
                   label="Selected Rectangles in Timeline">
                <command
-                     commandId="edu.cmu.scs.azurite.ui.commands.rectDummy"
+                     commandId="edu.cmu.scs.azurite.ui.commands.dummy"
                      label="(No rectangles selected)"
                      style="push">
                   <visibleWhen
@@ -142,7 +142,7 @@
                   icon="icons/selected_range.png"
                   label="Selected Time Range in Timeline">
                <command
-                     commandId="edu.cmu.scs.azurite.ui.commands.timeRangeDummy"
+                     commandId="edu.cmu.scs.azurite.ui.commands.dummy"
                      label="(No time range selected)"
                      style="push">
                   <visibleWhen
@@ -490,7 +490,7 @@
             allPopups="false"
             locationURI="menu:edu.cmu.scs.azurite.ui.toolbar.selectedCode">
          <command
-               commandId="edu.cmu.scs.azurite.ui.commands.codeDummy"
+               commandId="edu.cmu.scs.azurite.ui.commands.dummy"
                label="(No code selected in the editor)"
                style="push">
             <visibleWhen
@@ -527,7 +527,7 @@
             allPopups="false"
             locationURI="menu:edu.cmu.scs.azurite.ui.toolbar.selectedRects">
          <command
-               commandId="edu.cmu.scs.azurite.ui.commands.rectDummy"
+               commandId="edu.cmu.scs.azurite.ui.commands.dummy"
                label="(No rectangles selected)"
                style="push">
             <visibleWhen
@@ -556,7 +556,7 @@
             allPopups="false"
             locationURI="menu:edu.cmu.scs.azurite.ui.toolbar.selectedRange">
          <command
-               commandId="edu.cmu.scs.azurite.ui.commands.timeRangeDummy"
+               commandId="edu.cmu.scs.azurite.ui.commands.dummy"
                label="(No time range selected)"
                style="push">
             <visibleWhen
@@ -815,6 +815,10 @@
             id="edu.cmu.scs.azurite.ui.commands.openFilesInRangeCommand"
             name="Open All Files Edited In Range">
       </command>
+      <command
+            id="edu.cmu.scs.azurite.ui.commands.dummy"
+            name=" ">
+      </command>
    </extension>
    <extension
          point="org.eclipse.ui.bindings">
@@ -889,7 +893,7 @@
                minimized="false"
                moveable="true"
                relationship="stack"
-               relative="org.eclipse.debug.ui.ConsoleView"
+               relative="org.eclipse.ui.views.ProblemView"
                showTitle="true"
                standalone="false"
                visible="true">
