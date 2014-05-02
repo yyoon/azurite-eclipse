@@ -2742,7 +2742,7 @@ function updateEvents() {
 }
 
 function showMarkerAtPixel(pixel, notify, noupdate) {
-	if (isNaN(pixel) || (noupdate === true && global.markerTimestamp === 0)) {
+	if (isNaN(pixel) || (noupdate === true && global.markerTimestamp === 0) || global.lastOperation === null) {
 		// Don't show the marker at all.
 		svg.subMarker.style('display', 'none');
 		return;
@@ -2792,10 +2792,12 @@ function hideMarker() {
 }
 
 function selectPixelRange(startPixel, endPixel) {
-	global.selectedPixelRange = [startPixel, endPixel];
-	global.selectedTimestampRange = [pixelToTimestamp(startPixel), pixelToTimestamp(endPixel)];
+	if (global.lastOperation !== null) {
+		global.selectedPixelRange = [startPixel, endPixel];
+		global.selectedTimestampRange = [pixelToTimestamp(startPixel), pixelToTimestamp(endPixel)];
 
-	updateRangeSelectionBox();
+		updateRangeSelectionBox();
+	}
 }
 
 function updateEndPixelRange(endPixel) {
