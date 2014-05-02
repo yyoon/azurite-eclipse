@@ -681,11 +681,11 @@ function EditOperation(sid, id, t1, t2, y1, y2, type, fileGroup) {
 	this.type = type;
 	this.color = function() {
 		if (this.type === TYPE_INSERT) {
-			return "green";
+			return "#0a760a";
 		} else if (this.type === TYPE_DELETE) {
-			return "red";
+			return "#ec1313";
 		} else if (this.type === TYPE_REPLACE) {
-			return "blue";
+			return "#1313ec";
 		}
 	};
 	
