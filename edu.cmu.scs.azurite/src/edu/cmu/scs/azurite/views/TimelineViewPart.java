@@ -38,6 +38,7 @@ import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IFileEditorInput;
 import org.eclipse.ui.IWorkbenchActionConstants;
 import org.eclipse.ui.IWorkbenchPage;
+import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.handlers.IHandlerService;
@@ -77,6 +78,8 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	private static final String EXECUTE_JS_CODE_COMMAND_ID = "edu.cmu.scs.azurite.ui.commands.executeJSCode";
 	private static final String EXECUTE_JS_CODE_COMMAND_PARAM_ID = "edu.cmu.scs.azurite.ui.commands.executeJSCode.codeToExecute";
 	private static String BROWSER_FUNC_PREFIX = "__AZURITE__";
+	
+	private static final String TIMELINE_VIEW_ID = "edu.cmu.scs.azurite.views.TimelineViewPart";
 
 	private static TimelineViewPart me = null;
 	
@@ -88,6 +91,20 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	 */
 	public static TimelineViewPart getInstance() {
 		return me;
+	}
+	
+	public static void openTimeline() {
+		IWorkbenchWindow window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
+		if (window != null) {
+			IWorkbenchPage page = window.getActivePage();
+			if (page != null) {
+				try {
+					page.showView(TIMELINE_VIEW_ID);
+				} catch (PartInitException e) {
+					e.printStackTrace();
+				}
+			}
+		}
 	}
 
 	private Browser browser;
