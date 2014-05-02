@@ -53,13 +53,20 @@ public class SelectedRectsHandler extends AbstractHandler {
 		dialog.setLabelProvider(new SelectedRectsOperationLabelProvider());
 		
 		Object[][] input = {
-				{ null, "Selective Undo", "edu.cmu.scs.azurite.ui.commands.selectiveUndoCommand" },
-				{ null, "Undo Everything After the Last Selected Rectangle", "edu.cmu.scs.azurite.ui.commands.undoEverythingAfterSelectionCommand" },
-				{ null, "Jump to the Affected Code in the Editor", "edu.cmu.scs.azurite.ui.commands.jumpToTheAffectedCodeCommand" },
+				{
+					null,
+					"Selective Undo",
+					"edu.cmu.scs.azurite.ui.commands.selectiveUndoCommand"
+				},
+				{
+					null,
+					"Jump to the Code",
+					"edu.cmu.scs.azurite.ui.commands.jumpToTheAffectedCodeCommand"
+				},
 		};
 		
 		if (numSelected > 1) {
-			input = Arrays.copyOfRange(input, 0, 2);
+			input = Arrays.copyOfRange(input, 0, 1);
 		}
 		
 		dialog.setInput(input);

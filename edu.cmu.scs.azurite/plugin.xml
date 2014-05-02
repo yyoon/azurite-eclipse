@@ -76,6 +76,23 @@
                   icon="icons/selected_code.png"
                   label="Selected Code in the Editor">
                <command
+                     commandId="edu.cmu.scs.azurite.ui.commands.codeDummy"
+                     label="(No code selected in the editor)"
+                     style="push">
+                  <visibleWhen
+                        checkEnabled="false">
+                     <not>
+                        <reference
+                              definitionId="codeSelected">
+                        </reference>
+                     </not>
+                  </visibleWhen>
+               </command>
+               <separator
+                     name="edu.cmu.scs.azurite.separator.code"
+                     visible="true">
+               </separator>
+               <command
                      commandId="edu.cmu.scs.azurite.ui.commands.selectCorrespondingTimelineRectanglesCommand"
                      style="push">
                </command>
@@ -96,6 +113,23 @@
                   icon="icons/selected_rects.png"
                   label="Selected Rectangles in Timeline">
                <command
+                     commandId="edu.cmu.scs.azurite.ui.commands.rectDummy"
+                     label="(No rectangles selected)"
+                     style="push">
+                  <visibleWhen
+                        checkEnabled="false">
+                     <not>
+                        <reference
+                              definitionId="rectSelected">
+                        </reference>
+                     </not>
+                  </visibleWhen>
+               </command>
+               <separator
+                     name="edu.cmu.scs.azurite.separator.rect"
+                     visible="true">
+               </separator>
+               <command
                      commandId="edu.cmu.scs.azurite.ui.commands.selectiveUndoCommand"
                      style="push">
                </command>
@@ -105,7 +139,45 @@
                </command>
             </menu>
             <menu
-                  label="Selected Time Range in the Timeline">
+                  icon="icons/selected_range.png"
+                  label="Selected Time Range in Timeline">
+               <command
+                     commandId="edu.cmu.scs.azurite.ui.commands.timeRangeDummy"
+                     label="(No time range selected)"
+                     style="push">
+                  <visibleWhen
+                        checkEnabled="false">
+                     <not>
+                        <reference
+                              definitionId="rangeSelected">
+                        </reference>
+                     </not>
+                  </visibleWhen>
+               </command>
+               <separator
+                     name="edu.cmu.scs.azurite.separator.timeRange"
+                     visible="true">
+               </separator>
+               <command
+                     commandId="edu.cmu.scs.azurite.ui.commands.selectAllInsideCommand"
+                     style="push">
+               </command>
+               <command
+                     commandId="edu.cmu.scs.azurite.ui.commands.selectAllOutsideCommand"
+                     style="push">
+               </command>
+               <command
+                     commandId="edu.cmu.scs.azurite.ui.commands.deselectAllInsideCommand"
+                     style="push">
+               </command>
+               <command
+                     commandId="edu.cmu.scs.azurite.ui.commands.deselectAllOutsideCommand"
+                     style="push">
+               </command>
+               <separator
+                     name="edu.cmu.scs.azurite.separator1"
+                     visible="true">
+               </separator>
                <command
                      commandId="edu.cmu.scs.azurite.ui.commands.showFilesInRangeCommand"
                      style="push">
@@ -120,6 +192,7 @@
                   visible="true">
             </separator>
             <menu
+                  icon="icons/timeline_marker.png"
                   label="Timeline View">
                <command
                      commandId="edu.cmu.scs.azurite.ui.commands.openTimelineViewCommand"
@@ -305,6 +378,11 @@
                id="edu.cmu.scs.azurite.ui.toolbar.selectedRects"
                style="pulldown">
          </command>
+         <command
+               commandId="edu.cmu.scs.azurite.ui.commands.selectedRange"
+               id="edu.cmu.scs.azurite.ui.toolbar.selectedRange"
+               style="pulldown">
+         </command>
          <separator
                name="edu.cmu.scs.azurite.separator2"
                visible="true">
@@ -412,6 +490,23 @@
             allPopups="false"
             locationURI="menu:edu.cmu.scs.azurite.ui.toolbar.selectedCode">
          <command
+               commandId="edu.cmu.scs.azurite.ui.commands.codeDummy"
+               label="(No code selected in the editor)"
+               style="push">
+            <visibleWhen
+                  checkEnabled="false">
+               <not>
+                  <reference
+                        definitionId="codeSelected">
+                  </reference>
+               </not>
+            </visibleWhen>
+         </command>
+         <separator
+               name="edu.cmu.scs.azurite.separator.code"
+               visible="true">
+         </separator>
+         <command
                commandId="edu.cmu.scs.azurite.ui.commands.selectCorrespondingTimelineRectanglesCommand"
                style="push">
          </command>
@@ -432,11 +527,77 @@
             allPopups="false"
             locationURI="menu:edu.cmu.scs.azurite.ui.toolbar.selectedRects">
          <command
+               commandId="edu.cmu.scs.azurite.ui.commands.rectDummy"
+               label="(No rectangles selected)"
+               style="push">
+            <visibleWhen
+                  checkEnabled="false">
+               <not>
+                  <reference
+                        definitionId="rectSelected">
+                  </reference>
+               </not>
+            </visibleWhen>
+         </command>
+         <separator
+               name="edu.cmu.scs.azurite.separator.rect"
+               visible="true">
+         </separator>
+         <command
                commandId="edu.cmu.scs.azurite.ui.commands.selectiveUndoCommand"
                style="push">
          </command>
          <command
                commandId="edu.cmu.scs.azurite.ui.commands.jumpToTheAffectedCodeCommand"
+               style="push">
+         </command>
+      </menuContribution>
+      <menuContribution
+            allPopups="false"
+            locationURI="menu:edu.cmu.scs.azurite.ui.toolbar.selectedRange">
+         <command
+               commandId="edu.cmu.scs.azurite.ui.commands.timeRangeDummy"
+               label="(No time range selected)"
+               style="push">
+            <visibleWhen
+                  checkEnabled="false">
+               <not>
+                  <reference
+                        definitionId="rangeSelected">
+                  </reference>
+               </not>
+            </visibleWhen>
+         </command>
+         <separator
+               name="edu.cmu.scs.azurite.separator.timeRange"
+               visible="true">
+         </separator>
+         <command
+               commandId="edu.cmu.scs.azurite.ui.commands.selectAllInsideCommand"
+               style="push">
+         </command>
+         <command
+               commandId="edu.cmu.scs.azurite.ui.commands.selectAllOutsideCommand"
+               style="push">
+         </command>
+         <command
+               commandId="edu.cmu.scs.azurite.ui.commands.deselectAllInsideCommand"
+               style="push">
+         </command>
+         <command
+               commandId="edu.cmu.scs.azurite.ui.commands.deselectAllOutsideCommand"
+               style="push">
+         </command>
+         <separator
+               name="edu.cmu.scs.azurite.separator1"
+               visible="true">
+         </separator>
+         <command
+               commandId="edu.cmu.scs.azurite.ui.commands.showFilesInRangeCommand"
+               style="push">
+         </command>
+         <command
+               commandId="edu.cmu.scs.azurite.ui.commands.openFilesInRangeCommand"
                style="push">
          </command>
       </menuContribution>
@@ -450,15 +611,15 @@
       </command>
       <command
             id="edu.cmu.scs.azurite.ui.commands.selectCorrespondingTimelineRectanglesCommand"
-            name="Select Corresponding Timeline Rectangles">
+            name="Select Corresponding Rectangles">
       </command>
       <command
             id="edu.cmu.scs.azurite.ui.commands.undoInRegionCommand"
-            name="Undo All Operations on the Selection">
+            name="Undo Everything in Region">
       </command>
       <command
             id="edu.cmu.scs.azurite.ui.commands.stepwiseUndoInRegionCommand"
-            name="Stepwise Undo Operations on the Selection">
+            name="Stepwise Undo in Region">
       </command>
       <command
             id="edu.cmu.scs.azurite.ui.commands.launchCodeHistoryDiff"
@@ -476,14 +637,6 @@
       <command
             id="edu.cmu.scs.azurite.ui.commands.jumpToTheAffectedCodeCommand"
             name="Jump to the Code">
-      </command>
-      <command
-            id="edu.cmu.scs.azurite.ui.commands.showFilesInRangeCommand"
-            name="Show Files Edited in Selected Time Range in Timeline">
-      </command>
-      <command
-            id="edu.cmu.scs.azurite.ui.commands.openFilesInRangeCommand"
-            name="Open Files Edited in Selected Time Range in the Editor">
       </command>
       <command
             defaultHandler="edu.cmu.scs.azurite.ui.handlers.ActivateFirebugLiteHandler"
@@ -594,9 +747,13 @@
          </commandParameter>
       </command>
       <command
-            defaultHandler="edu.cmu.scs.azurite.ui.handlers.SelectAllInsideHandler"
+            defaultHandler="edu.cmu.scs.azurite.ui.handlers.SelectedRangeHandler"
+            id="edu.cmu.scs.azurite.ui.commands.selectedRange"
+            name="Selected Time Range">
+      </command>
+      <command
             id="edu.cmu.scs.azurite.ui.commands.selectAllInsideCommand"
-            name="Select All Rectangles Inside This Range">
+            name="Select All Rectangles Inside">
          <commandParameter
                id="edu.cmu.scs.azurite.ui.commands.absTimestampStart"
                name="Absolute timestamp of the starting point"
@@ -609,9 +766,8 @@
          </commandParameter>
       </command>
       <command
-            defaultHandler="edu.cmu.scs.azurite.ui.handlers.SelectAllOutsideHandler"
             id="edu.cmu.scs.azurite.ui.commands.selectAllOutsideCommand"
-            name="Select All Rectangles Outside This Range">
+            name="Select All Rectangles Outside">
          <commandParameter
                id="edu.cmu.scs.azurite.ui.commands.absTimestampStart"
                name="Absolute timestamp of the starting point"
@@ -624,9 +780,8 @@
          </commandParameter>
       </command>
       <command
-            defaultHandler="edu.cmu.scs.azurite.ui.handlers.DeselectAllInsideHandler"
             id="edu.cmu.scs.azurite.ui.commands.deselectAllInsideCommand"
-            name="Deselect All Rectangles Inside This Range">
+            name="Deselect All Rectangles Inside">
          <commandParameter
                id="edu.cmu.scs.azurite.ui.commands.absTimestampStart"
                name="Absolute timestamp of the starting point"
@@ -639,9 +794,8 @@
          </commandParameter>
       </command>
       <command
-            defaultHandler="edu.cmu.scs.azurite.ui.handlers.DeselectAllOutsideHandler"
             id="edu.cmu.scs.azurite.ui.commands.deselectAllOutsideCommand"
-            name="Deselect All Rectangles Outside This Range">
+            name="Deselect All Rectangles Outside">
          <commandParameter
                id="edu.cmu.scs.azurite.ui.commands.absTimestampStart"
                name="Absolute timestamp of the starting point"
@@ -652,6 +806,14 @@
                name="Absolute timestamp of the ending point"
                optional="false">
          </commandParameter>
+      </command>
+      <command
+            id="edu.cmu.scs.azurite.ui.commands.showFilesInRangeCommand"
+            name="Show All Files Edited In Range">
+      </command>
+      <command
+            id="edu.cmu.scs.azurite.ui.commands.openFilesInRangeCommand"
+            name="Open All Files Edited In Range">
       </command>
    </extension>
    <extension
@@ -707,6 +869,14 @@
       <image
             commandId="edu.cmu.scs.azurite.ui.commands.selectedRects"
             icon="icons/selected_rects.png">
+      </image>
+      <image
+            commandId="edu.cmu.scs.azurite.ui.commands.historySearchCommand"
+            icon="icons/history_search.png">
+      </image>
+      <image
+            commandId="edu.cmu.scs.azurite.ui.commands.selectedRange"
+            icon="icons/selected_range.png">
       </image>
    </extension>
    <extension
@@ -938,6 +1108,42 @@
       <handler
             class="edu.cmu.scs.azurite.ui.handlers.OpenFilesInRangeHandler"
             commandId="edu.cmu.scs.azurite.ui.commands.openFilesInRangeCommand">
+         <enabledWhen>
+            <reference
+                  definitionId="rangeSelected">
+            </reference>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="edu.cmu.scs.azurite.ui.handlers.SelectAllInsideHandler"
+            commandId="edu.cmu.scs.azurite.ui.commands.selectAllInsideCommand">
+         <enabledWhen>
+            <reference
+                  definitionId="rangeSelected">
+            </reference>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="edu.cmu.scs.azurite.ui.handlers.SelectAllOutsideHandler"
+            commandId="edu.cmu.scs.azurite.ui.commands.selectAllOutsideCommand">
+         <enabledWhen>
+            <reference
+                  definitionId="rangeSelected">
+            </reference>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="edu.cmu.scs.azurite.ui.handlers.DeselectAllInsideHandler"
+            commandId="edu.cmu.scs.azurite.ui.commands.deselectAllInsideCommand">
+         <enabledWhen>
+            <reference
+                  definitionId="rangeSelected">
+            </reference>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="edu.cmu.scs.azurite.ui.handlers.DeselectAllOutsideHandler"
+            commandId="edu.cmu.scs.azurite.ui.commands.deselectAllOutsideCommand">
          <enabledWhen>
             <reference
                   definitionId="rangeSelected">

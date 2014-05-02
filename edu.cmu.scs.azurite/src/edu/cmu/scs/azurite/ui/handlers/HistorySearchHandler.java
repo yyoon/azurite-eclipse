@@ -40,8 +40,6 @@ public class HistorySearchHandler extends AbstractHandler {
 		dialog.create();
 		int result = dialog.open();
 		
-		System.out.println("Dialog Result: " + result);
-		
 		if (result == HistorySearchDialog.CLOSE) {
 			return null;
 		}
@@ -177,6 +175,8 @@ public class HistorySearchHandler extends AbstractHandler {
 		
 		// Send this to the timeline view, if it's available.
 		// TODO open up the timeline if it's not.
+		TimelineViewPart.openTimeline();
+		
 		TimelineViewPart timelineViewPart = TimelineViewPart.getInstance();
 		if (timelineViewPart != null) {
 			timelineViewPart.addSelection(ids, true);
