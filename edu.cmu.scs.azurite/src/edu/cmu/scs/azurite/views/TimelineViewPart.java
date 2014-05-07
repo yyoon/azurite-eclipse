@@ -246,38 +246,28 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 						}
 						
 						case "time_range": {
-							long absTimestampStart = ((Number) browser.evaluate("return global.selectedTimestampRange[0];")).longValue();
-							long absTimestampEnd = ((Number) browser.evaluate("return global.selectedTimestampRange[1];")).longValue();
-							
-							paramMap.clear();
-							paramMap.put("edu.cmu.scs.azurite.ui.commands.absTimestampStart", Long.toString(absTimestampStart));
-							paramMap.put("edu.cmu.scs.azurite.ui.commands.absTimestampEnd", Long.toString(absTimestampEnd));
 							Action selectAllInside = new CommandAction(
-									"Select All Rectangles Inside This Range",
-									"edu.cmu.scs.azurite.ui.commands.selectAllInsideCommand",
-									paramMap);
+									"Select All Rectangles Inside",
+									"edu.cmu.scs.azurite.ui.commands.selectAllInsideCommand");
 							
 							Action selectAllOutside = new CommandAction(
-									"Select All Rectangles Outside This Range",
-									"edu.cmu.scs.azurite.ui.commands.selectAllOutsideCommand",
-									paramMap);
+									"Select All Rectangles Outside",
+									"edu.cmu.scs.azurite.ui.commands.selectAllOutsideCommand");
 							
 							Action deselectAllInside = new CommandAction(
-									"Deselect All Rectangles Inside This Range",
-									"edu.cmu.scs.azurite.ui.commands.deselectAllInsideCommand",
-									paramMap);
+									"Deselect All Rectangles Inside",
+									"edu.cmu.scs.azurite.ui.commands.deselectAllInsideCommand");
 							
 							Action deselectAllOutside = new CommandAction(
-									"Deselect All Rectangles Outside This Range",
-									"edu.cmu.scs.azurite.ui.commands.deselectAllOutsideCommand",
-									paramMap);
+									"Deselect All Rectangles Outside",
+									"edu.cmu.scs.azurite.ui.commands.deselectAllOutsideCommand");
 							
 							Action showAllFilesEditedInRange = new CommandAction(
-									"Show All Files Edited In This Range",
+									"Show All Files Edited In Range",
 									"edu.cmu.scs.azurite.ui.commands.showFilesInRangeCommand");
 							
 							Action openAllFilesEditedInRange = new CommandAction(
-									"Open All Files Edited In This Range",
+									"Open All Files Edited In Range",
 									"edu.cmu.scs.azurite.ui.commands.openFilesInRangeCommand");
 							
 							manager.add(selectAllInside);
@@ -1138,6 +1128,14 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	
 	private void performLayout() {
 		browser.execute("layout();");
+	}
+
+	public long getTimeRangeStart() {
+		return ((Number) browser.evaluate("return global.selectedTimestampRange[0];")).longValue();
+	}
+
+	public long getTimeRangeEnd() {
+		return ((Number) browser.evaluate("return global.selectedTimestampRange[1];")).longValue();
 	}
 	
 }

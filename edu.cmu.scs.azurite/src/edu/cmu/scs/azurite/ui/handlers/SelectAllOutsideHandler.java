@@ -17,10 +17,14 @@ public class SelectAllOutsideHandler extends AbstractHandler {
 
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
-		String timestampStringStart = event.getParameter("edu.cmu.scs.azurite.ui.commands.absTimestampStart");
-		String timestampStringEnd = event.getParameter("edu.cmu.scs.azurite.ui.commands.absTimestampEnd");
-		long absTimestampStart = Long.parseLong(timestampStringStart);
-		long absTimestampEnd = Long.parseLong(timestampStringEnd);
+		TimelineViewPart timelineViewPart = TimelineViewPart.getInstance();
+		if (timelineViewPart == null) {
+			// Do nothing if the timeline view is currently not available.
+			return null;
+		}
+		
+		long absTimestampStart = timelineViewPart.getTimeRangeStart();
+		long absTimestampEnd = timelineViewPart.getTimeRangeEnd();
 		
 		if (absTimestampStart > absTimestampEnd) {
 			long temp = absTimestampStart;
@@ -39,10 +43,7 @@ public class SelectAllOutsideHandler extends AbstractHandler {
 		List<OperationId> ids = OperationId.getOperationIdsFromRuntimeDCs(dcs);
 		
 		// Send this to the timeline view, if it's available.
-		TimelineViewPart timelineViewPart = TimelineViewPart.getInstance();
-		if (timelineViewPart != null) {
-			timelineViewPart.addSelection(ids, true);
-		}
+		timelineViewPart.addSelection(ids, true);
 		
 		return null;
 	}
