@@ -1296,18 +1296,7 @@ function pixelToTimestamp(pixel) {
 /*
  * When the page loads, load a log file
  */
-window.onload = function() {
-	azurite.initialize();
-
-	setupSVG();
-
-	window.onresize();
-	initEventHandlers();
-	
-	setTimeout(layout, 100);
-};
-
-window.onresize = function(e) {
+function handleResize() {
 	// if window size are different, redraw everything
 	if (global.lastWindowWidth !== window.innerWidth || global.lastWindowHeight !== window.innerHeight) {
 		global.lastWindowWidth = window.innerWidth;
@@ -1323,6 +1312,22 @@ window.onresize = function(e) {
 		
 		svg.subFiles.selectAll('rect.file_rect').attr('width', fileRectDraw.wFunc);
 	}
+}
+
+window.onload = function() {
+	azurite.initialize();
+
+	setupSVG();
+	
+	initEventHandlers();
+	
+	setTimeout(layout, 100);
+
+	handleResize();
+};
+
+window.onresize = function(e) {
+	handleResize();
 };
 
 function updateAreas() {
