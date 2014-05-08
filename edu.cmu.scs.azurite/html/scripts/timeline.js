@@ -506,7 +506,7 @@ function setupSVG() {
 		.attr('id', 'marker_time_text')
 		.attr('class', 'marker')
 		.attr('x', MARKER_SIZE)
-		.attr('y', -MARKER_SIZE / 2)
+		.attr('y', global.isMac ? -MARKER_SIZE / 2 : -3)
 		.attr('alignment-baseline', 'central')
 		.attr('fill', TICK_TEXT_COLOR)
 		.attr('font-size', MARKER_SIZE + 'px')
