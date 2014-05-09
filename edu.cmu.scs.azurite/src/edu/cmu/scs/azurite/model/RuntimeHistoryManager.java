@@ -241,6 +241,9 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 		// If there was a change between the two snapshots..
 		// This can only happen for the current session, because the past log
 		// files don't have the prevSnapshot value.
+		
+		// For the past logs, this is handled in PastHistoryManager#processEvents method.
+		// TODO Maybe merge the code to here by setting up the prevSnapshot value there.
 		if (foc.getSnapshot() != null && foc.getPrevSnapshot() != null) {
 			PastHistoryManager.getInstance().injectDiffDCs(getCurrentFileKey(),
 					foc.getPrevSnapshot(), foc.getSnapshot(),	// before and after.
@@ -278,7 +281,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 
 	@Override
 	public void documentChanged(BaseDocumentChangeEvent docChange) {
-		if (docChange instanceof Replace && ((Replace) docChange).isEntireFileChange()) {
+		if (isEntireFileReplace(docChange)) {
 			// In this case, inject diff DCs.
 			Replace replace = (Replace) docChange;
 			
@@ -310,6 +313,10 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 			mCurrentSessionEvents.addCommand(docChange);
 		}
 	}
+
+	private boolean isEntireFileReplace(BaseDocumentChangeEvent docChange) {
+		return docChange instanceof Replace && ((Replace) docChange).isEntireFileChange();
+	}
 	
 	@Override
 	public void documentChangeUpdated(BaseDocumentChangeEvent docChange) {
@@ -318,7 +325,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 	
 	@Override
 	public void documentChangeFinalized(BaseDocumentChangeEvent docChange) {
-		if (docChange instanceof Replace && ((Replace) docChange).isEntireFileChange()) {
+		if (isEntireFileReplace(docChange)) {
 			// Do nothing, because everything should have been handled in documentChanged
 		} else {
 			addRuntimeDCFromOriginalDC(docChange);
@@ -672,7 +679,8 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 
 		// Notify the listeners (mainly, Timeline View)
 		// Timeline view only needs the events newly added.
-		firePastLogsReadEvent(listEvents);
+		listAllEvents.remove(listAllEvents.size() - 1);
+		firePastLogsReadEvent(listAllEvents);
 	}
 
 	private void processDocumentChange(BaseDocumentChangeEvent docChange) {

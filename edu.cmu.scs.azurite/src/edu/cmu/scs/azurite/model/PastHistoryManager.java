@@ -20,6 +20,7 @@ import edu.cmu.scs.fluorite.commands.AbstractCommand;
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 import edu.cmu.scs.fluorite.commands.FileOpenCommand;
 import edu.cmu.scs.fluorite.commands.ICommand;
+import edu.cmu.scs.fluorite.commands.Replace;
 import edu.cmu.scs.fluorite.model.DocumentChangeListener;
 import edu.cmu.scs.fluorite.model.EventRecorder;
 import edu.cmu.scs.fluorite.model.Events;
@@ -248,6 +249,41 @@ public class PastHistoryManager implements DocumentChangeListener {
 			if (originalContent != null || docChange instanceof FileOpenCommand) {
 				String updatedContent = docChange.applyToString(originalContent);
 				localFinalSnapshots.put(curFileKey, updatedContent);
+			}
+			
+			if (originalContent != null && docChange instanceof Replace) {
+				final Replace replace = (Replace) docChange;
+				
+				// Entire file replacement!!
+				if (replace.getOffset() == 0 && replace.getLength() == originalContent.length()) {
+					replace.setEntireFileChange(true);
+					
+					// Take it back..
+					copyEvents.removeLastCommand();
+
+					// Inject Diff DCs here.
+					if (replace.getDeletedText() != null && !replace.getDeletedText().isEmpty() &&
+						replace.getInsertedText() != null && !replace.getInsertedText().isEmpty() &&
+						!replace.getDeletedText().equals(replace.getInsertedText())) {
+						
+						PastHistoryManager.getInstance().injectDiffDCs(
+								curFileKey,
+								replace.getDeletedText(),
+								replace.getInsertedText(),
+								replace.getSessionId(),
+								replace.getTimestamp(),
+								false,
+								new IAddCommand() {
+									@Override
+									public void addCommand(ICommand command) {
+										++insertedCount.value;
+										command.setCommandIndex(replace.getCommandIndex()
+												+ insertedCount.value);
+										copyEvents.addCommand(command);
+									}
+								});
+					}
+				}
 			}
 		}
 
