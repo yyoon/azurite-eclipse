@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 import name.fraser.neil.plaintext.diff_match_patch.Diff;
+import name.fraser.neil.plaintext.diff_match_patch.Operation;
 import name.fraser.neil.plaintext.diff_match_patch_ext;
 import edu.cmu.scs.azurite.commands.diff.DiffDelete;
 import edu.cmu.scs.azurite.commands.diff.DiffInsert;
@@ -325,14 +326,23 @@ public class PastHistoryManager implements DocumentChangeListener {
 			if (autoAssignId == false) {
 				AbstractCommand.setIncrementCommandID(false);
 			}
+			
+			// Make the timestamp spreaded just enough to be displayed on timeline correctly.
+			int count = 0;
+			for (Diff diff : diffs) {
+				if (diff.operation == Operation.INSERT || diff.operation == Operation.DELETE) {
+					++count;
+				}
+			}
 
 			for (Diff diff : diffs) {
 				switch (diff.operation) {
 				case INSERT: {
 					DiffInsert di = new DiffInsert(key, curOffset, diff.text, null);
 					di.setSessionId(sessionId);
-					di.setTimestamp(timestamp);
-					di.setTimestamp2(timestamp);
+					di.setTimestamp(timestamp - count);
+					di.setTimestamp2(timestamp - count + 1);
+					--count;
 
 					curOffset += diff.text.length();
 					curLength += diff.text.length();
@@ -347,8 +357,9 @@ public class PastHistoryManager implements DocumentChangeListener {
 					DiffDelete dd = new DiffDelete(key, curOffset, diff.text.length(), -1, -1,
 							diff.text, null);
 					dd.setSessionId(sessionId);
-					dd.setTimestamp(timestamp);
-					dd.setTimestamp2(timestamp);
+					dd.setTimestamp(timestamp - count);
+					dd.setTimestamp2(timestamp - count + 1);
+					--count;
 
 					curLength -= diff.text.length();
 
@@ -389,14 +400,17 @@ public class PastHistoryManager implements DocumentChangeListener {
 			}
 
 			if (!elem.getSnapshot().equals(finalContent)) {
+				
+				long t = elem.getSessionId() + elem.getTimestamp() - events.getStartTimestamp();
+				
 				injectDiffDCs(
-						key,					// FileKey key
-						finalContent,			// String before
-						elem.getSnapshot(),		// String after
-						elem.getSessionId(),	// long sessionId
-						elem.getTimestamp(),	// long timestamp
-						false,					// boolean autoAssignId
-						new IAddCommand() {		// IAddCommand addCommand
+						key,						// FileKey key
+						finalContent,				// String before
+						elem.getSnapshot(),			// String after
+						events.getStartTimestamp(),	// long sessionId
+						t,							// long timestamp
+						false,						// boolean autoAssignId
+						new IAddCommand() {			// IAddCommand addCommand
 								@Override
 								public void addCommand(ICommand command) {
 									ICommand lastCommand = events.getCommands().get(

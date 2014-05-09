@@ -29,6 +29,9 @@ var TYPE_INSERT = 0;
 var TYPE_DELETE = 1;
 var TYPE_REPLACE = 2;
 
+var TYPE_DIFF_INSERT = 10;
+var TYPE_DIFF_DELETE = 11;
+
 var RECT_RADIUS = 1;
 var MIN_WIDTH = 7;
 var MIN_HEIGHT = MIN_WIDTH;
@@ -697,6 +700,10 @@ function EditOperation(sid, id, t1, t2, y1, y2, type, fileGroup) {
 			return "#ec1313";
 		} else if (this.type === TYPE_REPLACE) {
 			return "#1313ec";
+		} else if (this.type === TYPE_DIFF_INSERT) {
+			return "#4d764d";
+		} else if (this.type === TYPE_DIFF_DELETE) {
+			return "#ec9999";
 		}
 	};
 	
