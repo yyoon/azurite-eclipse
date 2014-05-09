@@ -12,8 +12,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import name.fraser.neil.plaintext.diff_match_patch;
 import name.fraser.neil.plaintext.diff_match_patch.Diff;
+import name.fraser.neil.plaintext.diff_match_patch_ext;
 import edu.cmu.scs.azurite.commands.diff.DiffDelete;
 import edu.cmu.scs.azurite.commands.diff.DiffInsert;
 import edu.cmu.scs.fluorite.commands.AbstractCommand;
@@ -278,8 +278,9 @@ public class PastHistoryManager implements DocumentChangeListener {
 			throw new IllegalArgumentException("Cannot process null strings.");
 		}
 
-		diff_match_patch dmp = new diff_match_patch();
-		LinkedList<Diff> diffs = dmp.diff_main(before, after);
+		diff_match_patch_ext dmp = new diff_match_patch_ext();
+		LinkedList<Diff> diffs = dmp.diff_lines_only(before, after);
+		
 		int curOffset = 0;
 		int curLength = before.length();
 
