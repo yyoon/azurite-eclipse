@@ -18,6 +18,7 @@ import edu.cmu.scs.fluorite.commands.EclipseCommand;
 import edu.cmu.scs.fluorite.commands.FileOpenCommand;
 import edu.cmu.scs.fluorite.commands.ICommand;
 import edu.cmu.scs.fluorite.commands.JUnitCommand;
+import edu.cmu.scs.fluorite.commands.Replace;
 import edu.cmu.scs.fluorite.commands.RunCommand;
 import edu.cmu.scs.fluorite.model.CommandExecutionListener;
 import edu.cmu.scs.fluorite.model.DocumentChangeListener;
@@ -240,6 +241,9 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 		// If there was a change between the two snapshots..
 		// This can only happen for the current session, because the past log
 		// files don't have the prevSnapshot value.
+		
+		// For the past logs, this is handled in PastHistoryManager#processEvents method.
+		// TODO Maybe merge the code to here by setting up the prevSnapshot value there.
 		if (foc.getSnapshot() != null && foc.getPrevSnapshot() != null) {
 			PastHistoryManager.getInstance().injectDiffDCs(getCurrentFileKey(),
 					foc.getPrevSnapshot(), foc.getSnapshot(),	// before and after.
@@ -274,21 +278,44 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 		
 		fireActiveFileChangedEvent(key.getProjectName(), key.getFilePath());
 	}
-	
-	public void handleSnapshot(String snapshot) {
-		// TODO extract diff.
-		// Apply to the current file.
-		if (snapshot != null) {
-			getRuntimeDocumentChanges().clear();
-			mNextIndexToApply.put(getCurrentFileKey(), 0);
-		}
-	}
 
 	@Override
 	public void documentChanged(BaseDocumentChangeEvent docChange) {
-		fireDocumentChangeAddedEvent(docChange);
-		
-		mCurrentSessionEvents.addCommand(docChange);
+		if (isEntireFileReplace(docChange)) {
+			// In this case, inject diff DCs.
+			Replace replace = (Replace) docChange;
+			
+			if (replace.getDeletedText() != null && !replace.getDeletedText().isEmpty() &&
+				replace.getInsertedText() != null && !replace.getInsertedText().isEmpty() &&
+				!replace.getDeletedText().equals(replace.getInsertedText())) {
+				
+				PastHistoryManager.getInstance().injectDiffDCs(
+						getCurrentFileKey(),
+						replace.getDeletedText(),
+						replace.getInsertedText(),
+						replace.getSessionId(),
+						replace.getTimestamp(),
+						true,
+						new IAddCommand() {
+							@Override
+							public void addCommand(ICommand command) {
+								if (command instanceof BaseDocumentChangeEvent) {
+									BaseDocumentChangeEvent docChange =
+											(BaseDocumentChangeEvent) command;
+									documentChanged(docChange);
+									documentChangeFinalized(docChange);
+								}
+							}
+						});
+			}
+		} else {
+			fireDocumentChangeAddedEvent(docChange);
+			mCurrentSessionEvents.addCommand(docChange);
+		}
+	}
+
+	private boolean isEntireFileReplace(BaseDocumentChangeEvent docChange) {
+		return docChange instanceof Replace && ((Replace) docChange).isEntireFileChange();
 	}
 	
 	@Override
@@ -298,7 +325,11 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 	
 	@Override
 	public void documentChangeFinalized(BaseDocumentChangeEvent docChange) {
-		addRuntimeDCFromOriginalDC(docChange);
+		if (isEntireFileReplace(docChange)) {
+			// Do nothing, because everything should have been handled in documentChanged
+		} else {
+			addRuntimeDCFromOriginalDC(docChange);
+		}
 	}
 	
 	private void addRuntimeDCFromOriginalDC(BaseDocumentChangeEvent docChange) {
@@ -648,7 +679,8 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 
 		// Notify the listeners (mainly, Timeline View)
 		// Timeline view only needs the events newly added.
-		firePastLogsReadEvent(listEvents);
+		listAllEvents.remove(listAllEvents.size() - 1);
+		firePastLogsReadEvent(listAllEvents);
 	}
 
 	private void processDocumentChange(BaseDocumentChangeEvent docChange) {

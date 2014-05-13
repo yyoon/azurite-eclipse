@@ -47,6 +47,8 @@ import org.eclipse.ui.part.ViewPart;
 import org.eclipse.ui.progress.UIJob;
 import org.eclipse.ui.texteditor.AbstractTextEditor;
 
+import edu.cmu.scs.azurite.commands.diff.DiffDelete;
+import edu.cmu.scs.azurite.commands.diff.DiffInsert;
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.jface.action.CommandAction;
 import edu.cmu.scs.azurite.model.FileKey;
@@ -925,7 +927,11 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	}
 	
 	private int getTypeIndex(BaseDocumentChangeEvent docChange) {
-		if (docChange instanceof Insert) {
+		if (docChange instanceof DiffInsert) {
+			return 10;
+		} else if (docChange instanceof DiffDelete) {
+			return 11;
+		} else if (docChange instanceof Insert) { 
 			return 0;
 		} else if (docChange instanceof Delete) {
 			return 1;
