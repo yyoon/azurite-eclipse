@@ -106,8 +106,8 @@ rectDraw.wFunc = function(d) {
 rectDraw.hFunc = function(d) {
 	return Math.max(MIN_HEIGHT / global.scaleY, ROW_HEIGHT * (d.y2 - d.y1) / 100);
 };
-rectDraw.fillFunc = function(d) {
-	return d.color();
+rectDraw.classFunc = function(d) {
+	return 'op_rect ' + d.typeString();
 };
 
 var fileDraw = {};
@@ -692,20 +692,6 @@ function EditOperation(sid, id, t1, t2, y1, y2, type, fileGroup) {
 			return "type_diff_delete";
 		}
 	}
-
-	this.color = function() {
-		if (this.type === TYPE_INSERT) {
-			return "#0a760a";
-		} else if (this.type === TYPE_DELETE) {
-			return "#ec1313";
-		} else if (this.type === TYPE_REPLACE) {
-			return "#1313ec";
-		} else if (this.type === TYPE_DIFF_INSERT) {
-			return "#4d764d";
-		} else if (this.type === TYPE_DIFF_DELETE) {
-			return "#ec9999";
-		}
-	};
 	
 	this.fileGroup = fileGroup;
 	this.session = fileGroup.session;
@@ -852,9 +838,7 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current
 		.attr('id', function(d) {
 			return d.sid + '_' + d.id;
 		})
-		.attr('class', function(d) {
-			return 'op_rect ' + d.typeString();
-		})
+		.attr('class', rectDraw.classFunc)
 		.attr('y', rectDraw.yFunc)
 		.attr('width', rectDraw.wFunc)
 		.attr('height', rectDraw.hFunc)
@@ -994,10 +978,10 @@ function updateOperation(sid, id, t2, y1, y2, type, scroll) {
 
 	if (global.lastRect !== null) {
 		global.lastRect
+			.attr('class', rectDraw.classFunc)
 			.attr('width', rectDraw.wFunc)
 			.attr('y', rectDraw.yFunc)
-			.attr('height', rectDraw.hFunc)
-			.attr('fill', rectDraw.fillFunc);
+			.attr('height', rectDraw.hFunc);
 	}
 	
 	var session = lastOp.session;
