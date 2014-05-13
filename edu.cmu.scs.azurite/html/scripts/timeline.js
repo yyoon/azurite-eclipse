@@ -57,10 +57,6 @@ var SCROLLBAR_DIST_THRESHOLD = 50;
 
 var MARKER_WIDTH = 1;
 var MARKER_SIZE = 10;
-var MARKER_COLOR = 'orange';
-
-var RANGE_BOX_FILL_OPACITY = 0.3;
-var RANGE_BOX_COLOR = 'royalblue';
 
 var RANGE_START_LINE_COLOR = 'white';
 var RANGE_START_LINE_WIDTH = MARKER_WIDTH;
@@ -470,8 +466,6 @@ function setupSVG() {
 
 	svg.subRangeBox = svg.subMarkers.append('rect')
 		.attr('id', 'range_selection_box')
-		.attr('fill', RANGE_BOX_COLOR)
-		.attr('fill-opacity', RANGE_BOX_FILL_OPACITY)
 		.style('display', 'none');
 
 	svg.subRangeStartLine = svg.subMarkers.append('line')
@@ -490,12 +484,10 @@ function setupSVG() {
 		.attr('class', 'marker')
 		.attr('y1', -MARKER_SIZE / 2)
 		.attr('stroke-width', MARKER_WIDTH)
-		.attr('stroke', MARKER_COLOR);
 	svg.subMarker.append('path')
 		.attr('id', 'marker_upper_triangle')
 		.attr('class', 'marker')
-		.attr('d', 'M 0 0 L ' + (-MARKER_SIZE / 2) + ' ' + (-MARKER_SIZE) + ' ' + (MARKER_SIZE / 2) + ' ' + (-MARKER_SIZE))
-		.attr('fill', MARKER_COLOR);
+		.attr('d', 'M 0 0 L ' + (-MARKER_SIZE / 2) + ' ' + (-MARKER_SIZE) + ' ' + (MARKER_SIZE / 2) + ' ' + (-MARKER_SIZE));
 /*	svg.subMarker.append('path')
 		.attr('id', 'marker_lower_triangle')
 		.attr('class', 'marker')
@@ -679,6 +671,25 @@ function EditOperation(sid, id, t1, t2, y1, y2, type, fileGroup) {
 	this.y1 = y1;
 	this.y2 = y2;
 	this.type = type;
+	this.typeString = function() {
+		switch (this.type) {
+		case TYPE_INSERT:
+			return "type_insert";
+
+		case TYPE_DELETE:
+			return "type_delete";
+
+		case TYPE_REPLACE:
+			return "type_replace";
+
+		case TYPE_DIFF_INSERT:
+			return "type_diff_insert";
+
+		case TYPE_DIFF_DELETE:
+			return "type_diff_delete";
+		}
+	}
+
 	this.color = function() {
 		if (this.type === TYPE_INSERT) {
 			return "#0a760a";
@@ -834,13 +845,14 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current
 		.attr('id', function(d) {
 			return d.sid + '_' + d.id;
 		})
-		.attr('class', 'op_rect')
+		.attr('class', function(d) {
+			return 'op_rect ' + d.typeString();
+		})
 		.attr('y', rectDraw.yFunc)
 		.attr('width', rectDraw.wFunc)
 		.attr('height', rectDraw.hFunc)
 		.attr('rx', RECT_RADIUS)
 		.attr('ry', RECT_RADIUS)
-		.attr('fill', rectDraw.fillFunc)
 		.attr('vector-effect', 'non-scaling-stroke');
 	
 	if (autolayout === true) {

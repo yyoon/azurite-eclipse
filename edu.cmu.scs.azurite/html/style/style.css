@@ -263,3 +263,61 @@ display: none;	/* Initially Hidden */
 height: 20px;
 margin: 5px 0px;
 }
+
+rect.op_rect.type_insert {
+fill: #0a760a;
+}
+
+rect.op_rect.type_insert:hover {
+fill: #11cc11;
+}
+
+rect.op_rect.type_delete {
+fill: #ec1313;
+}
+
+rect.op_rect.type_delete:hover {
+fill: #ff6666;
+}
+
+rect.op_rect.type_replace {
+fill: #1313ec;
+}
+
+rect.op_rect.type_replace:hover {
+fill: #6666ff;
+}
+
+rect.op_rect.type_diff_insert {
+fill: #4d764d;
+}
+
+rect.op_rect.type_diff_delete {
+fill: #ec9999;
+}
+
+rect#range_selection_box {
+fill: royalblue;
+fill-opacity: 0.3;
+}
+
+rect#range_selection_box:hover {
+fill: #316eff;
+fill-opacity: 0.5;
+}
+
+#marker_line {
+stroke: orange;
+}
+
+#marker_line:hover {
+stroke: #ffb733;
+}
+
+#marker_upper_triangle {
+fill: orange;
+}
+
+#marker_upper_triangle:hover {
+fill: #ffb733;
+}
