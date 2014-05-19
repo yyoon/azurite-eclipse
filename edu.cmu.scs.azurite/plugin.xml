@@ -354,6 +354,15 @@
                   style="push"
                   tooltip="Please help the researcher by describing the intent of your recent backtracking / code editing">
             </command>
+            <separator
+                  name="edu.cmu.scs.azurite.separator5"
+                  visible="true">
+            </separator>
+            <command
+                  commandId="edu.cmu.scs.azurite.ui.commands.aboutCommand"
+                  style="push"
+                  tooltip="About Azurite">
+            </command>
          </menu>
       </menuContribution>
       <menuContribution
@@ -779,6 +788,10 @@
             id="edu.cmu.scs.azurite.ui.commands.dummy"
             name=" ">
       </command>
+      <command
+            id="edu.cmu.scs.azurite.ui.commands.aboutCommand"
+            name="About Azurite...">
+      </command>
    </extension>
    <extension
          point="org.eclipse.ui.bindings">
@@ -1113,6 +1126,10 @@
                   definitionId="rangeSelected">
             </reference>
          </enabledWhen>
+      </handler>
+      <handler
+            class="edu.cmu.scs.azurite.ui.handlers.AboutHandler"
+            commandId="edu.cmu.scs.azurite.ui.commands.aboutCommand">
       </handler>
    </extension>
    <extension
