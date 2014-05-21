@@ -40,6 +40,23 @@
          <menu
                label="Azurite">
             <command
+                  commandId="edu.cmu.scs.azurite.ui.commands.dummy"
+                  label="(No code selected in the editor)"
+                  style="push">
+               <visibleWhen
+                     checkEnabled="false">
+                  <not>
+                     <reference
+                           definitionId="codeSelected">
+                     </reference>
+                  </not>
+               </visibleWhen>
+            </command>
+            <separator
+                  name="edu.cmu.scs.azurite.separator.code"
+                  visible="true">
+            </separator>
+            <command
                   commandId="edu.cmu.scs.azurite.ui.commands.selectCorrespondingTimelineRectanglesCommand"
                   style="push">
             </command>
