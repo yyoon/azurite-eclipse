@@ -33,7 +33,7 @@ public class AboutDialog extends Dialog {
 	private static final int CLOSE_BUTTON_ID = Dialog.OK;
 	
 	private static final int DIALOG_WIDTH = 600;
-	private static final int DIALOG_HEIGHT = 500;
+	private static final int DIALOG_HEIGHT = 600;
 
 	public AboutDialog(Shell parentShell) {
 		super(parentShell);
