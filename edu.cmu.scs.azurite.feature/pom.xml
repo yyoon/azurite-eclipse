@@ -7,7 +7,7 @@
 	<parent>
 		<groupId>edu.cmu.scs.azurite</groupId>
 		<artifactId>edu.cmu.scs.azurite.parent</artifactId>
-		<version>0.6.1-SNAPSHOT</version>
+		<version>0.6.2-SNAPSHOT</version>
 		<relativePath>../edu.cmu.scs.azurite.parent</relativePath>
 	</parent>
 </project>

@@ -5,7 +5,7 @@
 
   <groupId>edu.cmu.scs.azurite</groupId>
   <artifactId>edu.cmu.scs.azurite.parent</artifactId>
-  <version>0.6.1-SNAPSHOT</version>
+  <version>0.6.2-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <!-- the modules that shall be built together in one reactor -->
