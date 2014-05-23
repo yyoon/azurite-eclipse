@@ -5,8 +5,10 @@ import java.util.List;
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
+import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.ITextSelection;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IViewPart;
 import org.eclipse.ui.IWorkbenchPage;
@@ -46,14 +48,24 @@ public class LaunchCodeHistoryDiffHandler extends AbstractHandler {
 		
 		ITextSelection selection = HandlerUtilities.getSelectedRegion();
 		
-		IWorkbenchWindow window = PlatformUI.getWorkbench()
-				.getActiveWorkbenchWindow();
+		IWorkbenchWindow window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
 		if (window != null) {
 			IWorkbenchPage page = window.getActivePage();
 			if (page != null) {
 				try {
+					// This returns null when it's hitting the maximum number of views. 
+					Integer nextViewerId = CodeHistoryDiffViewPart.getNextViewerId();
+					if (nextViewerId == null) {
+						MessageDialog.openWarning(
+								Display.getCurrent().getActiveShell(),
+								"Azurite - Failed to open code history diff view",
+								"Failed to open a new code history diff view because there are too many code history views open.\n" +
+								"Please close some existing code history diff views and try again.");
+						return null;
+					}
+					
 					IViewPart viewPart = page.showView(CODE_HISTORY_DIFF_VIEW_ID,
-							Integer.toString(CodeHistoryDiffViewPart.getViewerId()),
+							Integer.toString(CodeHistoryDiffViewPart.getNextViewerId()),
 							IWorkbenchPage.VIEW_CREATE);
 					
 					if (viewPart instanceof CodeHistoryDiffViewPart) {

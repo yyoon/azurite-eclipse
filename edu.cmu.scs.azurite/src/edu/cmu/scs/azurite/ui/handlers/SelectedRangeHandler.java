@@ -18,49 +18,68 @@ import org.eclipse.ui.dialogs.ListDialog;
 import org.eclipse.ui.handlers.IHandlerService;
 
 import edu.cmu.scs.azurite.plugin.Activator;
+import edu.cmu.scs.azurite.views.TimelineViewPart;
 
-public class SelectedCodeHandler extends AbstractHandler {
+public class SelectedRangeHandler extends AbstractHandler {
 	
-	private static final String DIALOG_TITLE = "Azurite - Commands for Selected Code";
+	private static final String DIALOG_TITLE = "Azurite - Commands for Selected Time Range in Timeline";
 
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
 		Shell shell = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell();
 		
-		if (HandlerUtilities.isCodeSelected() == false) {
+		TimelineViewPart timeline = TimelineViewPart.getInstance();
+		
+		if (timeline == null) {
 			MessageDialog.openInformation(shell, DIALOG_TITLE,
-					"You must select some code first, in order to invoke these commands.");
+					"You must open the timeline first.");
+			return null;
+		}
+		
+		if (!timeline.isRangeSelected()) {
+			MessageDialog.openInformation(shell, DIALOG_TITLE,
+					"You must select some time range first.");
 			return null;
 		}
 		
 		ListDialog dialog = new ListDialog(shell); 
 		dialog.setTitle(DIALOG_TITLE);
-		dialog.setMessage("Which of the following commands do you want to execute on the selected code?"); 
+		dialog.setMessage("Which of the following commands do you want to execute on the selected time range?"); 
 		dialog.setHelpAvailable(false);
 		
-		dialog.setContentProvider(new SelectedCodeOperationContentProvider());
-		dialog.setLabelProvider(new SelectedCodeOperationLabelProvider());
+		dialog.setContentProvider(new SelectedRangeOperationContentProvider());
+		dialog.setLabelProvider(new SelectedRangeOperationLabelProvider());
 		
 		Object[][] input = {
 				{
 					null,
-					"Select Corresponding Timeline Rectangles",
-					"edu.cmu.scs.azurite.ui.commands.selectCorrespondingTimelineRectanglesCommand"
-				},
-				{
-					"icons/undo_in_region.png",
-					"Undo All Operations on the Selection",
-					"edu.cmu.scs.azurite.ui.commands.undoInRegionCommand"
+					"Select All Rectangles Inside",
+					"edu.cmu.scs.azurite.ui.commands.selectAllInsideCommand"
 				},
 				{
 					null,
-					"Stepwise Undo Operations on the Selection",
-					"edu.cmu.scs.azurite.ui.commands.stepwiseUndoInRegionCommand"
+					"Select All Rectangles Outside",
+					"edu.cmu.scs.azurite.ui.commands.selectAllOutsideCommand"
 				},
 				{
-					"icons/time_machine.png",
-					"Launch Code History Diff",
-					"edu.cmu.scs.azurite.ui.commands.launchCodeHistoryDiff"
+					null,
+					"Deselect All Rectangles Inside",
+					"edu.cmu.scs.azurite.ui.commands.deselectAllInsideCommand"
+				},
+				{
+					null,
+					"Deselect All Rectangles Outside",
+					"edu.cmu.scs.azurite.ui.commands.deselectAllOutsideCommand"
+				},
+				{
+					null,
+					"Show All Files Edited In Range",
+					"edu.cmu.scs.azurite.ui.commands.showFilesInRangeCommand"
+				},
+				{
+					null,
+					"Open All Files Edited In Range",
+					"edu.cmu.scs.azurite.ui.commands.openFilesInRangeCommand"
 				},
 		};
 		
@@ -85,7 +104,7 @@ public class SelectedCodeHandler extends AbstractHandler {
 		return null;
 	}
 	
-	private static class SelectedCodeOperationContentProvider implements IStructuredContentProvider {
+	private static class SelectedRangeOperationContentProvider implements IStructuredContentProvider {
 
 		@Override
 		public void dispose() {
@@ -104,7 +123,7 @@ public class SelectedCodeHandler extends AbstractHandler {
 		
 	}
 	
-	private static class SelectedCodeOperationLabelProvider extends LabelProvider {
+	private static class SelectedRangeOperationLabelProvider extends LabelProvider {
 		
 		private List<Image> imagesToDispose = new ArrayList<Image>();
 

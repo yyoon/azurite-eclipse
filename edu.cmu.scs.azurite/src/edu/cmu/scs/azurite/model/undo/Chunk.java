@@ -249,4 +249,28 @@ public class Chunk extends ArrayList<Segment> {
 		
 		return locationComparator;
 	}
+	
+	public static Chunk fromDCList(List<RuntimeDC> dcs) {
+		Chunk chunk = new Chunk();
+		for (RuntimeDC dc : dcs) {
+			chunk.addAll(dc.getAllSegments());
+		}
+		
+		Collections.sort(chunk, Segment.getLocationComparator());
+		return chunk;
+	}
+	
+	public static Chunk fromDCList(List<RuntimeDC> dcs, int startOffset, int endOffset) {
+		Chunk chunk = new Chunk();
+		for (RuntimeDC dc : dcs) {
+			for (Segment segment : dc.getAllSegments()) {
+				if (segment.inSelectionRange(startOffset, endOffset)) {
+					chunk.add(segment);
+				}
+			}
+		}
+		
+		Collections.sort(chunk, Segment.getLocationComparator());
+		return chunk;
+	}
 }

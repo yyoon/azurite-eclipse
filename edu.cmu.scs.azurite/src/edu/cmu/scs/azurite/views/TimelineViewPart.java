@@ -12,8 +12,13 @@ import java.util.Map;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.runtime.FileLocator;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.ListenerList;
 import org.eclipse.core.runtime.Platform;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.core.runtime.jobs.ISchedulingRule;
+import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IMenuListener;
 import org.eclipse.jface.action.IMenuManager;
@@ -28,15 +33,22 @@ import org.eclipse.swt.browser.BrowserFunction;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorPart;
+import org.eclipse.ui.IFileEditorInput;
 import org.eclipse.ui.IWorkbenchActionConstants;
 import org.eclipse.ui.IWorkbenchPage;
+import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.handlers.IHandlerService;
 import org.eclipse.ui.ide.IDE;
 import org.eclipse.ui.part.ViewPart;
+import org.eclipse.ui.progress.UIJob;
+import org.eclipse.ui.texteditor.AbstractTextEditor;
 
+import edu.cmu.scs.azurite.commands.diff.DiffDelete;
+import edu.cmu.scs.azurite.commands.diff.DiffInsert;
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.jface.action.CommandAction;
 import edu.cmu.scs.azurite.model.FileKey;
@@ -68,6 +80,8 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	private static final String EXECUTE_JS_CODE_COMMAND_ID = "edu.cmu.scs.azurite.ui.commands.executeJSCode";
 	private static final String EXECUTE_JS_CODE_COMMAND_PARAM_ID = "edu.cmu.scs.azurite.ui.commands.executeJSCode.codeToExecute";
 	private static String BROWSER_FUNC_PREFIX = "__AZURITE__";
+	
+	private static final String TIMELINE_VIEW_ID = "edu.cmu.scs.azurite.views.TimelineViewPart";
 
 	private static TimelineViewPart me = null;
 	
@@ -79,6 +93,20 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	 */
 	public static TimelineViewPart getInstance() {
 		return me;
+	}
+	
+	public static void openTimeline() {
+		IWorkbenchWindow window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
+		if (window != null) {
+			IWorkbenchPage page = window.getActivePage();
+			if (page != null) {
+				try {
+					page.showView(TIMELINE_VIEW_ID);
+				} catch (PartInitException e) {
+					e.printStackTrace();
+				}
+			}
+		}
 	}
 
 	private Browser browser;
@@ -139,18 +167,14 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 				"edu.cmu.scs.azurite.ui.commands.interactiveSelectiveUndoCommand");
 		interactiveSelectiveUndoAction.setImageDescriptor(isuIcon);
 		
-		final Action undoEverythingAfterSelectionAction = new CommandAction(
-				"Undo Everything After Selection",
-				"edu.cmu.scs.azurite.ui.commands.undoEverythingAfterSelectionCommand");
-		
 		final Action jumpToTheAffectedCodeAction = new CommandAction(
-				"Jump to the Affected Code in the Editor",
+				"Jump to the Code",
 				"edu.cmu.scs.azurite.ui.commands.jumpToTheAffectedCodeCommand");
-
+		
 		paramMap.clear();
-		paramMap.put(EXECUTE_JS_CODE_COMMAND_PARAM_ID, "showAllFilesEditedTogether();");
-		final Action showAllFilesEditedTogetherAction = new CommandAction(
-				"Show All Files Edited Together",
+		paramMap.put(EXECUTE_JS_CODE_COMMAND_PARAM_ID, "removeAllSelections();");
+		final Action deselectAllRectanglesAction = new CommandAction(
+				"Deselect All Rectangles",
 				EXECUTE_JS_CODE_COMMAND_ID,
 				paramMap);
 		
@@ -195,16 +219,19 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 						case "main_single": {
 							manager.add(selectiveUndoAction);
 							manager.add(interactiveSelectiveUndoAction);
-							manager.add(undoEverythingAfterSelectionAction);
 							manager.add(jumpToTheAffectedCodeAction);
+							
+							manager.add(new Separator());
+							manager.add(deselectAllRectanglesAction);
 							break;
 						}
 							
 						case "main_multi": {
 							manager.add(selectiveUndoAction);
 							manager.add(interactiveSelectiveUndoAction);
-							manager.add(undoEverythingAfterSelectionAction);
-							manager.add(showAllFilesEditedTogetherAction);
+							
+							manager.add(new Separator());
+							manager.add(deselectAllRectanglesAction);
 							break;
 						}
 							
@@ -220,6 +247,43 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 							break;
 						}
 						
+						case "time_range": {
+							Action selectAllInside = new CommandAction(
+									"Select All Rectangles Inside",
+									"edu.cmu.scs.azurite.ui.commands.selectAllInsideCommand");
+							
+							Action selectAllOutside = new CommandAction(
+									"Select All Rectangles Outside",
+									"edu.cmu.scs.azurite.ui.commands.selectAllOutsideCommand");
+							
+							Action deselectAllInside = new CommandAction(
+									"Deselect All Rectangles Inside",
+									"edu.cmu.scs.azurite.ui.commands.deselectAllInsideCommand");
+							
+							Action deselectAllOutside = new CommandAction(
+									"Deselect All Rectangles Outside",
+									"edu.cmu.scs.azurite.ui.commands.deselectAllOutsideCommand");
+							
+							Action showAllFilesEditedInRange = new CommandAction(
+									"Show All Files Edited In Range",
+									"edu.cmu.scs.azurite.ui.commands.showFilesInRangeCommand");
+							
+							Action openAllFilesEditedInRange = new CommandAction(
+									"Open All Files Edited In Range",
+									"edu.cmu.scs.azurite.ui.commands.openFilesInRangeCommand");
+							
+							manager.add(selectAllInside);
+							manager.add(selectAllOutside);
+							manager.add(deselectAllInside);
+							manager.add(deselectAllOutside);
+							
+							manager.add(new Separator());
+							manager.add(showAllFilesEditedInRange);
+							manager.add(openAllFilesEditedInRange);
+							
+							break;
+						}
+						
 						case "marker": {
 							long absTimestamp = ((Number) browser.evaluate("return global.selectedTimestamp;")).longValue();
 							
@@ -230,15 +294,71 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 									"edu.cmu.scs.azurite.ui.commands.undoAllFilesToThisPoint",
 									paramMap);
 							
+							manager.add(undoAllFilesToThisPointAction);
+
+							// Get the active editor, and display the file name.
+							IEditorPart activeEditor = Utilities.getActiveEditor();
+							String fileName = null;
+							if (activeEditor != null && (activeEditor instanceof AbstractTextEditor)) {
+								IEditorInput editorInput = activeEditor.getEditorInput();
+								if (editorInput instanceof IFileEditorInput) {
+									IFileEditorInput fileEditorInput = (IFileEditorInput) editorInput;
+									fileName = fileEditorInput.getFile().getName();
+								}
+							}
+							
+							if (fileName != null) {
+								paramMap.clear();
+								paramMap.put("edu.cmu.scs.azurite.ui.commands.undoCurrentFileToThisPoint.absTimestamp", Long.toString(absTimestamp));
+								Action undoCurrentFileToThisPointAction = new CommandAction(
+										"Undo \"" + fileName + "\" to This Point",
+										"edu.cmu.scs.azurite.ui.commands.undoCurrentFileToThisPoint",
+										paramMap);
+								
+								// Determine whether there are operations to be undone.
+								if (!RuntimeHistoryManager.getInstance()
+										.hasDocumentChangesLaterThanTimestamp(absTimestamp)) {
+									undoCurrentFileToThisPointAction.setEnabled(false);
+								}
+								
+								manager.add(undoCurrentFileToThisPointAction);
+							} else {
+								Action undoCurrentFileToThisPointAction = new Action(
+										"Undo Current File to This Point") {};
+								undoCurrentFileToThisPointAction.setEnabled(false);
+								
+								manager.add(undoCurrentFileToThisPointAction);
+							}
+							
+							manager.add(new Separator());
+							
 							paramMap.clear();
-							paramMap.put("edu.cmu.scs.azurite.ui.commands.undoCurrentFileToThisPoint.absTimestamp", Long.toString(absTimestamp));
-							Action undoCurrentFileToThisPointAction = new CommandAction(
-									"Undo Current File to This Point",
-									"edu.cmu.scs.azurite.ui.commands.undoCurrentFileToThisPoint",
+							paramMap.put("edu.cmu.scs.azurite.ui.commands.absTimestamp", Long.toString(absTimestamp));
+							Action selectAllAfter = new CommandAction(
+									"Select All Rectangles After This Point",
+									"edu.cmu.scs.azurite.ui.commands.selectAllAfterCommand",
 									paramMap);
 							
-							manager.add(undoAllFilesToThisPointAction);
-							manager.add(undoCurrentFileToThisPointAction);
+							Action selectAllBefore = new CommandAction(
+									"Select All Rectangles Before This Point",
+									"edu.cmu.scs.azurite.ui.commands.selectAllBeforeCommand",
+									paramMap);
+							
+							Action deselectAllAfter = new CommandAction(
+									"Deselect All Rectangles After This Point",
+									"edu.cmu.scs.azurite.ui.commands.deselectAllAfterCommand",
+									paramMap);
+							
+							Action deselectAllBefore = new CommandAction(
+									"Deselect All Rectangles Before This Point",
+									"edu.cmu.scs.azurite.ui.commands.deselectAllBeforeCommand",
+									paramMap);
+							
+							manager.add(selectAllAfter);
+							manager.add(selectAllBefore);
+							manager.add(deselectAllAfter);
+							manager.add(deselectAllBefore);
+							
 							break;
 						}
 					}
@@ -266,7 +386,6 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 
 	private void addBrowserFunctions() {
 		new UndoFunction(browser, BROWSER_FUNC_PREFIX + "selectiveUndo");
-		new UndoEverythingAfterSelectionFunction(browser, BROWSER_FUNC_PREFIX + "undoEverythingAfterSelection");
 		new InitializeFunction(browser, BROWSER_FUNC_PREFIX + "initialize");
 		new JumpFunction(browser, BROWSER_FUNC_PREFIX + "jump");
 		new LogFunction(browser, BROWSER_FUNC_PREFIX + "log");
@@ -326,37 +445,6 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 			}
 		}
 
-	}
-	
-	class UndoEverythingAfterSelectionFunction extends BrowserFunction {
-
-		public UndoEverythingAfterSelectionFunction(Browser browser, String name) {
-			super(browser, name);
-		}
-
-		@Override
-		public Object function(Object[] arguments) {
-			if (arguments == null || arguments.length != 2
-					|| !(arguments[0] instanceof Number)
-					|| !(arguments[1] instanceof Number)) {
-				return RETURN_CODE_FAIL;
-			}
-			
-			try {
-				long sid = ((Number)arguments[0]).longValue();
-				long id = ((Number)arguments[1]).longValue();
-				
-				RuntimeHistoryManager rhm = RuntimeHistoryManager.getInstance();
-				
-				SelectiveUndoEngine.getInstance().doSelectiveUndo(
-						rhm.filterDocumentChangesGreaterThanId(new OperationId(sid, id)));				
-				
-				return RETURN_CODE_OK;
-			} catch (Exception e) {
-				return RETURN_CODE_FAIL;
-			}
-		}
-		
 	}
 	
 	class InitializeFunction extends BrowserFunction {
@@ -469,14 +557,23 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 					return RETURN_CODE_FAIL;
 				}
 				
-				int offset = runtimeDC.getAllSegments().get(0).getOffset();
 				if (editor != null) {
-					ITextViewerExtension5 textViewerExt5 = Utilities
-							.getTextViewerExtension5(editor);
+					final ITextViewerExtension5 textViewerExt5 = Utilities.getTextViewerExtension5(editor);
 					
-					StyledText styledText = Utilities.getStyledText(editor);
-					styledText.setSelection(textViewerExt5.modelOffset2WidgetOffset(offset));
-					styledText.setFocus();
+					final int offset = runtimeDC.getAllSegments().get(0).getOffset();
+					final StyledText styledText = Utilities.getStyledText(editor);
+					UIJob job = new UIJob("Jump to the Code") {
+						
+						@Override
+						public IStatus runInUIThread(IProgressMonitor monitor) {
+							styledText.setSelection(textViewerExt5.modelOffset2WidgetOffset(offset));
+							styledText.setFocus();
+							styledText.showSelection();
+							return Status.OK_STATUS;
+						}
+					};
+					
+					job.schedule();
 				}
 				
 				return RETURN_CODE_OK;
@@ -531,6 +628,48 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	}
 	
 	class MarkerMoveFunction extends BrowserFunction {
+		
+		class CodeHistoryViewUpdateRule implements ISchedulingRule {
+
+			@Override
+			public boolean contains(ISchedulingRule rule) {
+				return (rule instanceof CodeHistoryViewUpdateRule);
+			}
+
+			@Override
+			public boolean isConflicting(ISchedulingRule rule) {
+				return (rule instanceof CodeHistoryViewUpdateRule);
+			}
+			
+		}
+		
+		class CodeHistoryViewUpdateJob extends UIJob {
+			
+			static final String JOB_NAME = "Code History View Update";
+			
+			public CodeHistoryViewUpdateJob(long absTimestamp) {
+				super(JOB_NAME);
+				this.absTimestamp = absTimestamp;
+			}
+			
+			private long absTimestamp;
+
+			@Override
+			public IStatus runInUIThread(IProgressMonitor monitor) {
+				for (CodeHistoryDiffViewPart view : CodeHistoryDiffViewPart.getInstances()) {
+					view.selectVersionWithAbsTimestamp(this.absTimestamp);
+				}
+
+				return Status.OK_STATUS;
+			}
+
+			@Override
+			public boolean belongsTo(Object family) {
+				return JOB_NAME.equals(family);
+			}
+		}
+		
+		private CodeHistoryViewUpdateRule rule = new CodeHistoryViewUpdateRule();
 
 		public MarkerMoveFunction(Browser browser, String name) {
 			super(browser, name);
@@ -542,12 +681,22 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 				return RETURN_CODE_FAIL;
 			}
 			
-			long absTimestamp = ((Number)arguments[0]).longValue();
+			final long absTimestamp = ((Number)arguments[0]).longValue();
 			
-			for (CodeHistoryDiffViewPart view : 
-					CodeHistoryDiffViewPart.getInstances()) {
-				view.selectVersionWithAbsTimestamp(absTimestamp);
+			UIJob job = new CodeHistoryViewUpdateJob(absTimestamp);
+			
+			// Discard all the waiting jobs in this family.
+			for (Job existingJob : Job.getJobManager().find("Code History View Update")) {
+				if (existingJob.getState() == Job.WAITING) {
+					existingJob.cancel();
+				}
 			}
+			
+			// Schedule this new job.
+			job.setSystem(true);
+			job.setUser(false);
+			job.setRule(this.rule);	// avoid running the same type of job concurrently.
+			job.schedule();
 			
 			return RETURN_CODE_OK;
 		}
@@ -778,7 +927,11 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	}
 	
 	private int getTypeIndex(BaseDocumentChangeEvent docChange) {
-		if (docChange instanceof Insert) {
+		if (docChange instanceof DiffInsert) {
+			return 10;
+		} else if (docChange instanceof DiffDelete) {
+			return 11;
+		} else if (docChange instanceof Insert) { 
 			return 0;
 		} else if (docChange instanceof Delete) {
 			return 1;
@@ -981,6 +1134,14 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	
 	private void performLayout() {
 		browser.execute("layout();");
+	}
+
+	public long getTimeRangeStart() {
+		return ((Number) browser.evaluate("return global.selectedTimestampRange[0];")).longValue();
+	}
+
+	public long getTimeRangeEnd() {
+		return ((Number) browser.evaluate("return global.selectedTimestampRange[1];")).longValue();
 	}
 	
 }

@@ -16,36 +16,13 @@
   </head>
   <body>
   <div id='main'>
-    <div class='menu_panel' id='menu_panel'>
-      <div class='menu_subpanel'>
-        <button class='menu' onclick='showBefore()'><</button>
-        <button class='menu' onclick='showAfter()'>></button>
-        <button class='menu' onclick='barZoomIn()'>+</button>
-        <button class='menu' onclick='barZoomOut()'>-</button>
-        <div id='bar_zoom_level' class='menu' style='color:white'></div>
-        <div id='bar_page_index' class='menu' style='color:white'></div>
-      </div>
-
-      <div class='menu_subpanel'>
-        <button class='menu' onclick='showUp()'>Up</button>
-        <button class='menu' onclick='showDown()'>Down</button>
-        <button class='menu' onclick='fileZoomIn()'>+</button>
-        <button class='menu' onclick='fileZoomOut()'>-</button>
-        <div id='file_zoom_level' class='menu' style='color:white'></div>
-        <div id='file_page_index' class='menu' style='color:white'></div>
-      </div>
-      
-      <div class='menu_debugpanel'>
-        <button class='menu' onclick='redraw()'>Redraw</button>
-        <button class='menu' onclick='window.location.reload()'>Refresh</button>
-      </div>
-      
-      <div style='clear: both;'></div>
-    </div>
-
     <div id='main_panel'>
       <div id='svg_wrapper'>
         <div id='svg_inner_wrapper'>
+        </div>
+
+        <div id='button_wrapper'>
+          <button id='unhide_button' onclick='showAllFiles()'>Unhide All Files</button>
         </div>
       </div>
     </div>

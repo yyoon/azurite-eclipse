@@ -12,14 +12,16 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import name.fraser.neil.plaintext.diff_match_patch;
 import name.fraser.neil.plaintext.diff_match_patch.Diff;
+import name.fraser.neil.plaintext.diff_match_patch.Operation;
+import name.fraser.neil.plaintext.diff_match_patch_ext;
 import edu.cmu.scs.azurite.commands.diff.DiffDelete;
 import edu.cmu.scs.azurite.commands.diff.DiffInsert;
 import edu.cmu.scs.fluorite.commands.AbstractCommand;
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 import edu.cmu.scs.fluorite.commands.FileOpenCommand;
 import edu.cmu.scs.fluorite.commands.ICommand;
+import edu.cmu.scs.fluorite.commands.Replace;
 import edu.cmu.scs.fluorite.model.DocumentChangeListener;
 import edu.cmu.scs.fluorite.model.EventRecorder;
 import edu.cmu.scs.fluorite.model.Events;
@@ -28,18 +30,18 @@ import edu.cmu.scs.fluorite.util.Utilities;
 
 /**
  * @author YoungSeok Yoon
- *
+ * 
  */
 public class PastHistoryManager implements DocumentChangeListener {
 
-	// Should always contain events 
+	// Should always contain events
 	private Deque<Events> mPastEvents;
-	
-	/* package */ class SnapshotElement {
+
+	/* package */class SnapshotElement {
 		private long mSessionId;
 		private long mTimestamp;
 		private String mSnapshot;
-		
+
 		public SnapshotElement(long sessionId, long timestamp, String snapshot) {
 			mSessionId = sessionId;
 			mTimestamp = timestamp;
@@ -70,48 +72,50 @@ public class PastHistoryManager implements DocumentChangeListener {
 			mSnapshot = snapshot;
 		}
 	}
-	
+
 	class IntegerContainer {
 		public int value;
 	}
-	
-	/* package */ Map<FileKey, SnapshotElement> mInitialSnapshots;
-	
+
+	/* package */Map<FileKey, SnapshotElement> mInitialSnapshots;
+
 	private PastHistoryManager() {
 		mPastEvents = new LinkedList<Events>();
-		
+
 		mInitialSnapshots = new HashMap<FileKey, SnapshotElement>();
 	}
 
 	private static PastHistoryManager _instance;
+
 	/**
 	 * Returns the singleton instance of this class.
+	 * 
 	 * @return The singleton instance of this class.
 	 */
 	public static PastHistoryManager getInstance() {
 		if (_instance == null) {
 			_instance = new PastHistoryManager();
 		}
-		
+
 		return _instance;
 	}
-	
+
 	public Deque<Events> getPastEvents() {
 		return mPastEvents;
 	}
-	
+
 	public int readPastLogs(int count) {
 		if (count <= 0) {
 			throw new IllegalArgumentException("Count should be positive!");
 		}
-		
+
 		File logLocation = null;
 		try {
 			logLocation = Utilities.getLogLocation();
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
-		
+
 		if (!logLocation.isDirectory()) {
 			throw new IllegalStateException("Log location is not a directory!");
 		}
@@ -121,42 +125,43 @@ public class PastHistoryManager implements DocumentChangeListener {
 		if (mPastEvents.size() > 0) {
 			currentStartTimestamp = mPastEvents.peekFirst().getStartTimestamp();
 		}
-		
-		final String currentLogName = Utilities.getUniqueLogNameByTimestamp(
-				currentStartTimestamp, false);
-		
+
+		final String currentLogName = Utilities.getUniqueLogNameByTimestamp(currentStartTimestamp,
+				false);
+
 		// Retrieve *.xml files from the log location.
 		File[] logFiles = logLocation.listFiles(new FilenameFilter() {
 			public boolean accept(File dir, String name) {
 				// TODO use regex to match the file naming pattern.
-				return name != null && name.endsWith(".xml")
-						&& name.compareTo(currentLogName) < 0;
+				return name != null && name.endsWith(".xml") && name.compareTo(currentLogName) < 0;
 			}
 		});
-		
+
 		// Sort the files (just in case.)
 		Arrays.sort(logFiles, new Comparator<File>() {
 			public int compare(File lhs, File rhs) {
 				return lhs.getName().compareTo(rhs.getName());
 			}
 		});
-		
+
 		// Pick the last 'count' number of files.
 		File[] logFilesToRead = logFiles;
 		if (logFiles.length >= count) {
-			logFilesToRead = Arrays.copyOfRange(logFiles, logFiles.length
-					- count, logFiles.length);
+			logFilesToRead = Arrays.copyOfRange(logFiles, logFiles.length - count, logFiles.length);
 		}
 
 		readPastLogs(logFilesToRead);
-		
+
 		return logFilesToRead.length;
 	}
 
+	/**
+	 * @param logFilesToRead This is sorted by their names.
+	 */
 	public void readPastLogs(File[] logFilesToRead) {
 		// Read the logs.
 		List<Events> tempEvents = new ArrayList<Events>();
-		
+
 		LogReader reader = new LogReader();
 		for (File logFile : logFilesToRead) {
 			Events events = reader.readAll(logFile.getAbsolutePath());
@@ -164,89 +169,128 @@ public class PastHistoryManager implements DocumentChangeListener {
 				tempEvents.add(events);
 			}
 		}
-		
+
 		if (!tempEvents.isEmpty()) {
-			// Add in reverse order.
+			// Add in reverse order, so that the last log is processed first.
 			Collections.reverse(tempEvents);
 			for (Events events : tempEvents) {
 				processEvents(events);
 			}
-			
+
 			// Notify the RuntimeHistoryManager.
 			RuntimeHistoryManager.getInstance().pastLogsRead(tempEvents);
 		}
 	}
 
 	private void processEvents(Events events) {
-		Map<FileKey, SnapshotElement> localInitialSnapshots =
-				new HashMap<FileKey, SnapshotElement>();
+		Map<FileKey, SnapshotElement> localInitialSnapshots = new HashMap<FileKey, SnapshotElement>();
 		Map<FileKey, String> localFinalSnapshots = new HashMap<FileKey, String>();
-		
+
 		FileKey curFileKey = null;
-		
-		final Events copyEvents = new Events(
-				Collections.<ICommand> emptyList(), "", Long.toString(events
-						.getStartTimestamp()), "", events.getStartTimestamp());
-		
+
+		final Events copyEvents = new Events(Collections.<ICommand> emptyList(), "",
+				Long.toString(events.getStartTimestamp()), "", events.getStartTimestamp());
+
 		final IntegerContainer insertedCount = new IntegerContainer();
 		insertedCount.value = 0;
-		
+
 		// Process the events here..
 		for (ICommand command : events.getCommands()) {
-			
+
 			// Adjust the command index.
 			command.setCommandIndex(command.getCommandIndex() + insertedCount.value);
 			copyEvents.addCommand(command);
-			
+
 			if (!(command instanceof BaseDocumentChangeEvent)) {
 				continue;
 			}
-			
+
 			if (command instanceof FileOpenCommand) {
-				final FileOpenCommand foc = (FileOpenCommand)command;
+				final FileOpenCommand foc = (FileOpenCommand) command;
 				FileKey key = new FileKey(foc.getProjectName(), foc.getFilePath());
-				
+
 				if (!localInitialSnapshots.containsKey(key)) {
-					SnapshotElement elem = new SnapshotElement(
-							foc.getSessionId(), foc.getTimestamp(),
-							foc.getSnapshot());
+					SnapshotElement elem = new SnapshotElement(foc.getSessionId(),
+							foc.getTimestamp(), foc.getSnapshot());
 					localInitialSnapshots.put(key, elem);
-					
+
 					localFinalSnapshots.put(key, foc.getSnapshot());
 				}
-				
+
 				curFileKey = key;
-				
+
 				// Inject DiffDCs here, too.
 				String knownFinalSnapshot = localFinalSnapshots.get(curFileKey);
 				if (foc.getSnapshot() != null && knownFinalSnapshot != null
 						&& !foc.getSnapshot().equals(knownFinalSnapshot)) {
-					injectDiffDCs(curFileKey, knownFinalSnapshot,
-							foc.getSnapshot(), foc.getSessionId(),
-							foc.getTimestamp(), false, new IAddCommand() {
-								@Override
-								public void addCommand(ICommand command) {
-									++insertedCount.value;
-									command.setCommandIndex(foc
-											.getCommandIndex()
-											+ insertedCount.value);
-									copyEvents.addCommand(command);
-								}
+					
+					// Inject Diff DCs while reading a SINGLE log file.
+					// (a source file is opened with a different snapshot)
+					injectDiffDCs(
+							curFileKey,			// FileKey key
+							knownFinalSnapshot,	// String before
+							foc.getSnapshot(),	// String after
+							foc.getSessionId(),	// long sessionId
+							foc.getTimestamp(),	// long timestamp
+							false,				// boolean autoAssignId
+							new IAddCommand() {	// IAddCommand addCommand
+									@Override
+									public void addCommand(ICommand command) {
+										++insertedCount.value;
+										command.setCommandIndex(foc.getCommandIndex()
+												+ insertedCount.value);
+										copyEvents.addCommand(command);
+									}
 							});
 				}
 			}
-			
-			BaseDocumentChangeEvent docChange = (BaseDocumentChangeEvent)command;
+
+			BaseDocumentChangeEvent docChange = (BaseDocumentChangeEvent) command;
 			String originalContent = localFinalSnapshots.get(curFileKey);
 			if (originalContent != null || docChange instanceof FileOpenCommand) {
 				String updatedContent = docChange.applyToString(originalContent);
 				localFinalSnapshots.put(curFileKey, updatedContent);
 			}
+			
+			if (originalContent != null && docChange instanceof Replace) {
+				final Replace replace = (Replace) docChange;
+				
+				// Entire file replacement!!
+				if (replace.getOffset() == 0 && replace.getLength() == originalContent.length()) {
+					replace.setEntireFileChange(true);
+					
+					// Take it back..
+					copyEvents.removeLastCommand();
+
+					// Inject Diff DCs here.
+					if (replace.getDeletedText() != null && !replace.getDeletedText().isEmpty() &&
+						replace.getInsertedText() != null && !replace.getInsertedText().isEmpty() &&
+						!replace.getDeletedText().equals(replace.getInsertedText())) {
+						
+						PastHistoryManager.getInstance().injectDiffDCs(
+								curFileKey,
+								replace.getDeletedText(),
+								replace.getInsertedText(),
+								replace.getSessionId(),
+								replace.getTimestamp(),
+								false,
+								new IAddCommand() {
+									@Override
+									public void addCommand(ICommand command) {
+										++insertedCount.value;
+										command.setCommandIndex(replace.getCommandIndex()
+												+ insertedCount.value);
+										copyEvents.addCommand(command);
+									}
+								});
+					}
+				}
+			}
 		}
-		
+
 		// Inject intermediate diffs.
 		injectDiffDCsWhileReadingPreviousLog(copyEvents, localInitialSnapshots, localFinalSnapshots);
-		
+
 		// Update the initial snapshots map.
 		for (FileKey key : localInitialSnapshots.keySet()) {
 			if (!mInitialSnapshots.containsKey(key)) {
@@ -254,7 +298,7 @@ public class PastHistoryManager implements DocumentChangeListener {
 			} else {
 				SnapshotElement elem = mInitialSnapshots.get(key);
 				SnapshotElement localElem = localInitialSnapshots.get(key);
-				
+
 				elem.setSessionId(localElem.getSessionId());
 				elem.setTimestamp(localElem.getTimestamp());
 				elem.setSnapshot(localElem.getSnapshot());
@@ -264,61 +308,71 @@ public class PastHistoryManager implements DocumentChangeListener {
 		// Finally, add the events to the end.
 		mPastEvents.addFirst(copyEvents);
 	}
-	
-	public void injectDiffDCs(FileKey key, String before, String after,
-			long sessionId, long timestamp, boolean autoAssignId,
-			IAddCommand addCommand) {
+
+	public void injectDiffDCs(FileKey key, String before, String after, long sessionId,
+			long timestamp, boolean autoAssignId, IAddCommand addCommand) {
 		if (before == null || after == null) {
 			throw new IllegalArgumentException("Cannot process null strings.");
 		}
+
+		diff_match_patch_ext dmp = new diff_match_patch_ext();
+		LinkedList<Diff> diffs = dmp.diff_lines_only(before, after);
 		
-		diff_match_patch dmp = new diff_match_patch();
-		LinkedList<Diff> diffs = dmp.diff_main(before, after);
 		int curOffset = 0;
 		int curLength = before.length();
-		
+
 		boolean incrementCommandID = AbstractCommand.getIncrementCommandID();
 		try {
 			if (autoAssignId == false) {
 				AbstractCommand.setIncrementCommandID(false);
 			}
 			
+			// Make the timestamp spreaded just enough to be displayed on timeline correctly.
+			int count = 0;
+			for (Diff diff : diffs) {
+				if (diff.operation == Operation.INSERT || diff.operation == Operation.DELETE) {
+					++count;
+				}
+			}
+
 			for (Diff diff : diffs) {
 				switch (diff.operation) {
-					case INSERT: {
-						DiffInsert di = new DiffInsert(key, curOffset, diff.text, null);
-						di.setSessionId(sessionId);
-						di.setTimestamp(timestamp);
-						di.setTimestamp2(timestamp);
-						
-						curOffset += diff.text.length();
-						curLength += diff.text.length();
-						
-						di.setDocLength(curLength);
-						
-						addCommand.addCommand(di);
-						break;
-					}
-					
-					case DELETE: {
-						DiffDelete dd = new DiffDelete(key, curOffset,
-								diff.text.length(), -1, -1, diff.text, null);
-						dd.setSessionId(sessionId);
-						dd.setTimestamp(timestamp);
-						dd.setTimestamp2(timestamp);
-						
-						curLength -= diff.text.length();
-						
-						dd.setDocLength(curLength);
-						
-						addCommand.addCommand(dd);
-						break;
-					}
-					
-					case EQUAL: {
-						curOffset += diff.text.length();
-						break;
-					}
+				case INSERT: {
+					DiffInsert di = new DiffInsert(key, curOffset, diff.text, null);
+					di.setSessionId(sessionId);
+					di.setTimestamp(timestamp - count);
+					di.setTimestamp2(timestamp - count + 1);
+					--count;
+
+					curOffset += diff.text.length();
+					curLength += diff.text.length();
+
+					di.setDocLength(curLength);
+
+					addCommand.addCommand(di);
+					break;
+				}
+
+				case DELETE: {
+					DiffDelete dd = new DiffDelete(key, curOffset, diff.text.length(), -1, -1,
+							diff.text, null);
+					dd.setSessionId(sessionId);
+					dd.setTimestamp(timestamp - count);
+					dd.setTimestamp2(timestamp - count + 1);
+					--count;
+
+					curLength -= diff.text.length();
+
+					dd.setDocLength(curLength);
+
+					addCommand.addCommand(dd);
+					break;
+				}
+
+				case EQUAL: {
+					curOffset += diff.text.length();
+					break;
+				}
 				}
 			}
 		} finally {
@@ -329,36 +383,43 @@ public class PastHistoryManager implements DocumentChangeListener {
 	private void injectDiffDCsWhileReadingPreviousLog(final Events events,
 			Map<FileKey, SnapshotElement> localInitialSnapshots,
 			Map<FileKey, String> localFinalSnapshots) {
-		
+
 		for (FileKey key : localInitialSnapshots.keySet()) {
 			if (!mInitialSnapshots.containsKey(key)) {
 				continue;
 			}
-			
+
 			String finalContent = localFinalSnapshots.get(key);
 			SnapshotElement elem = mInitialSnapshots.get(key);
-			
+
 			// If the final snapshot of this session differs from
 			// the initial snapshot that we know so far,
 			// compute the diffs and add fake operations.
 			if (elem.getSnapshot() == null || finalContent == null) {
 				continue;
 			}
-			
-			if (!elem.getSnapshot().equals(finalContent)) {
-				injectDiffDCs(key, finalContent, elem.getSnapshot(),
-						elem.getSessionId(), elem.getTimestamp(), false,
-						new IAddCommand() {
-							@Override
-							public void addCommand(ICommand command) {
-								ICommand lastCommand = events.getCommands()
-										.get(events.getCommands().size() - 1);
 
-								// Fake the command index.
-								command.setCommandIndex(lastCommand
-										.getCommandIndex() + 1);
-								events.addCommand(command);
-							}
+			if (!elem.getSnapshot().equals(finalContent)) {
+				
+				long t = elem.getSessionId() + elem.getTimestamp() - events.getStartTimestamp();
+				
+				injectDiffDCs(
+						key,						// FileKey key
+						finalContent,				// String before
+						elem.getSnapshot(),			// String after
+						events.getStartTimestamp(),	// long sessionId
+						t,							// long timestamp
+						false,						// boolean autoAssignId
+						new IAddCommand() {			// IAddCommand addCommand
+								@Override
+								public void addCommand(ICommand command) {
+									ICommand lastCommand = events.getCommands().get(
+											events.getCommands().size() - 1);
+	
+									// Fake the command index.
+									command.setCommandIndex(lastCommand.getCommandIndex() + 1);
+									events.addCommand(command);
+								}
 						});
 			}
 		}
@@ -367,10 +428,10 @@ public class PastHistoryManager implements DocumentChangeListener {
 	@Override
 	public void activeFileChanged(FileOpenCommand foc) {
 		FileKey key = new FileKey(foc.getProjectName(), foc.getFilePath());
-		
+
 		if (!mInitialSnapshots.containsKey(key)) {
-			SnapshotElement elem = new SnapshotElement(
-					foc.getSessionId(), foc.getTimestamp(), foc.getSnapshot());
+			SnapshotElement elem = new SnapshotElement(foc.getSessionId(), foc.getTimestamp(),
+					foc.getSnapshot());
 			mInitialSnapshots.put(key, elem);
 		}
 	}
@@ -391,8 +452,9 @@ public class PastHistoryManager implements DocumentChangeListener {
 	}
 
 	@Override
-	public void documentChangeAmended(BaseDocumentChangeEvent oldDocChange, BaseDocumentChangeEvent newDocChange) {
+	public void documentChangeAmended(BaseDocumentChangeEvent oldDocChange,
+			BaseDocumentChangeEvent newDocChange) {
 		// Do nothing for this event
 	}
-	
+
 }

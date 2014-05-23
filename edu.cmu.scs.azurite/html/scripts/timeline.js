@@ -2,7 +2,7 @@
 /*global d3, azurite */
 
 /* Things to be called from Azurite */
-/*exported updateOperation, getRightmostTimestamp, addSelectionsByIds, removeSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarkerAtTimestamp, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile, addEvent, activateFirebugLite, showAllFilesEditedInRange, openAllFilesEditedInRange */
+/*exported updateOperation, getRightmostTimestamp, addSelectionsByIds, removeSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarkerAtTimestamp, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile, addEvent, activateFirebugLite, showAllFilesEditedInRange, openAllFilesEditedInRange, removeAllSelections, showUp, showDown */
 
 /* Things to be called manually when debugging */
 /*exported test, testMarker, showEvents */
@@ -29,8 +29,11 @@ var TYPE_INSERT = 0;
 var TYPE_DELETE = 1;
 var TYPE_REPLACE = 2;
 
+var TYPE_DIFF_INSERT = 10;
+var TYPE_DIFF_DELETE = 11;
+
 var RECT_RADIUS = 1;
-var MIN_WIDTH = 6;
+var MIN_WIDTH = 7;
 var MIN_HEIGHT = MIN_WIDTH;
 var ROW_HEIGHT = 30;
 var DEFAULT_RATIO = 100;
@@ -48,7 +51,7 @@ var FILE_NAME_OFFSET_Y = 5;
 
 var FILES_PORTION = 0.15;
 
-var HIGHLIGHT_WIDTH = 3;
+var HIGHLIGHT_WIDTH = 2;
 
 var INDICATOR_WIDTH = 2;
 
@@ -57,10 +60,6 @@ var SCROLLBAR_DIST_THRESHOLD = 50;
 
 var MARKER_WIDTH = 1;
 var MARKER_SIZE = 10;
-var MARKER_COLOR = 'orange';
-
-var RANGE_BOX_FILL_OPACITY = 0.3;
-var RANGE_BOX_COLOR = 'royalblue';
 
 var RANGE_START_LINE_COLOR = 'white';
 var RANGE_START_LINE_WIDTH = MARKER_WIDTH;
@@ -107,18 +106,18 @@ rectDraw.wFunc = function(d) {
 rectDraw.hFunc = function(d) {
 	return Math.max(MIN_HEIGHT / global.scaleY, ROW_HEIGHT * (d.y2 - d.y1) / 100);
 };
-rectDraw.fillFunc = function(d) {
-	return d.color();
+rectDraw.classFunc = function(d) {
+	return 'op_rect ' + d.typeString();
 };
 
 var fileDraw = {};
 fileDraw.yFunc = function(d, i) {
-	return ROW_HEIGHT * (i + global.translateY) * global.scaleY + FILE_NAME_OFFSET_Y;
+	return (ROW_HEIGHT * i + global.translateY) * global.scaleY + FILE_NAME_OFFSET_Y;
 };
 
 var fileRectDraw = {};
 fileRectDraw.yFunc = function (d, i) {
-	return ROW_HEIGHT * (i + global.translateY) * global.scaleY;
+	return (ROW_HEIGHT * i + global.translateY) * global.scaleY;
 };
 fileRectDraw.wFunc = function (d) {
 	return getSvgWidth() * FILES_PORTION;
@@ -132,7 +131,7 @@ lineDraw.x2Func = function(d) {
 	return getSvgWidth() * (1.0 - FILES_PORTION);
 };
 lineDraw.yFunc = function(d) {
-	return ROW_HEIGHT * (d + global.translateY) * global.scaleY;
+	return (ROW_HEIGHT * d + global.translateY) * global.scaleY;
 };
 
 var indicatorDraw = {};
@@ -414,6 +413,13 @@ global.domainArray = [];
 global.rangeArray = [];
 global.timeScale.clamp(true);
 
+// Move to front function for d3 selection.
+d3.selection.prototype.moveToFront = function() {
+	return this.each(function(){
+		this.parentNode.appendChild(this);
+	});
+};
+
 /**
  * SVG Setup.
  */
@@ -463,8 +469,6 @@ function setupSVG() {
 
 	svg.subRangeBox = svg.subMarkers.append('rect')
 		.attr('id', 'range_selection_box')
-		.attr('fill', RANGE_BOX_COLOR)
-		.attr('fill-opacity', RANGE_BOX_FILL_OPACITY)
 		.style('display', 'none');
 
 	svg.subRangeStartLine = svg.subMarkers.append('line')
@@ -483,12 +487,10 @@ function setupSVG() {
 		.attr('class', 'marker')
 		.attr('y1', -MARKER_SIZE / 2)
 		.attr('stroke-width', MARKER_WIDTH)
-		.attr('stroke', MARKER_COLOR);
 	svg.subMarker.append('path')
 		.attr('id', 'marker_upper_triangle')
 		.attr('class', 'marker')
-		.attr('d', 'M 0 0 L ' + (-MARKER_SIZE / 2) + ' ' + (-MARKER_SIZE) + ' ' + (MARKER_SIZE / 2) + ' ' + (-MARKER_SIZE))
-		.attr('fill', MARKER_COLOR);
+		.attr('d', 'M 0 0 L ' + (-MARKER_SIZE / 2) + ' ' + (-MARKER_SIZE) + ' ' + (MARKER_SIZE / 2) + ' ' + (-MARKER_SIZE));
 /*	svg.subMarker.append('path')
 		.attr('id', 'marker_lower_triangle')
 		.attr('class', 'marker')
@@ -499,7 +501,7 @@ function setupSVG() {
 		.attr('id', 'marker_time_text')
 		.attr('class', 'marker')
 		.attr('x', MARKER_SIZE)
-		.attr('y', -MARKER_SIZE / 2)
+		.attr('y', global.isMac ? -MARKER_SIZE / 2 : -3)
 		.attr('alignment-baseline', 'central')
 		.attr('fill', TICK_TEXT_COLOR)
 		.attr('font-size', MARKER_SIZE + 'px')
@@ -672,15 +674,24 @@ function EditOperation(sid, id, t1, t2, y1, y2, type, fileGroup) {
 	this.y1 = y1;
 	this.y2 = y2;
 	this.type = type;
-	this.color = function() {
-		if (this.type === TYPE_INSERT) {
-			return "green";
-		} else if (this.type === TYPE_DELETE) {
-			return "red";
-		} else if (this.type === TYPE_REPLACE) {
-			return "blue";
+	this.typeString = function() {
+		switch (this.type) {
+		case TYPE_INSERT:
+			return "type_insert";
+
+		case TYPE_DELETE:
+			return "type_delete";
+
+		case TYPE_REPLACE:
+			return "type_replace";
+
+		case TYPE_DIFF_INSERT:
+			return "type_diff_insert";
+
+		case TYPE_DIFF_DELETE:
+			return "type_diff_delete";
 		}
-	};
+	}
 	
 	this.fileGroup = fileGroup;
 	this.session = fileGroup.session;
@@ -827,13 +838,12 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current
 		.attr('id', function(d) {
 			return d.sid + '_' + d.id;
 		})
-		.attr('class', 'op_rect')
+		.attr('class', rectDraw.classFunc)
 		.attr('y', rectDraw.yFunc)
 		.attr('width', rectDraw.wFunc)
 		.attr('height', rectDraw.hFunc)
 		.attr('rx', RECT_RADIUS)
 		.attr('ry', RECT_RADIUS)
-		.attr('fill', rectDraw.fillFunc)
 		.attr('vector-effect', 'non-scaling-stroke');
 	
 	if (autolayout === true) {
@@ -968,10 +978,10 @@ function updateOperation(sid, id, t2, y1, y2, type, scroll) {
 
 	if (global.lastRect !== null) {
 		global.lastRect
+			.attr('class', rectDraw.classFunc)
 			.attr('width', rectDraw.wFunc)
 			.attr('y', rectDraw.yFunc)
-			.attr('height', rectDraw.hFunc)
-			.attr('fill', rectDraw.fillFunc);
+			.attr('height', rectDraw.hFunc);
 	}
 	
 	var session = lastOp.session;
@@ -1097,10 +1107,12 @@ function layout(newLayout) {
 	global.domainArray = [];
 	global.rangeArray = [];
 	var addScaleFunc = function (d, i) {
-		global.domainArray.push(new Date(d.sid + d.t1));
-		global.domainArray.push(new Date(d.sid + d.t2));
-		global.rangeArray.push(global.tempSessionTx + this.getBBox().x);
-		global.rangeArray.push(global.tempSessionTx + this.getBBox().x + this.getBBox().width);
+		if (d.isVisible()) {
+			global.domainArray.push(new Date(d.sid + d.t1));
+			global.domainArray.push(new Date(d.sid + d.t2));
+			global.rangeArray.push(global.tempSessionTx + this.getBBox().x);
+			global.rangeArray.push(global.tempSessionTx + this.getBBox().x + this.getBBox().width);
+		}
 	};
 	
 	for (i = 0; i < global.sessions.length; ++i) {
@@ -1146,17 +1158,32 @@ function layout(newLayout) {
 		global.tempSessionTx += session.g.node().getBBox().width;
 	}
 
-	global.timeScale.domain(global.domainArray).range(global.rangeArray);
+	if (global.domainArray.length === 0) {
+		global.timeScale.domain([new Date(0), new Date()]).range([0, 0]);
+	}
+	else {
+		global.timeScale.domain(global.domainArray).range(global.rangeArray);
+	}
 	
 	updateHighlight();
 	updateHScroll();
-	updateMarkerPosition();
 	updateEvents();
 	updateTicks();
 	
 	// Restore the scroll position.
 	showFrom(leftmostTimestamp);
-	
+
+	// Marker / range selection box
+	global.markerPos = timestampToPixel(global.markerTimestamp);
+	if (global.selectedTimestampRange !== null) {
+		global.selectedPixelRange = [
+			timestampToPixel(global.selectedTimestampRange[0]),
+			timestampToPixel(global.selectedTimestampRange[1])
+		];
+	}
+	updateMarkerPosition(false, true);
+	updateRangeSelectionBox();
+
 	// profiling
 	var _endTick = new Date().valueOf();
 	if (global.profile) {
@@ -1174,6 +1201,8 @@ function make_filter(file) {
 function layoutFiles() {
 	var i;
 	var visibleFiles = [];
+
+	var hiddenFileExists = false;
 	
 	for (i = 0; i < global.files.length; ++i) {
 		var file = global.files[i];
@@ -1186,6 +1215,7 @@ function layoutFiles() {
 		}
 		else {
 			fileGroups.style('display', 'none');
+			hiddenFileExists = true;
 			continue;
 		}
 		
@@ -1198,11 +1228,11 @@ function layoutFiles() {
 	var rects = svg.subFiles.selectAll('rect.file_rect').data(visibleFiles);
 	rects.enter().insert('rect', ':first-child')
 		.attr('class', 'file_rect')
-		.attr('rx', '10')
-		.attr('ry', '10')
 		.attr('fill', 'lightgray')
+		.attr('rx', '2')
+		.attr('ry', '2')
 		.attr('stroke', 'gray')
-		.attr('stroke-width', '2')
+		.attr('stroke-width', '1')
 		.attr('vector-effect', 'non-scaling-stroke');
 	
 	rects.exit().remove();
@@ -1221,6 +1251,7 @@ function layoutFiles() {
 		.attr('y', fileDraw.yFunc)
 		.attr('dy', '1em')
 		.attr('fill', 'black')
+		.attr('font-family', 'courier')
 		.text(function(d) {
 			return d.fileName;
 		});
@@ -1233,7 +1264,7 @@ function layoutFiles() {
 		.attr('class', 'separating_line')
 		.attr('x1', '0')
 		.attr('stroke', 'gray')
-		.attr('stroke-width', '2');
+		.attr('stroke-width', '1');
 	
 	lines.exit().remove();
 	
@@ -1244,6 +1275,9 @@ function layoutFiles() {
 
 	// VScroll
 	updateVScroll();
+
+	// Show or Hide the unhide all button.
+	d3.selectAll('#unhide_button').style('display', hiddenFileExists ? 'inline-block' : 'none');
 }
 
 function getLeftmostTimestamp() {
@@ -1265,18 +1299,7 @@ function pixelToTimestamp(pixel) {
 /*
  * When the page loads, load a log file
  */
-window.onload = function() {
-	azurite.initialize();
-
-	setupSVG();
-
-	window.onresize();
-	initEventHandlers();
-	
-	setTimeout(layout, 100);
-};
-
-window.onresize = function(e) {
+function handleResize() {
 	// if window size are different, redraw everything
 	if (global.lastWindowWidth !== window.innerWidth || global.lastWindowHeight !== window.innerHeight) {
 		global.lastWindowWidth = window.innerWidth;
@@ -1292,6 +1315,22 @@ window.onresize = function(e) {
 		
 		svg.subFiles.selectAll('rect.file_rect').attr('width', fileRectDraw.wFunc);
 	}
+}
+
+window.onload = function() {
+	azurite.initialize();
+
+	setupSVG();
+	
+	initEventHandlers();
+	
+	setTimeout(layout, 100);
+
+	handleResize();
+};
+
+window.onresize = function(e) {
+	handleResize();
 };
 
 function updateAreas() {
@@ -1314,9 +1353,9 @@ function updateAreas() {
 	global.hscrollArea.bottom = CHART_MARGINS.top + CHART_MARGINS.bottom + svgHeight + SCROLLBAR_WIDTH;
 
 	global.vscrollArea.left = CHART_MARGINS.left + CHART_MARGINS.right + svgWidth;
-	global.vscrollArea.top = SCROLLBAR_WIDTH;
+	global.vscrollArea.top = CHART_MARGINS.top + SCROLLBAR_WIDTH;
 	global.vscrollArea.right = CHART_MARGINS.left + CHART_MARGINS.right + svgWidth + SCROLLBAR_WIDTH;
-	global.vscrollArea.bottom = CHART_MARGINS.top + CHART_MARGINS.bottom + svgHeight - SCROLLBAR_WIDTH;
+	global.vscrollArea.bottom = CHART_MARGINS.top + svgHeight - TICKS_HEIGHT - EVENTS_HEIGHT - SCROLLBAR_WIDTH;
 
 	global.eventArea.left = CHART_MARGINS.left + svgWidth * FILES_PORTION;
 	global.eventArea.top = CHART_MARGINS.top + svgHeight - TICKS_HEIGHT - EVENTS_HEIGHT;
@@ -1351,11 +1390,7 @@ function initMouseWheelHandler() {
 				fileZoomOut();
 			}
 		} else if (d3.event.shiftKey) {
-			if (d3.event.wheelDelta > 0) {
-				showUp();
-			} else {
-				showDown();
-			}
+			scrollDown(d3.event.wheelDelta / 10);
 		} else if (d3.event.ctrlKey) {
 			if (d3.event.wheelDelta < 0) {
 				barZoomOut();
@@ -1458,15 +1493,6 @@ function initMouseDownHandler() {
 			global.draggingVScroll = false;
 			global.draggingMarker = false;
 			global.draggingMarkerInTimeTickArea = false;
-
-			if (!global.isCtrlDown) {
-				global.prevSelectedRects = global.selectedRects.slice(0);
-
-				global.selectedRects = [];
-				svg.subRects.selectAll('rect.highlight_rect').remove();
-
-				checkAndNotifySelectionChanged();
-			}
 
 			d3.select('.selection_box').attr('x', mouseX).attr('y', mouseY);
 
@@ -1664,7 +1690,8 @@ function initMouseMoveHandler() {
 				ratio = clamp(ratio, 0.0, 1.0);
 
 				var newTy = getMinTranslateY() * ratio;
-				newTy = Math.round(newTy);
+				// Uncomment this to make vertical scrolling discrete.
+				// newTy = Math.round(newTy / ROW_HEIGHT) * ROW_HEIGHT;
 				translateY(newTy);
 			}());
 		}
@@ -1737,7 +1764,7 @@ function initMouseUpHandler() {
 				y2 = global.dragStart[1];
 			}
 
-			addSelections(x1, y1, x2, y2, true);
+			addSelections(x1, y1, x2, y2, true, !global.isCtrlDown);
 			global.dragStart = [];
 		}
 
@@ -1799,6 +1826,19 @@ function cursorInEvent(x, y) {
 	return d3.selectAll(list).filter('.event_icon')[0].length > 0;
 }
 
+function cursorInRangeSelectionBox(x, y) {
+	var rect = svg.main.node().createSVGRect();
+	rect.x = x;
+	rect.y = y;
+	rect.width = 1;
+	rect.height = 1;
+
+	// Get all the intersecting objects in the SVG.
+	var list = svg.main.node().getIntersectionList(rect, null);
+
+	return d3.selectAll(list).filter('#range_selection_box')[0].length > 0;
+}
+
 function cursorInArea(x, y, area) {
 	return x >= area.left && x < area.right && y >= area.top && y < area.bottom;
 }
@@ -1815,7 +1855,10 @@ function showContextMenu(e) {
 	
 	cmenu.mousePos = [mouseX, mouseY];
 	
-	if (cursorInArea(mouseX, mouseY, global.draggableArea)) {
+	if (cursorInRangeSelectionBox(mouseX, mouseY)) {
+		cmenu.typeName = 'time_range';
+	}
+	else if (cursorInArea(mouseX, mouseY, global.draggableArea)) {
 		if (global.selectedRects.length === 0) {
 			addSelections(mouseX, mouseY, mouseX + 1, mouseY + 1);
 		}
@@ -1833,8 +1876,8 @@ function showContextMenu(e) {
 		}
 	}
 	else if (cursorInArea(mouseX, mouseY, global.fileArea)) {
-		var numVisibleFiles = global.getVisibleFiles().length + global.translateY;
-		if (mouseY < numVisibleFiles * ROW_HEIGHT * global.scaleY) {
+		var visiblePixels = global.getVisibleFiles().length * ROW_HEIGHT + global.translateY;
+		if (mouseY < visiblePixels * global.scaleY) {
 			// showContextMenu(e, '#cmenu_file_in');
 			cmenu.typeName = 'file_in';
 		}
@@ -1890,7 +1933,16 @@ function removeSelectionsByIds(sids, ids) {
 	checkAndNotifySelectionChanged();
 }
 
-function addSelections(x1, y1, x2, y2, toggle) {
+function removeAllSelections() {
+	global.prevSelectedRects = global.selectedRects.slice(0);
+
+	global.selectedRects = [];
+	svg.subRects.selectAll('rect.highlight_rect').remove();
+
+	checkAndNotifySelectionChanged();
+}
+
+function addSelections(x1, y1, x2, y2, toggle, clearPrevSelections) {
 	global.prevSelectedRects = global.selectedRects.slice(0);
 
 	var rect = svg.main.node().createSVGRect();
@@ -1903,7 +1955,13 @@ function addSelections(x1, y1, x2, y2, toggle) {
 	var list = svg.main.node().getIntersectionList(rect, null);
 
 	// Filter only the operation rects.
-	d3.selectAll(list).filter('.op_rect').each(function(d, i) {
+	var opRects = d3.selectAll(list).filter('.op_rect');
+	if (clearPrevSelections === true && opRects.empty() === false) {
+		global.prevSelectedRects = global.selectedRects.slice(0);
+		global.selectedRects = [];
+	}
+
+	opRects.each(function(d, i) {
 		var sid = d.sid;
 		var id = d.id;
 		
@@ -1970,8 +2028,10 @@ function indexOfSelected(sid, id) {
 function updateHighlight() {
 	svg.subRects.selectAll('rect.highlight_rect').remove();
 
-	for ( var i = 0; i < global.selectedRects.length; ++i) {
-		var idString = '#' + global.selectedRects[i].sid + '_' + global.selectedRects[i].id;
+	var i, idString;
+
+	for (i = 0; i < global.selectedRects.length; ++i) {
+		idString = '#' + global.selectedRects[i].sid + '_' + global.selectedRects[i].id;
 
 		var $ref = $(idString);
 		if ($ref.length === 0) {
@@ -1985,8 +2045,16 @@ function updateHighlight() {
 			.attr('fill', 'yellow')
 			.attr('x', refBBox.x - (HIGHLIGHT_WIDTH / global.scaleX))
 			.attr('y', refBBox.y - (HIGHLIGHT_WIDTH / global.scaleY))
+			.attr('rx', RECT_RADIUS)
+			.attr('ry', RECT_RADIUS)
 			.attr('width', refBBox.width + HIGHLIGHT_WIDTH * 2 / global.scaleX)
 			.attr('height', refBBox.height + HIGHLIGHT_WIDTH * 2 / global.scaleY);
+	}
+
+	svg.subRects.selectAll('rect.highlight_rect').moveToFront();
+	for (i = 0; i < global.selectedRects.length; ++i) {
+		idString = '#' + global.selectedRects[i].sid + '_' + global.selectedRects[i].id;
+		d3.select($(idString)[0]).moveToFront();
 	}
 }
 
@@ -2023,6 +2091,10 @@ function scrollRight(pixels) {
 	translateX(global.translateX + pixels);
 }
 
+function scrollDown(pixels) {
+	translateY(global.translateY + pixels);
+}
+
 function scrollToEnd() {
 	translateX(getMinTranslateX());
 }
@@ -2036,21 +2108,21 @@ function fileZoomOut() {
 }
 
 function showUp() {
-	translateY(global.translateY + 1);
+	translateY(global.translateY + 1 * ROW_HEIGHT);
 }
 
 function showDown() {
-	translateY(global.translateY - 1);
+	translateY(global.translateY - 1 * ROW_HEIGHT);
 }
 
 function showPageUp() {
 	var extent = Math.floor(getSvgHeight() / (ROW_HEIGHT * global.scaleY));
-	translateY(global.translateY + extent - 1);
+	translateY(global.translateY + (extent - 1) * ROW_HEIGHT);
 }
 
 function showPageDown() {
 	var extent = Math.floor(getSvgHeight() / (ROW_HEIGHT * global.scaleY));
-	translateY(global.translateY - extent + 1);
+	translateY(global.translateY - (extent - 1) * ROW_HEIGHT);
 }
 
 function undo() {
@@ -2071,24 +2143,6 @@ function getStandardRectSelection() {
 	}
 	
 	return result;
-}
-
-function undoEverythingAfterSelection() {
-	// close context menu if there is any
-	// hideContextMenu();
-	
-	// Do nothing if there is no selection.
-	if (global.selectedRects.length === 0) {
-		return;
-	}
-	
-	// find the last selected item.
-	var selectedCopy = global.selectedRects.slice(0);
-	selectedCopy.sort(global.oidCompareFunc);
-
-	// Call the function in the plug-in side.
-	var lastOid = selectedCopy[selectedCopy.length - 1];
-	azurite.undoEverythingAfterSelection(lastOid.sid, lastOid.id);
 }
 
 function clamp(value, min, max) {
@@ -2148,6 +2202,8 @@ function scaleY(sy) {
 
 	updateSeparatingLines();
 
+	updateVScroll();
+
 	updateHighlight();
 }
 
@@ -2168,6 +2224,33 @@ function translateX(tx) {
 	updateHScroll();
 	
 	global.diffWhileDraggingMarker -= diff;
+
+	if (global.dates !== null && global.dates.length > 0) {
+		// Restore the last one.
+		if (global.lastMovedDate !== undefined && global.lastMovedDate !== null) {
+			d3.selectAll('#date_' + global.lastMovedDate.getTime()).attr('x', timeTickDraw.textXFunc(global.lastMovedDate));
+		}
+
+		var leftDate = global.dates[0];
+		var nextDate = null;
+		var leftTimestamp = screenPixelToTimestamp(0);
+		for (var i = 0; i < global.dates.length; ++i) {
+			if (global.dates[i].getTime() >= leftTimestamp) {
+				nextDate = global.dates[i];
+				break;
+			}
+
+			leftDate = global.dates[i];
+		}
+
+		if (nextDate !== null && timestampToPixel(leftTimestamp) + $('#date_' + leftDate.getTime())[0].getBBox().width > timestampToPixel(nextDate.getTime())) {
+			d3.selectAll('#date_' + leftDate.getTime()).attr('x', timeTickDraw.textXFunc(leftDate));
+		} else {
+			d3.selectAll('#date_' + leftDate.getTime()).attr('x', timeTickDraw.textXFunc(new Date(leftTimestamp)));
+		}
+
+		global.lastMovedDate = leftDate;
+	}
 	
 	// profiling
 	var _endTick = new Date().valueOf();
@@ -2196,7 +2279,7 @@ function translateY(ty) {
 	// profiling
 	var _startTick = new Date().valueOf();
 	if (global.profile) {
-		console.log("translateX() start: " + _startTick);
+		console.log("translateY() start: " + _startTick);
 	}
 	
 	ty = clamp(ty, getMinTranslateY(), 0);
@@ -2213,19 +2296,18 @@ function translateY(ty) {
 	// profiling
 	var _endTick = new Date().valueOf();
 	if (global.profile) {
-		console.log("translateX() end: " + _endTick);
-		console.log("translateX() took: " + (_endTick - _startTick));
+		console.log("translateY() end: " + _endTick);
+		console.log("translateY() took: " + (_endTick - _startTick));
 	}
 }
 
+// Use the pixels.
 function getMinTranslateY() {
-	return 1 - global.files.filter(function (e, i, a) {
-		return e.visible;
-	}).length;
+	return Math.min((getSvgHeight() - TICKS_HEIGHT - EVENTS_HEIGHT - (global.getVisibleFiles().length * ROW_HEIGHT * global.scaleY)) / global.scaleY, 0);
 }
 
 function updateSubRectsTransform() {
-	svg.subRects.attr('transform', 'translate(' + global.translateX + ' ' + (global.translateY * ROW_HEIGHT * global.scaleY) + ') ' + 'scale(' + global.scaleX + ' ' + global.scaleY + ')');
+	svg.subRects.attr('transform', 'translate(' + global.translateX + ' ' + (global.translateY * global.scaleY) + ') ' + 'scale(' + global.scaleX + ' ' + global.scaleY + ')');
 	svg.subMarkers.attr('transform', 'translate(' + global.translateX + ' 0)');
 	svg.subEvents.attr('transform', 'translate(' + global.translateX + ' 0)');
 	svg.subTicks.attr('transform', 'translate(' + global.translateX + ' 0)');
@@ -2266,8 +2348,8 @@ function updateHScroll() {
 function updateVScroll() {
 	var trackSize = $('#vscroll_thumbtrack').height();
 
-	var extent = Math.floor(getSvgHeight() / (ROW_HEIGHT * global.scaleY));
-	var thumbSize = clamp(Math.floor(trackSize * extent / (global.files.length + extent - 1)), MIN_SCROLL_THUMB_SIZE, trackSize);
+	var areaHeight = getSvgHeight() - TICKS_HEIGHT - EVENTS_HEIGHT;
+	var thumbSize = clamp(trackSize * areaHeight / (global.getVisibleFiles().length * ROW_HEIGHT * global.scaleY), MIN_SCROLL_THUMB_SIZE, trackSize);
 
 	var thumbRelativePos = global.translateY / getMinTranslateY();
 	if (global.translateY === 0 || getMinTranslateY() === 0) {
@@ -2307,6 +2389,7 @@ function updateTicks() {
 		// Always add the start of the session
 		ticks.push(new Date(start));
 		dates.push(new Date(start));
+		var lastDate = dates[dates.length - 1];
 
 		var startPixel = timestampToPixel(start);
 		var endPixel = timestampToPixel(end);
@@ -2329,6 +2412,11 @@ function updateTicks() {
 				if (nextSession === null || nextSessionStartPixel - candidatePixel >= minInterval) {
 					ticks.push(candidates[j]);
 					lastTickPixel = candidatePixel;
+
+					if (d3.time.day(lastDate).getTime() !== d3.time.day(candidates[j]).getTime()) {
+						dates.push(candidates[j]);
+						lastDate = candidates[j];
+					}
 				}
 			}
 		}
@@ -2395,7 +2483,8 @@ function updateTicks() {
 		text = svg.subTicks.append('text');
 		text.datum(dates[i]);
 
-		text.attr('x', timeTickDraw.xFunc)
+		text.attr('x', timeTickDraw.textXFunc)
+			.attr('id', 'date_' + dates[i].getTime())
 			.attr('dy', '2em')
 			.attr('fill', 'white')
 			.attr('text-anchor', 'left')
@@ -2421,7 +2510,7 @@ function dateFormatter(dateObj) {
 		return 'Today';
 	} else if (diffDays === 1) {
 		return 'Yesterday';
-	} else if (diffDays < 7) {
+	} else if (0 < diffDays && diffDays < 7) {
 		return 'Last ' + days[target.getDay()];
 	} else {
 		return d3.time.format('%x')(target);
@@ -2660,15 +2749,17 @@ function updateEvents() {
 		.attr('x', eventDraw.iconXFunc);
 }
 
-function showMarkerAtPixel(pixel, notify) {
-	if (isNaN(pixel)) {
+function showMarkerAtPixel(pixel, notify, noupdate) {
+	if (isNaN(pixel) || (noupdate === true && global.markerTimestamp === 0) || global.lastOperation === null) {
 		// Don't show the marker at all.
 		svg.subMarker.style('display', 'none');
 		return;
 	}
 
 	global.markerPos = pixel;
-	global.markerTimestamp = pixelToTimestamp(pixel);
+	if (noupdate !== true) {
+		global.markerTimestamp = pixelToTimestamp(pixel);
+	}
 
 	var timeFormat = '%I:%M:%S %p';
 	var timeFormatter = d3.time.format(timeFormat);
@@ -2693,7 +2784,7 @@ function showMarkerAtTimestamp(absTimestamp, notify) {
 	svg.subMarker.style('display', '');
 }
 
-function updateMarkerPosition(notify) {
+function updateMarkerPosition(notify, noupdate) {
 	var t = global.markerTimestamp;
 	var tx = timestampToPixel(t);
 
@@ -2701,7 +2792,7 @@ function updateMarkerPosition(notify) {
 		notify = false;
 	}
 
-	showMarkerAtPixel(tx, notify);
+	showMarkerAtPixel(tx, notify, noupdate);
 }
 
 function hideMarker() {
@@ -2709,10 +2800,12 @@ function hideMarker() {
 }
 
 function selectPixelRange(startPixel, endPixel) {
-	global.selectedPixelRange = [startPixel, endPixel];
-	global.selectedTimestampRange = [pixelToTimestamp(startPixel), pixelToTimestamp(endPixel)];
+	if (global.lastOperation !== null) {
+		global.selectedPixelRange = [startPixel, endPixel];
+		global.selectedTimestampRange = [pixelToTimestamp(startPixel), pixelToTimestamp(endPixel)];
 
-	updateRangeSelectionBox();
+		updateRangeSelectionBox();
+	}
 }
 
 function updateEndPixelRange(endPixel) {

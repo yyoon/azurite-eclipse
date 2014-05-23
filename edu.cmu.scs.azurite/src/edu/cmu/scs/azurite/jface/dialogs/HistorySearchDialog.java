@@ -38,12 +38,6 @@ public class HistorySearchDialog extends Dialog {
 	public static final int SEARCH = IDialogConstants.OK_ID;
 	public static final int CLOSE = IDialogConstants.CANCEL_ID;
 
-	private static HistorySearchDialog _instance = null;
-
-	public static HistorySearchDialog getInstance() {
-		return _instance;
-	}
-
 	public HistorySearchDialog(Shell shell, String initialSearchString) {
 		super(shell);
 		
@@ -139,8 +133,6 @@ public class HistorySearchDialog extends Dialog {
 
 		mCreatedDialogArea = true;
 
-		_instance = this;
-
 		return comp;
 	}
 
@@ -156,8 +148,6 @@ public class HistorySearchDialog extends Dialog {
 
 	@Override
 	public boolean close() {
-		_instance = null;
-		
 		mCaseSensitive = mButtonCaseSensitive.getSelection();
 		mScopeSelectedCode = mButtonSelectedCode.getSelection();
 		mCurrentSession = mButtonCurrentSession.getSelection();

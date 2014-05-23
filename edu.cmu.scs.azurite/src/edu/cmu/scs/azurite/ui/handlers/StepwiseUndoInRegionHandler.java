@@ -31,6 +31,7 @@ import org.eclipse.ui.texteditor.IDocumentProvider;
 import org.eclipse.ui.texteditor.ITextEditor;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
+import edu.cmu.scs.azurite.model.undo.Chunk;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
 import edu.cmu.scs.fluorite.commands.Delete;
 import edu.cmu.scs.fluorite.commands.Insert;
@@ -109,12 +110,29 @@ public class StepwiseUndoInRegionHandler extends AbstractHandler {
 			this.snapshotsAfterEachStep = new ArrayList<String>();
 			this.snapshotsAfterEachStep.add(doc.get());
 			
+			// Use the Chunk, instead of undoing the whole operations,
+			// because there can be regional conflicts.
 			for (int i = 1; i <= dcs.size(); ++i) {
 				List<RuntimeDC> subDCs = dcs.subList(dcs.size() - i, dcs.size());
-				IDocument copy = new Document(doc.get());
-				SelectiveUndoEngine.getInstance().doSelectiveUndo(subDCs, copy);
+				Chunk chunk = Chunk.fromDCList(
+						subDCs,
+						selection.getOffset(),
+						selection.getOffset() + selection.getLength());
 				
-				this.snapshotsAfterEachStep.add(copy.get());
+				int startOffset = chunk.getStartOffset();
+				int endOffset = chunk.getEndOffset();
+				String initialContent = doc.get().substring(startOffset, endOffset);
+				
+				String undoResult = SelectiveUndoEngine.getInstance()
+						.doSelectiveUndoChunkWithoutConflicts(chunk, initialContent);
+				
+				StringBuilder snapshot = new StringBuilder(doc.get());
+				snapshot.replace(
+						Math.max(startOffset, selection.getOffset()),
+						Math.min(endOffset, selection.getOffset() + selection.getLength()),
+						undoResult);
+				
+				this.snapshotsAfterEachStep.add(snapshot.toString());
 			}
 			
 			// Begin compound change.
@@ -160,7 +178,11 @@ public class StepwiseUndoInRegionHandler extends AbstractHandler {
 			
 			// Intercept document change recorder with this stamp, only if it's not the first operation.
 			if (!firstInvocation) {
-				DocumentRecorder.getInstance().setIntercept(doc, stamp, nextStamp, new DocumentRecorderInterceptor(prefix, suffix, newSnapshot, originalSnapshot, doc));
+				DocumentRecorder.getInstance().setIntercept(
+						doc,
+						stamp,
+						nextStamp,
+						new DocumentRecorderInterceptor(prefix, suffix, newSnapshot, originalSnapshot, doc));
 			}
 			
 			// Replace the document using the stamp.
@@ -270,7 +292,7 @@ public class StepwiseUndoInRegionHandler extends AbstractHandler {
 						startLine,
 						endLine,
 						originalSnapshot.substring(prefix, originalSnapshot.length() - suffix),
-						doc);
+						originalDoc);
 				
 				recorder.amendLastDocumentChange(delete, true);
 			} else {
@@ -282,7 +304,7 @@ public class StepwiseUndoInRegionHandler extends AbstractHandler {
 						newSnapshot.length() - prefix - suffix,
 						originalSnapshot.substring(prefix, originalSnapshot.length() - suffix),
 						newSnapshot.substring(prefix, newSnapshot.length() - suffix),
-						doc);
+						originalDoc);
 				
 				recorder.amendLastDocumentChange(replace, true);
 			}
