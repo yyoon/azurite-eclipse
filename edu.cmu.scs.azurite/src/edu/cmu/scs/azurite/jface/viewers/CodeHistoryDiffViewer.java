@@ -35,7 +35,6 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.ide.IDE;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
-import edu.cmu.scs.azurite.commands.runtime.Segment;
 import edu.cmu.scs.azurite.compare.AzuriteCompareInput;
 import edu.cmu.scs.azurite.compare.SimpleCompareItem;
 import edu.cmu.scs.azurite.jface.dialogs.InteractiveSelectiveUndoDialog;
@@ -336,15 +335,7 @@ public class CodeHistoryDiffViewer extends Composite {
 		
 		// Get the previous versions by performing undo.
 		List<RuntimeDC> subList = mInvolvedDCs.subList(version, mInvolvedDCs.size());
-		Chunk chunk = new Chunk();
-		for (RuntimeDC dc : subList) {
-			for (Segment segment : dc.getAllSegments()) {
-				if (segment.inSelectionRange(mSelectionStart, mSelectionEnd)) {
-					chunk.add(segment);
-				}
-			}
-		}
-		Collections.sort(chunk, Segment.getLocationComparator());
+		Chunk chunk = Chunk.fromDCList(subList, mSelectionStart, mSelectionEnd);
 		
 		int startOffset = chunk.getStartOffset();
 		int endOffset = chunk.getEndOffset();

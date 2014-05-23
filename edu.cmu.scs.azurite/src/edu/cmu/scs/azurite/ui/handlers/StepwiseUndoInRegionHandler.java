@@ -31,6 +31,7 @@ import org.eclipse.ui.texteditor.IDocumentProvider;
 import org.eclipse.ui.texteditor.ITextEditor;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
+import edu.cmu.scs.azurite.model.undo.Chunk;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
 import edu.cmu.scs.fluorite.commands.Delete;
 import edu.cmu.scs.fluorite.commands.Insert;
@@ -109,12 +110,26 @@ public class StepwiseUndoInRegionHandler extends AbstractHandler {
 			this.snapshotsAfterEachStep = new ArrayList<String>();
 			this.snapshotsAfterEachStep.add(doc.get());
 			
+			// Use the Chunk, instead of undoing the whole operations,
+			// because there can be regional conflicts.
 			for (int i = 1; i <= dcs.size(); ++i) {
 				List<RuntimeDC> subDCs = dcs.subList(dcs.size() - i, dcs.size());
-				IDocument copy = new Document(doc.get());
-				SelectiveUndoEngine.getInstance().doSelectiveUndo(subDCs, copy);
+				Chunk chunk = Chunk.fromDCList(
+						subDCs,
+						selection.getOffset(),
+						selection.getOffset() + selection.getLength());
 				
-				this.snapshotsAfterEachStep.add(copy.get());
+				int startOffset = chunk.getStartOffset();
+				int endOffset = chunk.getEndOffset();
+				String initialContent = doc.get().substring(startOffset, endOffset);
+				
+				String undoResult = SelectiveUndoEngine.getInstance()
+						.doSelectiveUndoChunkWithoutConflicts(chunk, initialContent);
+				
+				StringBuilder snapshot = new StringBuilder(doc.get());
+				snapshot.replace(startOffset, endOffset, undoResult);
+				
+				this.snapshotsAfterEachStep.add(snapshot.toString());
 			}
 			
 			// Begin compound change.
