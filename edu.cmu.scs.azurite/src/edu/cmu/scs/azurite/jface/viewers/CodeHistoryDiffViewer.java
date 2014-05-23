@@ -329,13 +329,15 @@ public class CodeHistoryDiffViewer extends Composite {
 		
 		if (version == mInvolvedDCs.size()) {
 			return mCurrentItem;
-		} else if (mHistoryItems.containsKey(version)) {
+		}/* else if (mHistoryItems.containsKey(version)) {
 			return mHistoryItems.get(version);
-		}
+		}*/
 		
 		// Get the previous versions by performing undo.
 		List<RuntimeDC> subList = mInvolvedDCs.subList(version, mInvolvedDCs.size());
-		Chunk chunk = Chunk.fromDCList(subList, mSelectionStart, mSelectionEnd);
+		Chunk chunk = isEntireFileSelected()
+				? Chunk.fromDCList(subList)
+				: Chunk.fromDCList(subList, mSelectionStart, mSelectionEnd);
 		
 		int startOffset = chunk.getStartOffset();
 		int endOffset = chunk.getEndOffset();
@@ -362,6 +364,10 @@ public class CodeHistoryDiffViewer extends Composite {
 		mHistoryItems.put(version, historyItem);
 		
 		return historyItem;
+	}
+	
+	private boolean isEntireFileSelected() {
+		return mSelectionStart == 0 && mSelectionEnd == mFileContent.length();
 	}
 
 }

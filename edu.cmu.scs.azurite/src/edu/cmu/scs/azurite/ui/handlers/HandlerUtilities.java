@@ -2,6 +2,7 @@ package edu.cmu.scs.azurite.ui.handlers;
 
 import java.util.List;
 
+import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.ITextSelection;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.ISelectionProvider;
@@ -10,8 +11,10 @@ import org.eclipse.ui.IEditorSite;
 import org.eclipse.ui.texteditor.AbstractTextEditor;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
+import edu.cmu.scs.azurite.model.IRuntimeDCFilter;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.fluorite.model.EventRecorder;
+import edu.cmu.scs.fluorite.util.Utilities;
 
 public class HandlerUtilities {
 	
@@ -74,7 +77,20 @@ public class HandlerUtilities {
 					}
 				}
 			}
+			
+			// Check if the entire file is selected.
+			IDocument doc = Utilities.getDocument(editorPart);
+			if (offset == 0 && length == doc.getLength()) {
+				return RuntimeHistoryManager.getInstance()
+						.filterDocumentChanges(new IRuntimeDCFilter() {
+							@Override
+							public boolean filter(RuntimeDC runtimeDC) {
+								return true;
+							}
+						});
+			}
 
+			// In all the other cases.
 			List<RuntimeDC> dcs = RuntimeHistoryManager.getInstance()
 					.filterDocumentChangesByRegion(offset, offset + length);
 			
