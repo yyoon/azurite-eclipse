@@ -127,7 +127,10 @@ public class StepwiseUndoInRegionHandler extends AbstractHandler {
 						.doSelectiveUndoChunkWithoutConflicts(chunk, initialContent);
 				
 				StringBuilder snapshot = new StringBuilder(doc.get());
-				snapshot.replace(startOffset, endOffset, undoResult);
+				snapshot.replace(
+						Math.max(startOffset, selection.getOffset()),
+						Math.min(endOffset, selection.getOffset() + selection.getLength()),
+						undoResult);
 				
 				this.snapshotsAfterEachStep.add(snapshot.toString());
 			}
@@ -175,7 +178,11 @@ public class StepwiseUndoInRegionHandler extends AbstractHandler {
 			
 			// Intercept document change recorder with this stamp, only if it's not the first operation.
 			if (!firstInvocation) {
-				DocumentRecorder.getInstance().setIntercept(doc, stamp, nextStamp, new DocumentRecorderInterceptor(prefix, suffix, newSnapshot, originalSnapshot, doc));
+				DocumentRecorder.getInstance().setIntercept(
+						doc,
+						stamp,
+						nextStamp,
+						new DocumentRecorderInterceptor(prefix, suffix, newSnapshot, originalSnapshot, doc));
 			}
 			
 			// Replace the document using the stamp.
@@ -285,7 +292,7 @@ public class StepwiseUndoInRegionHandler extends AbstractHandler {
 						startLine,
 						endLine,
 						originalSnapshot.substring(prefix, originalSnapshot.length() - suffix),
-						new Document(originalSnapshot));
+						originalDoc);
 				
 				recorder.amendLastDocumentChange(delete, true);
 			} else {
@@ -297,7 +304,7 @@ public class StepwiseUndoInRegionHandler extends AbstractHandler {
 						newSnapshot.length() - prefix - suffix,
 						originalSnapshot.substring(prefix, originalSnapshot.length() - suffix),
 						newSnapshot.substring(prefix, newSnapshot.length() - suffix),
-						new Document(originalSnapshot));
+						originalDoc);
 				
 				recorder.amendLastDocumentChange(replace, true);
 			}
