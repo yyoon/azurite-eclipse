@@ -486,7 +486,7 @@ function setupSVG() {
 		.attr('id', 'marker_line')
 		.attr('class', 'marker')
 		.attr('y1', -MARKER_SIZE / 2)
-		.attr('stroke-width', MARKER_WIDTH)
+		.attr('stroke-width', MARKER_WIDTH);
 	svg.subMarker.append('path')
 		.attr('id', 'marker_upper_triangle')
 		.attr('class', 'marker')
@@ -691,7 +691,7 @@ function EditOperation(sid, id, t1, t2, y1, y2, type, fileGroup) {
 		case TYPE_DIFF_DELETE:
 			return "type_diff_delete";
 		}
-	}
+	};
 	
 	this.fileGroup = fileGroup;
 	this.session = fileGroup.session;
