@@ -285,7 +285,7 @@ public class StepwiseUndoInRegionHandler extends AbstractHandler {
 						startLine,
 						endLine,
 						originalSnapshot.substring(prefix, originalSnapshot.length() - suffix),
-						doc);
+						new Document(originalSnapshot));
 				
 				recorder.amendLastDocumentChange(delete, true);
 			} else {
@@ -297,7 +297,7 @@ public class StepwiseUndoInRegionHandler extends AbstractHandler {
 						newSnapshot.length() - prefix - suffix,
 						originalSnapshot.substring(prefix, originalSnapshot.length() - suffix),
 						newSnapshot.substring(prefix, newSnapshot.length() - suffix),
-						doc);
+						new Document(originalSnapshot));
 				
 				recorder.amendLastDocumentChange(replace, true);
 			}
