@@ -33,7 +33,7 @@ public class AboutDialog extends Dialog {
 	private static final int CLOSE_BUTTON_ID = Dialog.OK;
 	
 	private static final int DIALOG_WIDTH = 600;
-	private static final int DIALOG_HEIGHT = 600;
+	private static final int DIALOG_HEIGHT = 550;
 
 	public AboutDialog(Shell parentShell) {
 		super(parentShell);
@@ -61,7 +61,10 @@ public class AboutDialog extends Dialog {
 		
 		Composite comp = new Composite(parent, SWT.NONE);
 		comp.setLayout(new GridLayout());
-		comp.setLayoutData(new GridData(GridData.FILL_BOTH));
+		GridData gridData = new GridData(GridData.FILL_BOTH);
+		gridData.widthHint = DIALOG_WIDTH;
+		gridData.heightHint = DIALOG_HEIGHT;
+		comp.setLayoutData(gridData);
 		
 		Browser browser = new Browser(comp, SWT.NONE);
 		browser.setLayoutData(new GridData(GridData.FILL_BOTH));
