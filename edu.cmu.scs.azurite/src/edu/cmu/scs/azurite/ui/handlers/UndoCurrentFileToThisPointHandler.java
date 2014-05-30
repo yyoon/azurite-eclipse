@@ -18,7 +18,7 @@ public class UndoCurrentFileToThisPointHandler extends AbstractHandler {
 		
 		RuntimeHistoryManager history = RuntimeHistoryManager.getInstance();
 		SelectiveUndoEngine.getInstance().doSelectiveUndo(
-				history.filterDocumentChangesLaterThanTimestamp(absTimestamp));
+				history.filterDocumentChangesLaterThanOrEqualToTimestamp(absTimestamp));
 		
 		return null;
 	}
