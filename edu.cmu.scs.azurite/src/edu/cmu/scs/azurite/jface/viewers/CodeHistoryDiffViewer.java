@@ -44,7 +44,9 @@ import edu.cmu.scs.azurite.model.undo.Chunk;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
 import edu.cmu.scs.azurite.plugin.Activator;
 import edu.cmu.scs.azurite.views.TimelineViewPart;
+import edu.cmu.scs.fluorite.commands.CodeHistoryDiffRevertCommand;
 import edu.cmu.scs.fluorite.commands.ICommand;
+import edu.cmu.scs.fluorite.model.EventRecorder;
 import edu.cmu.scs.fluorite.util.Utilities;
 
 public class CodeHistoryDiffViewer extends Composite {
@@ -292,6 +294,8 @@ public class CodeHistoryDiffViewer extends Composite {
 				}
 			}
 		}
+		
+		EventRecorder.getInstance().recordCommand(new CodeHistoryDiffRevertCommand());
 		
 		// After this, the view itself will be out of sync.
 		// TODO Keep the view in sync and don't close.
