@@ -285,7 +285,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 						}
 						
 						case "marker": {
-							long absTimestamp = ((Number) browser.evaluate("return global.selectedTimestamp;")).longValue();
+							long absTimestamp = getMarkerTimestamp();
 							
 							paramMap.clear();
 							paramMap.put("edu.cmu.scs.azurite.ui.commands.undoAllFilesToThisPoint.absTimestamp", Long.toString(absTimestamp));
@@ -1134,6 +1134,10 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	
 	private void performLayout() {
 		browser.execute("layout();");
+	}
+	
+	public long getMarkerTimestamp() {
+		return ((Number) browser.evaluate("return global.markerTimestamp;")).longValue();
 	}
 
 	public long getTimeRangeStart() {
