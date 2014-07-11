@@ -1107,6 +1107,11 @@
       <handler
             class="edu.cmu.scs.azurite.ui.handlers.TagMarkerHandler"
             commandId="edu.cmu.scs.azurite.ui.commands.tagMarkerCommand">
+         <enabledWhen>
+            <reference
+                  definitionId="markerVisible">
+            </reference>
+         </enabledWhen>
       </handler>
    </extension>
    <extension
@@ -1154,6 +1159,13 @@
                property="edu.cmu.scs.azurite.selection.rangeSelected">
          </test>
       </definition>
+      <definition
+            id="markerVisible">
+         <test
+               forcePluginActivation="true"
+               property="edu.cmu.scs.azurite.selection.markerVisible">
+         </test>
+      </definition>
    </extension>
    <extension
          point="org.eclipse.core.expressions.propertyTesters">
@@ -1168,7 +1180,7 @@
             class="edu.cmu.scs.azurite.expressions.TimelineSelectionPropertyTester"
             id="edu.cmu.scs.azurite.timelineSelectionPropertyTester"
             namespace="edu.cmu.scs.azurite.selection"
-            properties="rectSelected,singleRectSelected,multiRectsSelected,rangeSelected"
+            properties="rectSelected,singleRectSelected,multiRectsSelected,rangeSelected,markerVisible"
             type="java.lang.Object">
       </propertyTester>
    </extension>

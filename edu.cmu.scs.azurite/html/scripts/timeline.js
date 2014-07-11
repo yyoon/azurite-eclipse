@@ -2,7 +2,7 @@
 /*global d3, azurite */
 
 /* Things to be called from Azurite */
-/*exported updateOperation, getRightmostTimestamp, addSelectionsByIds, removeSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarkerAtTimestamp, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile, addEvent, activateFirebugLite, showAllFilesEditedInRange, openAllFilesEditedInRange, removeAllSelections, showUp, showDown */
+/*exported updateOperation, getRightmostTimestamp, addSelectionsByIds, removeSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarkerAtTimestamp, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile, addEvent, activateFirebugLite, showAllFilesEditedInRange, openAllFilesEditedInRange, removeAllSelections, showUp, showDown, isMarkerVisible */
 
 /* Things to be called manually when debugging */
 /*exported test, testMarker, showEvents */
@@ -2773,6 +2773,10 @@ function showMarkerAtPixel(pixel, notify, noupdate) {
 		// Tell Azurite about this marker move!
 		azurite.markerMove(global.markerTimestamp);
 	}
+}
+
+function isMarkerVisible() {
+	return svg.subMarker.style('display') !== 'none';
 }
 
 function showMarkerAtTimestamp(absTimestamp, notify) {

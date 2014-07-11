@@ -1107,6 +1107,19 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 			return false;
 		}
 	}
+	
+	public boolean isMarkerVisible() {
+		try {
+			Object result = evaluateJSCode("return isMarkerVisible();");
+			if (result instanceof Boolean) {
+				return ((Boolean) result).booleanValue();
+			} else {
+				return false;
+			}
+		} catch (SWTException e) {
+			return false;
+		}
+	}
 
 	public static List<OperationId> translateSelection(Object selected) {
 		Object[] selectedArray = (Object[]) selected;
