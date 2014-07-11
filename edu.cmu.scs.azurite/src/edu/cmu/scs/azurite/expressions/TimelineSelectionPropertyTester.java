@@ -35,6 +35,10 @@ public class TimelineSelectionPropertyTester extends PropertyTester {
 			return timeline.isRangeSelected();
 		}
 		
+		case "markerVisible": {
+			return timeline.isMarkerVisible();
+		}
+		
 		default:
 			break;
 		}

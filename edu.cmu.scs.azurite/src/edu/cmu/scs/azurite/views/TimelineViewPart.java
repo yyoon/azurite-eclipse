@@ -63,8 +63,8 @@ import edu.cmu.scs.fluorite.commands.EclipseCommand;
 import edu.cmu.scs.fluorite.commands.FileOpenCommand;
 import edu.cmu.scs.fluorite.commands.ICommand;
 import edu.cmu.scs.fluorite.commands.ITimestampOverridable;
+import edu.cmu.scs.fluorite.commands.ITypeOverridable;
 import edu.cmu.scs.fluorite.commands.Insert;
-import edu.cmu.scs.fluorite.commands.JUnitCommand;
 import edu.cmu.scs.fluorite.commands.Replace;
 import edu.cmu.scs.fluorite.model.CommandExecutionListener;
 import edu.cmu.scs.fluorite.model.EventRecorder;
@@ -285,7 +285,13 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 						}
 						
 						case "marker": {
-							long absTimestamp = ((Number) browser.evaluate("return global.selectedTimestamp;")).longValue();
+							long absTimestamp = getMarkerTimestamp();
+							
+							Action tagThisPointAction = new CommandAction(
+									"Tag This Point",
+									"edu.cmu.scs.azurite.ui.commands.tagMarkerCommand");
+							
+							manager.add(tagThisPointAction);
 							
 							paramMap.clear();
 							paramMap.put("edu.cmu.scs.azurite.ui.commands.undoAllFilesToThisPoint.absTimestamp", Long.toString(absTimestamp));
@@ -834,15 +840,14 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		long displayTimestamp = event instanceof ITimestampOverridable
 				? ((ITimestampOverridable) event).getTimestampForDisplay()
 				: sessionId + timestamp;
-		String type = "EclipseCommand".equals(event.getCommandType())
-				? ((EclipseCommand) event).getCommandID()
-				: event.getCommandType();
-		
-		if (event instanceof JUnitCommand) {
-			JUnitCommand junitCommand = (JUnitCommand) event;
-			if (junitCommand.getRootData() != null) {
-				type += "(" + Boolean.toString(junitCommand.getRootData().getSucceeded()) + ")";
-			}
+
+		String type = null;
+		if (event instanceof ITypeOverridable) {
+			type = ((ITypeOverridable) event).getTypeForDisplay();
+		} else if ("EclipseCommand".equals(event.getCommandType())) {
+			type = ((EclipseCommand) event).getCommandID();
+		} else {
+			type = event.getCommandType();
 		}
 		
 		String executeStr = String.format("addEvent(%1$d, %2$d, %3$d, %4$d, '%5$s', '%6$s');",
@@ -1101,6 +1106,19 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 			return false;
 		}
 	}
+	
+	public boolean isMarkerVisible() {
+		try {
+			Object result = evaluateJSCode("return isMarkerVisible();");
+			if (result instanceof Boolean) {
+				return ((Boolean) result).booleanValue();
+			} else {
+				return false;
+			}
+		} catch (SWTException e) {
+			return false;
+		}
+	}
 
 	public static List<OperationId> translateSelection(Object selected) {
 		Object[] selectedArray = (Object[]) selected;
@@ -1134,6 +1152,10 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	
 	private void performLayout() {
 		browser.execute("layout();");
+	}
+	
+	public long getMarkerTimestamp() {
+		return ((Number) browser.evaluate("return global.markerTimestamp;")).longValue();
 	}
 
 	public long getTimeRangeStart() {

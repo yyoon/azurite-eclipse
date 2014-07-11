@@ -371,6 +371,14 @@
                   style="push"
                   tooltip="Please help the researcher by describing the intent of your recent backtracking / code editing">
             </command>
+            <command
+                  commandId="edu.cmu.scs.azurite.ui.commands.tagNowCommand"
+                  style="push">
+            </command>
+            <command
+                  commandId="edu.cmu.scs.azurite.ui.commands.tagMarkerCommand"
+                  style="push">
+            </command>
             <separator
                   name="edu.cmu.scs.azurite.separator5"
                   visible="true">
@@ -735,6 +743,16 @@
             id="edu.cmu.scs.azurite.ui.commands.aboutCommand"
             name="About Azurite...">
       </command>
+      <command
+            description="Tag the current moment so that it can be referred back later"
+            id="edu.cmu.scs.azurite.ui.commands.tagNowCommand"
+            name="Tag Now">
+      </command>
+      <command
+            description="Tag the marker position so that it can be referred back later"
+            id="edu.cmu.scs.azurite.ui.commands.tagMarkerCommand"
+            name="Tag the Marker Position">
+      </command>
    </extension>
    <extension
          point="org.eclipse.ui.bindings">
@@ -797,6 +815,14 @@
       <image
             commandId="edu.cmu.scs.azurite.ui.commands.selectedRange"
             icon="icons/selected_range.png">
+      </image>
+      <image
+            commandId="edu.cmu.scs.azurite.ui.commands.tagNowCommand"
+            icon="icons/tag.png">
+      </image>
+      <image
+            commandId="edu.cmu.scs.azurite.ui.commands.tagMarkerCommand"
+            icon="icons/tag.png">
       </image>
    </extension>
    <extension
@@ -1074,6 +1100,19 @@
             class="edu.cmu.scs.azurite.ui.handlers.AboutHandler"
             commandId="edu.cmu.scs.azurite.ui.commands.aboutCommand">
       </handler>
+      <handler
+            class="edu.cmu.scs.azurite.ui.handlers.TagNowHandler"
+            commandId="edu.cmu.scs.azurite.ui.commands.tagNowCommand">
+      </handler>
+      <handler
+            class="edu.cmu.scs.azurite.ui.handlers.TagMarkerHandler"
+            commandId="edu.cmu.scs.azurite.ui.commands.tagMarkerCommand">
+         <enabledWhen>
+            <reference
+                  definitionId="markerVisible">
+            </reference>
+         </enabledWhen>
+      </handler>
    </extension>
    <extension
          point="org.eclipse.core.expressions.definitions">
@@ -1120,6 +1159,13 @@
                property="edu.cmu.scs.azurite.selection.rangeSelected">
          </test>
       </definition>
+      <definition
+            id="markerVisible">
+         <test
+               forcePluginActivation="true"
+               property="edu.cmu.scs.azurite.selection.markerVisible">
+         </test>
+      </definition>
    </extension>
    <extension
          point="org.eclipse.core.expressions.propertyTesters">
@@ -1134,7 +1180,7 @@
             class="edu.cmu.scs.azurite.expressions.TimelineSelectionPropertyTester"
             id="edu.cmu.scs.azurite.timelineSelectionPropertyTester"
             namespace="edu.cmu.scs.azurite.selection"
-            properties="rectSelected,singleRectSelected,multiRectsSelected,rangeSelected"
+            properties="rectSelected,singleRectSelected,multiRectsSelected,rangeSelected,markerVisible"
             type="java.lang.Object">
       </propertyTester>
    </extension>
