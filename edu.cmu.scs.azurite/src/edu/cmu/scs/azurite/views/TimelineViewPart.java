@@ -287,6 +287,12 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 						case "marker": {
 							long absTimestamp = getMarkerTimestamp();
 							
+							Action tagThisPointAction = new CommandAction(
+									"Tag This Point",
+									"edu.cmu.scs.azurite.ui.commands.tagMarkerCommand");
+							
+							manager.add(tagThisPointAction);
+							
 							paramMap.clear();
 							paramMap.put("edu.cmu.scs.azurite.ui.commands.undoAllFilesToThisPoint.absTimestamp", Long.toString(absTimestamp));
 							Action undoAllFilesToThisPointAction = new CommandAction(
