@@ -189,8 +189,11 @@ eventDraw.iconFunc = function(d) {
 		case 'RunCommand':
 			return 'images/event_icons/run_exc.gif';
 
-		case 'Annotation':
+		case 'Tag':
 			return 'images/event_icons/tag.png';
+
+		case 'Annotation':
+			return 'images/event_icons/annotation.png';
 
 		case 'org.eclipse.ui.file.save':
 			return 'images/event_icons/save_edit.gif';

@@ -63,8 +63,8 @@ import edu.cmu.scs.fluorite.commands.EclipseCommand;
 import edu.cmu.scs.fluorite.commands.FileOpenCommand;
 import edu.cmu.scs.fluorite.commands.ICommand;
 import edu.cmu.scs.fluorite.commands.ITimestampOverridable;
+import edu.cmu.scs.fluorite.commands.ITypeOverridable;
 import edu.cmu.scs.fluorite.commands.Insert;
-import edu.cmu.scs.fluorite.commands.JUnitCommand;
 import edu.cmu.scs.fluorite.commands.Replace;
 import edu.cmu.scs.fluorite.model.CommandExecutionListener;
 import edu.cmu.scs.fluorite.model.EventRecorder;
@@ -840,15 +840,14 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		long displayTimestamp = event instanceof ITimestampOverridable
 				? ((ITimestampOverridable) event).getTimestampForDisplay()
 				: sessionId + timestamp;
-		String type = "EclipseCommand".equals(event.getCommandType())
-				? ((EclipseCommand) event).getCommandID()
-				: event.getCommandType();
-		
-		if (event instanceof JUnitCommand) {
-			JUnitCommand junitCommand = (JUnitCommand) event;
-			if (junitCommand.getRootData() != null) {
-				type += "(" + Boolean.toString(junitCommand.getRootData().getSucceeded()) + ")";
-			}
+
+		String type = null;
+		if (event instanceof ITypeOverridable) {
+			type = ((ITypeOverridable) event).getTypeForDisplay();
+		} else if ("EclipseCommand".equals(event.getCommandType())) {
+			type = ((EclipseCommand) event).getCommandID();
+		} else {
+			type = event.getCommandType();
 		}
 		
 		String executeStr = String.format("addEvent(%1$d, %2$d, %3$d, %4$d, '%5$s', '%6$s');",
