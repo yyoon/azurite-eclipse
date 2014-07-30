@@ -1473,7 +1473,28 @@ function initMouseDownHandler() {
 
 			// Filter only the icons.
 			d3.selectAll(list).filter('.event_icon').each(function(d) {
-				// In this case, this should be notified to the Azurite plug-in.
+				// Handle shift key and range selection ---------------------------------
+				if (event.shiftKey) {
+					global.draggingMarkerShift = true;
+
+					var pixelPosition = timestampToPixel(d.dt);
+
+					if (global.selectedPixelRange !== null) {
+						// If there is already a selected range, just update the end pixel
+						updateEndPixelRange(pixelPosition);
+					}
+					else if (global.markerPos !== null) {
+						// If there is no range selection, make a new one.
+						selectPixelRange(global.markerPos, pixelPosition);
+					}
+				}
+				else {
+					global.draggingMarkerShift = false;
+
+					deselectRange();
+				}
+				// ----------------------------------------------------------------------
+				
 				showMarkerAtTimestamp(d.dt, true);
 			});
 		}
