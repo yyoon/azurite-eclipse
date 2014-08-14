@@ -75,7 +75,7 @@ public class DetermineChunkTest {
 
 	private void applyOperations(BaseDocumentChangeEvent[] operations) {
 		for (BaseDocumentChangeEvent operation : operations) {
-			operation.applyToDocument(document);
+			operation.apply(document);
 			manager.documentChangeFinalized(operation);
 		}
 	}

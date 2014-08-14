@@ -538,21 +538,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 				long sid = ((Number)arguments[2]).longValue();
 				long id = ((Number)arguments[3]).longValue();
 				
-				File fileToOpen = new File(key.getFilePath());
-				
-				IEditorPart editor = null;
-				if (fileToOpen.exists() && fileToOpen.isFile()) {
-				    IFileStore fileStore = EFS.getLocalFileSystem().getStore(fileToOpen.toURI());
-				    IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
-				 
-				    try {
-				        editor = IDE.openEditorOnFileStore( page, fileStore );
-				    } catch ( PartInitException e ) {
-				        //Put your exception handler here if you wish to
-				    }
-				} else {
-				    //Do something if the file does not exist
-				}
+				IEditorPart editor = edu.cmu.scs.azurite.util.Utilities.openEditorWithKey(key);
 
 				// Move to the location.
 				RuntimeDC runtimeDC = RuntimeHistoryManager.getInstance()
@@ -587,7 +573,6 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 				return RETURN_CODE_FAIL;
 			}
 		}
-		
 	}
 	
 	class GetInfoFunction extends BrowserFunction {

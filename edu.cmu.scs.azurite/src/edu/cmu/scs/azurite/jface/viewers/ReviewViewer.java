@@ -1,5 +1,7 @@
 package edu.cmu.scs.azurite.jface.viewers;
 
+import java.util.List;
+
 import org.eclipse.compare.CompareConfiguration;
 import org.eclipse.compare.CompareUI;
 import org.eclipse.compare.CompareViewerSwitchingPane;
@@ -8,6 +10,7 @@ import org.eclipse.jface.action.ActionContributionItem;
 import org.eclipse.jface.action.IContributionItem;
 import org.eclipse.jface.action.Separator;
 import org.eclipse.jface.action.ToolBarManager;
+import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.layout.GridData;
@@ -18,9 +21,14 @@ import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
 
+import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.compare.AzuriteCompareInput;
 import edu.cmu.scs.azurite.compare.SimpleCompareItem;
+import edu.cmu.scs.azurite.model.FileKey;
+import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.azurite.plugin.Activator;
+import edu.cmu.scs.azurite.util.Utilities;
+import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 
 public class ReviewViewer extends Composite {
 	
@@ -30,6 +38,9 @@ public class ReviewViewer extends Composite {
 	private String mTitle;
 	
 	private IViewPart mParentViewPart;
+	
+	private int mVersionBegin;
+	private int mVersionEnd;
 	
 	private ActionContributionItem mRevertAction;
 	private ActionContributionItem mPrevAction;
@@ -51,11 +62,8 @@ public class ReviewViewer extends Composite {
 		
 		mCompareViewerSwitchingPane = createCompareView(this);
 		
-		SimpleCompareItem left = new SimpleCompareItem("Before", "Left", false);
-		SimpleCompareItem right = new SimpleCompareItem("After", "Right", false);
-		mCompareViewerSwitchingPane.setInput(new AzuriteCompareInput(left, right));
-		
-		mCompareViewerSwitchingPane.redraw();
+		int historySize = RuntimeHistoryManager.getInstance().getEntireHistory().size();
+		selectVersion(historySize - 1, historySize);
 	}
 	
 	private void createActions() {
@@ -130,6 +138,79 @@ public class ReviewViewer extends Composite {
 		compareView.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 		
 		return compareView;
+	}
+	
+	private int getVersionBegin() {
+		return mVersionBegin;
+	}
+	
+	private int getVersionEnd() {
+		return mVersionEnd;
+	}
+	
+	public void selectVersion(int versionBegin, int versionEnd) {
+		if (mCompareViewerSwitchingPane == null) {
+			throw new IllegalStateException();
+		}
+		
+		RuntimeHistoryManager manager = RuntimeHistoryManager.getInstance();
+		
+		List<RuntimeDC> entireHistory = manager.getEntireHistory();
+		if (versionBegin < 0 || versionEnd > entireHistory.size() || versionBegin >= versionEnd) {
+			throw new IllegalArgumentException();
+		}
+		
+		if (getVersionBegin() == versionBegin && getVersionEnd() == versionEnd) {
+			return;
+		}
+		
+		// Extract involved DCs, and the file key.
+		List<RuntimeDC> involvedDCs = entireHistory.subList(versionBegin, versionEnd);
+		int size = versionEnd - versionBegin;
+		
+		FileKey key = involvedDCs.get(0).getBelongsTo();
+		for (int i = 1; i < size; ++i) {
+			if (!key.equals(involvedDCs.get(i).getBelongsTo())) {
+				throw new IllegalArgumentException();
+			}
+		}
+		
+		List<RuntimeDC> historyForKey = manager.getRuntimeDocumentChanges(key);
+		int versionEndForKey = historyForKey.indexOf(entireHistory.get(versionEnd - 1)) + 1;
+		int versionBeginForKey = versionEndForKey - size;
+		
+		// Jump to the file
+		Utilities.openEditorWithKey(key);
+		
+		// Get the IDocument object for the file key.
+		IDocument doc = Utilities.findDocumentForKey(key);
+		
+		// TODO Optimize this process with caching.
+		// TODO Select these operations.
+		StringBuilder fileContent = new StringBuilder(doc.get());
+		
+		// Get the "After" code
+		for (int i = historyForKey.size() - 1; i >= versionEndForKey; --i) {
+			BaseDocumentChangeEvent originalDC = historyForKey.get(i).getOriginal();
+			originalDC.applyInverse(fileContent);
+		}
+		
+		String after = fileContent.toString();
+		
+		// Get the "Before code
+		for (int i = versionEndForKey - 1; i >= versionBeginForKey; --i) {
+			BaseDocumentChangeEvent originalDC = historyForKey.get(i).getOriginal();
+			originalDC.applyInverse(fileContent);
+		}
+		
+		String before = fileContent.toString();
+		
+		SimpleCompareItem left = new SimpleCompareItem("Before", before, false);
+		SimpleCompareItem right = new SimpleCompareItem("After", after, false);
+		AzuriteCompareInput input = new AzuriteCompareInput(left, right);
+		
+		mCompareViewerSwitchingPane.setInput(input);
+		mCompareViewerSwitchingPane.redraw();
 	}
 
 	public void closeParentView() {

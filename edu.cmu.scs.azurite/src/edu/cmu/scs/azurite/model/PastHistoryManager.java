@@ -248,7 +248,7 @@ public class PastHistoryManager implements DocumentChangeListener {
 			BaseDocumentChangeEvent docChange = (BaseDocumentChangeEvent) command;
 			String originalContent = localFinalSnapshots.get(curFileKey);
 			if (originalContent != null || docChange instanceof FileOpenCommand) {
-				String updatedContent = docChange.applyToString(originalContent);
+				String updatedContent = docChange.apply(originalContent);
 				localFinalSnapshots.put(curFileKey, updatedContent);
 			}
 			

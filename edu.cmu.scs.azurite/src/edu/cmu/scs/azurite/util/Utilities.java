@@ -1,9 +1,13 @@
 package edu.cmu.scs.azurite.util;
 
+import java.io.File;
+
 import org.eclipse.core.filebuffers.FileBuffers;
 import org.eclipse.core.filebuffers.ITextFileBuffer;
 import org.eclipse.core.filebuffers.ITextFileBufferManager;
 import org.eclipse.core.filebuffers.LocationKind;
+import org.eclipse.core.filesystem.EFS;
+import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IWorkspace;
 import org.eclipse.core.resources.IWorkspaceRoot;
@@ -13,9 +17,13 @@ import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.ui.IEditorInput;
+import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IEditorReference;
 import org.eclipse.ui.IFileEditorInput;
+import org.eclipse.ui.IWorkbenchPage;
+import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.ide.IDE;
 
 import edu.cmu.scs.azurite.model.FileKey;
 
@@ -80,6 +88,26 @@ public class Utilities {
 			// Just return null.
 			return null;
 		}
+	}
+
+	public static IEditorPart openEditorWithKey(FileKey key) {
+		File fileToOpen = new File(key.getFilePath());
+		
+		IEditorPart editor = null;
+		if (fileToOpen.exists() && fileToOpen.isFile()) {
+		    IFileStore fileStore = EFS.getLocalFileSystem().getStore(fileToOpen.toURI());
+		    IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
+		 
+		    try {
+		        editor = IDE.openEditorOnFileStore( page, fileStore );
+		    } catch ( PartInitException e ) {
+		        //Put your exception handler here if you wish to
+		    }
+		} else {
+		    //Do something if the file does not exist
+		}
+		
+		return editor;
 	}
 
 }
