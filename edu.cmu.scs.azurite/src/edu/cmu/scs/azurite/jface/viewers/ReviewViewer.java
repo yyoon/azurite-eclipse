@@ -10,6 +10,7 @@ import org.eclipse.jface.action.ActionContributionItem;
 import org.eclipse.jface.action.IContributionItem;
 import org.eclipse.jface.action.Separator;
 import org.eclipse.jface.action.ToolBarManager;
+import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.SWT;
@@ -81,7 +82,14 @@ public class ReviewViewer extends Composite {
 				new Action("Prev", Activator.getImageDescriptor("icons/old_go_previous.png")) {
 						@Override
 						public void run() {
-							// TODO: Implement
+							if (mVersionBegin > 0) {
+								selectVersion(mVersionBegin - 1, mVersionBegin);
+							} else {
+								MessageDialog.openInformation(
+										getShell(),
+										"Azurite - Review",
+										"No more changes to be reviewed");
+							}
 						}
 				});
 		mPrevAction.setId("historyDiffPrev");
@@ -91,7 +99,15 @@ public class ReviewViewer extends Composite {
 				new Action("Next", Activator.getImageDescriptor("icons/old_go_next.png")) {
 						@Override
 						public void run() {
-							// TODO: Implement
+							int historySize = RuntimeHistoryManager.getInstance().getEntireHistory().size();
+							if (mVersionEnd < historySize) {
+								selectVersion(mVersionEnd, mVersionEnd + 1);
+							} else {
+								MessageDialog.openInformation(
+										getShell(),
+										"Azurite - Review",
+										"No more changes to be reviewed");
+							}
 						}
 				});
 		mNextAction.setId("historyDiffNext");
@@ -182,11 +198,12 @@ public class ReviewViewer extends Composite {
 		// Jump to the file
 		Utilities.openEditorWithKey(key);
 		
+		// TODO Select these operations.
+		
 		// Get the IDocument object for the file key.
 		IDocument doc = Utilities.findDocumentForKey(key);
 		
 		// TODO Optimize this process with caching.
-		// TODO Select these operations.
 		StringBuilder fileContent = new StringBuilder(doc.get());
 		
 		// Get the "After" code
@@ -211,6 +228,9 @@ public class ReviewViewer extends Composite {
 		
 		mCompareViewerSwitchingPane.setInput(input);
 		mCompareViewerSwitchingPane.redraw();
+		
+		mVersionBegin = versionBegin;
+		mVersionEnd = versionEnd;
 	}
 
 	public void closeParentView() {
