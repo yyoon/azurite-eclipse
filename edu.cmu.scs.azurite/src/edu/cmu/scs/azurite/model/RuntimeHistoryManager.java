@@ -45,6 +45,11 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 	private Events mCurrentSessionEvents;
 	
 	/**
+	 * All the runtimeDCs listed in time order.
+	 */
+	private List<RuntimeDC> mEntireHistory;
+	
+	/**
 	 * Basic constructor. Only use this public constructor for testing purposes!
 	 * Otherwise, use <code>getInstance</code> static method instead.
 	 */
@@ -68,6 +73,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 		mNextIndexToApply = new HashMap<FileKey, Integer>();
 		mCurrentFileKey = null;
 		mEventsToBeDisplayed = new ArrayList<ICommand>();
+		mEntireHistory = new ArrayList<RuntimeDC>();
 	}
 
 	public void scheduleTask(Runnable runnable) {
@@ -189,6 +195,14 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 		}
 		
 		return null;
+	}
+	
+	/**
+	 * Returns all the runtime DCs in time order.
+	 * @return all the runtime DCs in time order.
+	 */
+	public List<RuntimeDC> getEntireHistory() {
+		return Collections.unmodifiableList(mEntireHistory);
 	}
 	
 	/**
@@ -341,18 +355,20 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 	}
 	
 	private void addRuntimeDCFromOriginalDC(BaseDocumentChangeEvent docChange, FileKey key, boolean fireEvent) {
-		RuntimeDC runtimeDocChange = RuntimeDC.createRuntimeDocumentChange(docChange);
-		runtimeDocChange.setBelongsTo(key);
+		RuntimeDC runtimeDC = RuntimeDC.createRuntimeDocumentChange(docChange);
+		runtimeDC.setBelongsTo(key);
 		
 		List<RuntimeDC> list = getRuntimeDocumentChanges(key);
 		if (list == null) {
 			throw new IllegalArgumentException("Key does not exist!");
 		}
-		list.add(runtimeDocChange);
+		list.add(runtimeDC);
+		
+		mEntireHistory.add(runtimeDC);
 		
 		// Fire runtime document change event
 		if (fireEvent) {
-			fireRuntimeDCAddedEvent(runtimeDocChange);
+			fireRuntimeDCAddedEvent(runtimeDC);
 		}
 	}
 	
@@ -770,6 +786,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 		
 		// Delete the last one from dcs, and add a new one.
 		dcs.remove(dcs.size() - 1);
+		mEntireHistory.remove(mEntireHistory.size() - 1);
 		addRuntimeDCFromOriginalDC(newDocChange, getCurrentFileKey(), false);
 		
 		// Also, amend the current session events.
