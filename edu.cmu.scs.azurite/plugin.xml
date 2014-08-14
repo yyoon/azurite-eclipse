@@ -26,13 +26,12 @@
             restorable="false">
       </view>
       <view
-            allowMultiple="false"
             category="edu.cmu.scs.azurite"
             class="edu.cmu.scs.azurite.views.ReviewViewPart"
             icon="icons/time_machine.png"
             id="edu.cmu.scs.azurite.views.ReviewViewPart"
             name="Review"
-            restorable="true">
+            restorable="false">
       </view>
    </extension>
    <extension
