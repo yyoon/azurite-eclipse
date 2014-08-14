@@ -1284,7 +1284,7 @@
             textPreferenceKey="edu.cmu.scs.azurite.delete.text"
             textPreferenceValue="true"
             textStylePreferenceKey="edu.cmu.scs.azurite.delete.textStyle"
-            textStylePreferenceValue="BOX"
+            textStylePreferenceValue="IBEAM"
             verticalRulerPreferenceKey="edu.cmu.scs.azurite.delete.verticalRuler"
             verticalRulerPreferenceValue="true">
       </specification>
