@@ -75,7 +75,7 @@ public class ReviewViewer extends Composite {
 							// TODO: Implement
 						}
 				});
-		mRevertAction.setId("historyDiffRevert");
+		mRevertAction.setId("reviewRevert");
 		mRevertAction.setMode(ActionContributionItem.MODE_FORCE_TEXT);
 		
 		mPrevAction = new ActionContributionItem(
@@ -92,7 +92,7 @@ public class ReviewViewer extends Composite {
 							}
 						}
 				});
-		mPrevAction.setId("historyDiffPrev");
+		mPrevAction.setId("reviewPrev");
 		mPrevAction.setMode(ActionContributionItem.MODE_FORCE_TEXT);
 		
 		mNextAction = new ActionContributionItem(
@@ -110,7 +110,7 @@ public class ReviewViewer extends Composite {
 							}
 						}
 				});
-		mNextAction.setId("historyDiffNext");
+		mNextAction.setId("reviewNext");
 		mNextAction.setMode(ActionContributionItem.MODE_FORCE_TEXT);
 	}
 
@@ -122,7 +122,7 @@ public class ReviewViewer extends Composite {
 				v.getControl().setData(CompareUI.COMPARE_VIEWER_TITLE, mTitle);
 				
 				ToolBarManager tbm = CompareViewerSwitchingPane.getToolBarManager(this);
-				String navGroupId = "historyDiffNav";
+				String navGroupId = "reviewNav";
 				
 				// Check if the actions are added or not.
 				boolean added = false;
