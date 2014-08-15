@@ -62,9 +62,6 @@ public class ReviewViewer extends Composite {
 		createActions();
 		
 		mCompareViewerSwitchingPane = createCompareView(this);
-		
-		int historySize = RuntimeHistoryManager.getInstance().getEntireHistory().size();
-		selectVersion(historySize - 1, historySize);
 	}
 	
 	private void createActions() {
