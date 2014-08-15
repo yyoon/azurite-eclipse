@@ -873,7 +873,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		// Add the operations
 		StringBuilder builder = new StringBuilder();
 		
-		long start = System.currentTimeMillis();
+//		long start = System.currentTimeMillis();
 		
 		for (ICommand command : events.getCommands()) {
 			if (!(command instanceof BaseDocumentChangeEvent)) {
@@ -891,13 +891,13 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 			}
 		}
 		
-		long end = System.currentTimeMillis();
-		System.out.println("Building String: " + (end - start) + "ms");
+//		long end = System.currentTimeMillis();
+//		System.out.println("Building String: " + (end - start) + "ms");
 		
-		start = System.currentTimeMillis();
+//		start = System.currentTimeMillis();
 		browser.execute(builder.toString());
-		end = System.currentTimeMillis();
-		System.out.println("Executing String: " + (end - start) + "ms");
+//		end = System.currentTimeMillis();
+//		System.out.println("Executing String: " + (end - start) + "ms");
 		
 		// Restore the last file
 		browser.execute("popCurrentFile();");
