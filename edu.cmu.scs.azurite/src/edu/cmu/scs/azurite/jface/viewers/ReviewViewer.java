@@ -27,9 +27,11 @@ import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.compare.AzuriteCompareInput;
 import edu.cmu.scs.azurite.compare.SimpleCompareItem;
 import edu.cmu.scs.azurite.model.FileKey;
+import edu.cmu.scs.azurite.model.OperationId;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.azurite.plugin.Activator;
 import edu.cmu.scs.azurite.util.Utilities;
+import edu.cmu.scs.azurite.views.TimelineViewPart;
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 
 public class ReviewViewer extends Composite {
@@ -197,8 +199,13 @@ public class ReviewViewer extends Composite {
 		IEditorPart editor = Utilities.openEditorWithKey(key);
 		Utilities.moveCursorToChangeLocation(editor, involvedDCs.get(0));
 		
-		// TODO Select these operations.
-		
+		// Select these operations.
+		List<OperationId> ids = OperationId.getOperationIdsFromRuntimeDCs(involvedDCs);
+		TimelineViewPart timelineViewPart = TimelineViewPart.getInstance();
+		if (timelineViewPart != null) {
+			timelineViewPart.addSelection(ids, true);
+		}
+
 		// Get the IDocument object for the file key.
 		IDocument doc = Utilities.findDocumentForKey(key);
 		
