@@ -17,6 +17,7 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IViewPart;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchWindow;
@@ -193,7 +194,8 @@ public class ReviewViewer extends Composite {
 		int versionBeginForKey = versionEndForKey - size;
 		
 		// Jump to the file
-		Utilities.openEditorWithKey(key);
+		IEditorPart editor = Utilities.openEditorWithKey(key);
+		Utilities.moveCursorToChangeLocation(editor, involvedDCs.get(0));
 		
 		// TODO Select these operations.
 		
