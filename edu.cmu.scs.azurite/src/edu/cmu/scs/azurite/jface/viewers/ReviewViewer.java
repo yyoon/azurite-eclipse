@@ -1,6 +1,7 @@
 package edu.cmu.scs.azurite.jface.viewers;
 
 import java.util.List;
+import java.util.Map;
 
 import org.eclipse.compare.CompareConfiguration;
 import org.eclipse.compare.CompareUI;
@@ -29,6 +30,7 @@ import edu.cmu.scs.azurite.compare.SimpleCompareItem;
 import edu.cmu.scs.azurite.model.FileKey;
 import edu.cmu.scs.azurite.model.OperationId;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
+import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
 import edu.cmu.scs.azurite.plugin.Activator;
 import edu.cmu.scs.azurite.util.Utilities;
 import edu.cmu.scs.azurite.views.TimelineViewPart;
@@ -72,7 +74,13 @@ public class ReviewViewer extends Composite {
 				new Action("Revert", Activator.getImageDescriptor("icons/old_edit_undo.png")) {
 						@Override
 						public void run() {
-							// TODO: Implement
+							RuntimeHistoryManager manager = RuntimeHistoryManager.getInstance();
+							List<RuntimeDC> entireHistory = manager.getEntireHistory();
+							List<RuntimeDC> involvedDCs = entireHistory.subList(mVersionBegin, mVersionEnd);
+							List<OperationId> ids = OperationId.getOperationIdsFromRuntimeDCs(involvedDCs);
+							
+							Map<FileKey, List<RuntimeDC>> params = manager.extractFileDCMapFromOperationIds(ids);
+							SelectiveUndoEngine.getInstance().doSelectiveUndoOnMultipleFiles(params);
 						}
 				});
 		mRevertAction.setId("reviewRevert");
