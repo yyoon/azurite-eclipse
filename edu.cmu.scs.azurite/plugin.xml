@@ -25,6 +25,14 @@
             name="Code History Diff"
             restorable="false">
       </view>
+      <view
+            category="edu.cmu.scs.azurite"
+            class="edu.cmu.scs.azurite.views.ReviewViewPart"
+            icon="icons/time_machine.png"
+            id="edu.cmu.scs.azurite.views.ReviewViewPart"
+            name="Review"
+            restorable="false">
+      </view>
    </extension>
    <extension
          point="org.eclipse.ui.startup">
@@ -352,6 +360,10 @@
             </separator>
             <command
                   commandId="edu.cmu.scs.azurite.ui.commands.interactiveSelectiveUndoCommand"
+                  style="push">
+            </command>
+            <command
+                  commandId="edu.cmu.scs.azurite.ui.commands.launchReviewCommand"
                   style="push">
             </command>
             <command
@@ -753,6 +765,10 @@
             id="edu.cmu.scs.azurite.ui.commands.tagMarkerCommand"
             name="Tag the Marker Position">
       </command>
+      <command
+            id="edu.cmu.scs.azurite.ui.commands.launchReviewCommand"
+            name="Review Recent Changes">
+      </command>
    </extension>
    <extension
          point="org.eclipse.ui.bindings">
@@ -823,6 +839,10 @@
       <image
             commandId="edu.cmu.scs.azurite.ui.commands.tagMarkerCommand"
             icon="icons/tag.png">
+      </image>
+      <image
+            commandId="edu.cmu.scs.azurite.ui.commands.launchReviewCommand"
+            icon="icons/time_machine.png">
       </image>
    </extension>
    <extension
@@ -1112,6 +1132,10 @@
                   definitionId="markerVisible">
             </reference>
          </enabledWhen>
+      </handler>
+      <handler
+            class="edu.cmu.scs.azurite.ui.handlers.LaunchReviewHandler"
+            commandId="edu.cmu.scs.azurite.ui.commands.launchReviewCommand">
       </handler>
    </extension>
    <extension

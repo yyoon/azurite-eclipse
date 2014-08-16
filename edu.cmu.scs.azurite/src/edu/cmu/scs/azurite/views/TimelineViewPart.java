@@ -25,12 +25,10 @@ import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.Separator;
 import org.eclipse.jface.resource.ImageDescriptor;
-import org.eclipse.jface.text.ITextViewerExtension5;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.SWTException;
 import org.eclipse.swt.browser.Browser;
 import org.eclipse.swt.browser.BrowserFunction;
-import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IEditorInput;
@@ -538,21 +536,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 				long sid = ((Number)arguments[2]).longValue();
 				long id = ((Number)arguments[3]).longValue();
 				
-				File fileToOpen = new File(key.getFilePath());
-				
-				IEditorPart editor = null;
-				if (fileToOpen.exists() && fileToOpen.isFile()) {
-				    IFileStore fileStore = EFS.getLocalFileSystem().getStore(fileToOpen.toURI());
-				    IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
-				 
-				    try {
-				        editor = IDE.openEditorOnFileStore( page, fileStore );
-				    } catch ( PartInitException e ) {
-				        //Put your exception handler here if you wish to
-				    }
-				} else {
-				    //Do something if the file does not exist
-				}
+				IEditorPart editor = edu.cmu.scs.azurite.util.Utilities.openEditorWithKey(key);
 
 				// Move to the location.
 				RuntimeDC runtimeDC = RuntimeHistoryManager.getInstance()
@@ -563,31 +547,13 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 					return RETURN_CODE_FAIL;
 				}
 				
-				if (editor != null) {
-					final ITextViewerExtension5 textViewerExt5 = Utilities.getTextViewerExtension5(editor);
-					
-					final int offset = runtimeDC.getAllSegments().get(0).getOffset();
-					final StyledText styledText = Utilities.getStyledText(editor);
-					UIJob job = new UIJob("Jump to the Code") {
-						
-						@Override
-						public IStatus runInUIThread(IProgressMonitor monitor) {
-							styledText.setSelection(textViewerExt5.modelOffset2WidgetOffset(offset));
-							styledText.setFocus();
-							styledText.showSelection();
-							return Status.OK_STATUS;
-						}
-					};
-					
-					job.schedule();
-				}
+				edu.cmu.scs.azurite.util.Utilities.moveCursorToChangeLocation(editor, runtimeDC);
 				
 				return RETURN_CODE_OK;
 			} catch (Exception e) {
 				return RETURN_CODE_FAIL;
 			}
 		}
-		
 	}
 	
 	class GetInfoFunction extends BrowserFunction {
