@@ -9,6 +9,7 @@ import org.eclipse.jface.preference.PreferencePage;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Label;
@@ -28,6 +29,7 @@ import edu.cmu.scs.azurite.views.TimelineViewPart;
 
 public class AzuritePreferencePage extends PreferencePage implements IWorkbenchPreferencePage {
 	
+	private Button buttonMarker;
 	private Table table;
 
 	@Override
@@ -37,6 +39,10 @@ public class AzuritePreferencePage extends PreferencePage implements IWorkbenchP
 		comp.setLayoutData(new GridData(GridData.FILL_BOTH));
 		
 		IPreferenceStore store = Activator.getDefault().getPreferenceStore();
+		
+		this.buttonMarker = new Button(comp, SWT.CHECK);
+		this.buttonMarker.setText("Enable code highlighting for the selected rectangles");
+		this.buttonMarker.setSelection(store.getBoolean(Initializer.Pref_EnableMarkers));
 		
 		Label label = new Label(comp, SWT.NONE);
 		label.setText("Events to be displayed in the Timeline View");
@@ -115,6 +121,7 @@ public class AzuritePreferencePage extends PreferencePage implements IWorkbenchP
 	@Override
 	protected void performDefaults() {
 		IPreferenceStore store = Activator.getDefault().getPreferenceStore();
+		this.buttonMarker.setSelection(store.getDefaultBoolean(Initializer.Pref_EnableMarkers));
 		readIntoTable(store.getDefaultString(Initializer.Pref_EventDisplaySettings));
 		
 		super.performDefaults();
@@ -123,6 +130,7 @@ public class AzuritePreferencePage extends PreferencePage implements IWorkbenchP
 	@Override
 	public boolean performOk() {
 		IPreferenceStore store = Activator.getDefault().getPreferenceStore();
+		store.setValue(Initializer.Pref_EnableMarkers, this.buttonMarker.getSelection());
 		store.setValue(Initializer.Pref_EventDisplaySettings, getStringFromTable());
 		
 		RuntimeHistoryManager.updateTimelineEventsList();
