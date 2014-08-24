@@ -1,5 +1,6 @@
 package edu.cmu.scs.azurite.model;
 
+import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -8,18 +9,21 @@ import java.util.Map;
 import java.util.Set;
 
 import org.eclipse.core.runtime.ListenerList;
+import org.eclipse.jface.preference.IPreferenceStore;
+import org.eclipse.ui.IMemento;
+import org.eclipse.ui.WorkbenchException;
+import org.eclipse.ui.XMLMemento;
 
 import edu.cmu.scs.azurite.commands.diff.IDiffDC;
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.commands.runtime.Segment;
-import edu.cmu.scs.fluorite.commands.AnnotateCommand;
+import edu.cmu.scs.azurite.plugin.Activator;
+import edu.cmu.scs.azurite.preferences.Initializer;
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
-import edu.cmu.scs.fluorite.commands.EclipseCommand;
 import edu.cmu.scs.fluorite.commands.FileOpenCommand;
 import edu.cmu.scs.fluorite.commands.ICommand;
-import edu.cmu.scs.fluorite.commands.JUnitCommand;
+import edu.cmu.scs.fluorite.commands.ITypeOverridable;
 import edu.cmu.scs.fluorite.commands.Replace;
-import edu.cmu.scs.fluorite.commands.RunCommand;
 import edu.cmu.scs.fluorite.model.CommandExecutionListener;
 import edu.cmu.scs.fluorite.model.DocumentChangeListener;
 import edu.cmu.scs.fluorite.model.EventRecorder;
@@ -49,6 +53,8 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 	 */
 	private List<RuntimeDC> mEntireHistory;
 	
+	private static Map<String, Boolean> sEventDisplayMap;
+	
 	/**
 	 * Basic constructor. Only use this public constructor for testing purposes!
 	 * Otherwise, use <code>getInstance</code> static method instead.
@@ -66,6 +72,37 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 		mCurrentSessionEvents = new Events(Collections.<ICommand> emptyList(),
 				"Current Session", Long.toString(startTimestamp), "",
 				startTimestamp);
+	}
+	
+	public static void updateEventDisplayMap() {
+		sEventDisplayMap = new HashMap<String, Boolean>();
+		
+		if (Activator.getDefault() != null && Activator.getDefault().getPreferenceStore() != null) {
+			IPreferenceStore store = Activator.getDefault().getPreferenceStore();
+			String str = store.getString(Initializer.Pref_EventDisplaySettings);
+			if (str == null) {
+				str = store.getDefaultString(Initializer.Pref_EventDisplaySettings);
+			}
+			
+			if (str != null) {
+				try (StringReader reader = new StringReader(str)) {
+					IMemento root = XMLMemento.createReadRoot(reader);
+					for (IMemento child : root.getChildren()) {
+						sEventDisplayMap.put(child.getString("type"), child.getBoolean("enabled"));
+					}
+				} catch (WorkbenchException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+	
+	private static Map<String, Boolean> getEventDisplayMap() {
+		if (sEventDisplayMap == null) {
+			updateEventDisplayMap();
+		}
+		
+		return Collections.unmodifiableMap(sEventDisplayMap);
 	}
 
 	private void clearData() {
@@ -727,34 +764,11 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 	}
 
 	public static boolean shouldCommandBeDisplayed(ICommand command) {
-		if (command instanceof JUnitCommand) {
-			return true;
-		} else if (command instanceof RunCommand) {
-			return true;
-		} else if (command instanceof AnnotateCommand) {
-			return true;
-		} else if (command instanceof EclipseCommand) {
-			EclipseCommand eclipseCommand = (EclipseCommand) command;
-			switch (eclipseCommand.getCommandID()) {
-				case "org.eclipse.ui.file.save":
-					
-				// Egit commands
-				case "org.eclipse.egit.ui.team.Commit":
-				case "org.eclipse.egit.ui.team.Pull":
-				case "org.eclipse.egit.ui.team.Fetch":
-				case "org.eclipse.egit.ui.team.Push":
-				case "org.eclipse.egit.ui.team.Merge":
-				case "org.eclipse.egit.ui.team.Reset":
-				case "org.eclipse.egit.ui.team.Rebase":
-				case "org.eclipse.egit.ui.CheckoutCommand":
-					return true;
-					
-				default:
-					return false;
-			}
-		}
+		String type = command instanceof ITypeOverridable
+				? ((ITypeOverridable) command).getTypeForDisplay()
+				: command.getCommandType();
 		
-		return false;
+		return getEventDisplayMap().containsKey(type);
 	}
 
 	@Override

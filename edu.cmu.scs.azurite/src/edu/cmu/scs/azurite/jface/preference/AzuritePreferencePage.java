@@ -21,6 +21,7 @@ import org.eclipse.ui.IWorkbenchPreferencePage;
 import org.eclipse.ui.WorkbenchException;
 import org.eclipse.ui.XMLMemento;
 
+import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.azurite.plugin.Activator;
 import edu.cmu.scs.azurite.preferences.Initializer;
 
@@ -122,6 +123,8 @@ public class AzuritePreferencePage extends PreferencePage implements IWorkbenchP
 	public boolean performOk() {
 		IPreferenceStore store = Activator.getDefault().getPreferenceStore();
 		store.setValue(Initializer.Pref_EventDisplaySettings, getStringFromTable());
+		
+		RuntimeHistoryManager.updateEventDisplayMap();
 		
 		return super.performOk();
 	}
