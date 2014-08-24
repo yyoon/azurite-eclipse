@@ -25,7 +25,7 @@ public class Initializer extends AbstractPreferenceInitializer {
 		{ "RunCommand",                          "green",        "images/event_icons/run_exc.gif",    "true" },
 		{ "Tag",                                 "gold",         "images/event_icons/tag.png",        "true" },
 		{ "Annotation",                          "goldenrod",    "images/event_icons/annotation.png", "true" },
-		{ "org.eclipse.ui.file.save",            "lightskyblue", "images/event_icons/save_edit.gif",  "true" },
+		{ "org.eclipse.ui.file.save",            "lightskyblue", "images/event_icons/save_edit.gif",  "false" },
 		{ "org.eclipse.egit.ui.team.Commit",     "goldenrod",    "images/event_icons/commit.gif",     "true" },
 		{ "org.eclipse.egit.ui.team.Pull",       "goldenrod",    "images/event_icons/pull.gif",       "true" },
 		{ "org.eclipse.egit.ui.team.Fetch",      "goldenrod",    "images/event_icons/fetch.gif",      "true" },
