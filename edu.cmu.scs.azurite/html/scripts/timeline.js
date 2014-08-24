@@ -150,85 +150,20 @@ eventDraw.y1Func = function() {
 	return -(getSvgHeight() - TICKS_HEIGHT - EVENTS_HEIGHT);
 };
 eventDraw.colorFunc = function(d) {
-	switch (d.type) {
-		case 'JUnitCommand':
-			return 'green';
-
-		case 'RunCommand':
-			return 'green';
-
-		case 'Annotation':
-			return 'goldenrod';
-
-		case 'org.eclipse.ui.file.save':
-			return 'lightskyblue';
-
-		case 'org.eclipse.egit.ui.team.Commit':
-		case 'org.eclipse.egit.ui.team.Pull':
-		case 'org.eclipse.egit.ui.team.Fetch':
-		case 'org.eclipse.egit.ui.team.Push':
-		case 'org.eclipse.egit.ui.team.Merge':
-		case 'org.eclipse.egit.ui.team.Reset':
-		case 'org.eclipse.egit.ui.team.Rebase':
-		case 'org.eclipse.egit.ui.CheckoutCommand':
-			return 'goldenrod';
-
-		default:
-			return 'gold';
-	}
+	return azurite.eventColorFunc(d.type);
 };
+
 eventDraw.iconFunc = function(d) {
-	switch (d.type) {
-		case 'JUnitCommand':
-		case 'JUnitCommand(true)':
-			return 'images/event_icons/junitsucc.gif';
+	return azurite.eventIconFunc(d.type);
+}
 
-		case 'JUnitCommand(false)':
-			return 'images/event_icons/juniterr.gif';
-
-		case 'RunCommand':
-			return 'images/event_icons/run_exc.gif';
-
-		case 'Tag':
-			return 'images/event_icons/tag.png';
-
-		case 'Annotation':
-			return 'images/event_icons/annotation.png';
-
-		case 'org.eclipse.ui.file.save':
-			return 'images/event_icons/save_edit.gif';
-
-		case 'org.eclipse.egit.ui.team.Commit':
-			return 'images/event_icons/commit.gif';
-
-		case 'org.eclipse.egit.ui.team.Pull':
-			return 'images/event_icons/pull.gif';
-
-		case 'org.eclipse.egit.ui.team.Fetch':
-			return 'images/event_icons/fetch.gif';
-
-		case 'org.eclipse.egit.ui.team.Push':
-			return 'images/event_icons/push.gif';
-
-		case 'org.eclipse.egit.ui.team.Merge':
-			return 'images/event_icons/merge.gif';
-
-		case 'org.eclipse.egit.ui.team.Reset':
-			return 'images/event_icons/reset.gif';
-
-		case 'org.eclipse.egit.ui.team.Rebase':
-			return 'images/event_icons/rebase.gif';
-
-		case 'org.eclipse.egit.ui.CheckoutCommand':
-			return 'images/event_icons/checkout.gif';
-
-		default:
-			return 'images/event_icons/error.png';
-	}
-};
 eventDraw.iconXFunc = function(d) {
 	return timestampToPixel(d.dt) - EVENT_ICON_WIDTH / 2;
 };
+
+eventDraw.displayFunc = function(d) {
+	return azurite.eventDisplayFunc(d.type);
+}
 
 var timeTickDraw = {};
 timeTickDraw.xFunc = function(d) {
@@ -1044,7 +979,8 @@ function addEvent(sid, id, t, dt, type, desc) {
 		.attr('y1', eventDraw.y1Func)
 		.attr('y2', EVENTS_HEIGHT / 2)
 		.attr('stroke-width', EVENT_WIDTH)
-		.attr('stroke', eventDraw.colorFunc);
+		.attr('stroke', eventDraw.colorFunc)
+		.attr('display', eventDraw.displayFunc);
 
 	// Add icon. The size should be 16x16
 	var eventIcon = svg.subEvents.append('image').datum(newEvent);
@@ -1054,7 +990,8 @@ function addEvent(sid, id, t, dt, type, desc) {
 		.attr('x', eventDraw.iconXFunc)
 		.attr('y', (EVENTS_HEIGHT - EVENT_ICON_HEIGHT) / 2)
 		.attr('width', EVENT_ICON_WIDTH)
-		.attr('height', EVENT_ICON_HEIGHT);
+		.attr('height', EVENT_ICON_HEIGHT)
+		.attr('display', eventDraw.displayFunc);
 
 	$(eventIcon.node()).tipsy({
 		gravity: 'n',
@@ -2768,9 +2705,12 @@ function getAllFilesEditedInRange() {
 function updateEvents() {
 	svg.subEvents.selectAll('.event_line')
 		.attr('x1', eventDraw.xFunc)
-		.attr('x2', eventDraw.xFunc);
+		.attr('x2', eventDraw.xFunc)
+		.attr('stroke', eventDraw.colorFunc)
+		.attr('display', eventDraw.displayFunc);
 	svg.subEvents.selectAll('.event_icon')
-		.attr('x', eventDraw.iconXFunc);
+		.attr('x', eventDraw.iconXFunc)
+		.attr('display', eventDraw.displayFunc);
 }
 
 function showMarkerAtPixel(pixel, notify, noupdate) {

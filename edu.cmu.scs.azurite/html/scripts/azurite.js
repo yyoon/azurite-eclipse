@@ -19,6 +19,10 @@ try {
     azurite.eclipseCommand = __AZURITE__eclipseCommand;
 	
 	azurite.notifySelectionChanged = __AZURITE__notifySelectionChanged;
+	
+	azurite.eventColorFunc = __AZURITE__eventColorFunc;
+	azurite.eventIconFunc = __AZURITE__eventIconFunc;
+	azurite.eventDisplayFunc = __AZURITE__eventDisplayFunc;
     
     azurite.log = __AZURITE__log;
 } catch (e) {
@@ -75,6 +79,95 @@ try {
 	
 	azurite.notifySelectionChanged = function () {
 		alertFn('azurite.notifySelectionChanged() call');
+	};
+	
+	azurite.eventColorFunc = function(d) {
+		alertFn('azurite.eventColorFunc() call');
+		
+		switch (d.type) {
+			case 'JUnitCommand':
+				return 'green';
+
+			case 'RunCommand':
+				return 'green';
+
+			case 'Annotation':
+				return 'goldenrod';
+
+			case 'org.eclipse.ui.file.save':
+				return 'lightskyblue';
+
+			case 'org.eclipse.egit.ui.team.Commit':
+			case 'org.eclipse.egit.ui.team.Pull':
+			case 'org.eclipse.egit.ui.team.Fetch':
+			case 'org.eclipse.egit.ui.team.Push':
+			case 'org.eclipse.egit.ui.team.Merge':
+			case 'org.eclipse.egit.ui.team.Reset':
+			case 'org.eclipse.egit.ui.team.Rebase':
+			case 'org.eclipse.egit.ui.CheckoutCommand':
+				return 'goldenrod';
+
+			default:
+				return 'gold';
+		}
+	};
+	
+	azurite.eventIconFunc = function(d) {
+		alertFn('azurite.eventIconFunc() call');
+		
+		switch (d.type) {
+			case 'JUnitCommand':
+			case 'JUnitCommand(true)':
+				return 'images/event_icons/junitsucc.gif';
+
+			case 'JUnitCommand(false)':
+				return 'images/event_icons/juniterr.gif';
+
+			case 'RunCommand':
+				return 'images/event_icons/run_exc.gif';
+
+			case 'Tag':
+				return 'images/event_icons/tag.png';
+
+			case 'Annotation':
+				return 'images/event_icons/annotation.png';
+
+			case 'org.eclipse.ui.file.save':
+				return 'images/event_icons/save_edit.gif';
+
+			case 'org.eclipse.egit.ui.team.Commit':
+				return 'images/event_icons/commit.gif';
+
+			case 'org.eclipse.egit.ui.team.Pull':
+				return 'images/event_icons/pull.gif';
+
+			case 'org.eclipse.egit.ui.team.Fetch':
+				return 'images/event_icons/fetch.gif';
+
+			case 'org.eclipse.egit.ui.team.Push':
+				return 'images/event_icons/push.gif';
+
+			case 'org.eclipse.egit.ui.team.Merge':
+				return 'images/event_icons/merge.gif';
+
+			case 'org.eclipse.egit.ui.team.Reset':
+				return 'images/event_icons/reset.gif';
+
+			case 'org.eclipse.egit.ui.team.Rebase':
+				return 'images/event_icons/rebase.gif';
+
+			case 'org.eclipse.egit.ui.CheckoutCommand':
+				return 'images/event_icons/checkout.gif';
+
+			default:
+				return 'images/event_icons/error.png';
+		}
+	};
+	
+	azurite.eventDisplayFunc = function(d) {
+		alertFn('azurite.eventDisplayFunc() call');
+		
+		return true;
 	};
     
     azurite.log = function (msg) {
