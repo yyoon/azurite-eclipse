@@ -1339,5 +1339,13 @@
             verticalRulerPreferenceValue="true">
       </specification>
    </extension>
+   <extension
+         point="org.eclipse.ui.preferencePages">
+      <page
+            class="edu.cmu.scs.azurite.jface.preference.AzuritePreferencePage"
+            id="edu.cmu.scs.azurite.jface.preference.azuritePreferencePage"
+            name="Azurite">
+      </page>
+   </extension>
 
 </plugin>
