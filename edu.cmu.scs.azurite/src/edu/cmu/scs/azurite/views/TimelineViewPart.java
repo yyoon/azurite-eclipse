@@ -57,7 +57,6 @@ import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
 import edu.cmu.scs.azurite.plugin.Activator;
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 import edu.cmu.scs.fluorite.commands.Delete;
-import edu.cmu.scs.fluorite.commands.EclipseCommand;
 import edu.cmu.scs.fluorite.commands.FileOpenCommand;
 import edu.cmu.scs.fluorite.commands.ICommand;
 import edu.cmu.scs.fluorite.commands.ITimestampOverridable;
@@ -810,8 +809,6 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		String type = null;
 		if (event instanceof ITypeOverridable) {
 			type = ((ITypeOverridable) event).getTypeForDisplay();
-		} else if ("EclipseCommand".equals(event.getCommandType())) {
-			type = ((EclipseCommand) event).getCommandID();
 		} else {
 			type = event.getCommandType();
 		}
