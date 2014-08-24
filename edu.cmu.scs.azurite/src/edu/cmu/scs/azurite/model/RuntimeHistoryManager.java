@@ -53,7 +53,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 	 */
 	private List<RuntimeDC> mEntireHistory;
 	
-	private static Map<String, Boolean> sEventDisplayMap;
+	private static List<String> sTimelineEvents;
 	
 	/**
 	 * Basic constructor. Only use this public constructor for testing purposes!
@@ -74,8 +74,8 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 				startTimestamp);
 	}
 	
-	public static void updateEventDisplayMap() {
-		sEventDisplayMap = new HashMap<String, Boolean>();
+	public static void updateTimelineEventsList() {
+		sTimelineEvents = new ArrayList<String>();
 		
 		if (Activator.getDefault() != null && Activator.getDefault().getPreferenceStore() != null) {
 			IPreferenceStore store = Activator.getDefault().getPreferenceStore();
@@ -88,7 +88,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 				try (StringReader reader = new StringReader(str)) {
 					IMemento root = XMLMemento.createReadRoot(reader);
 					for (IMemento child : root.getChildren()) {
-						sEventDisplayMap.put(child.getString("type"), child.getBoolean("enabled"));
+						sTimelineEvents.add(child.getString("type"));
 					}
 				} catch (WorkbenchException e) {
 					e.printStackTrace();
@@ -97,12 +97,12 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 		}
 	}
 	
-	private static Map<String, Boolean> getEventDisplayMap() {
-		if (sEventDisplayMap == null) {
-			updateEventDisplayMap();
+	private static List<String> getTimelineEvents() {
+		if (sTimelineEvents == null) {
+			updateTimelineEventsList();
 		}
 		
-		return Collections.unmodifiableMap(sEventDisplayMap);
+		return Collections.unmodifiableList(sTimelineEvents);
 	}
 
 	private void clearData() {
@@ -768,7 +768,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 				? ((ITypeOverridable) command).getTypeForDisplay()
 				: command.getCommandType();
 		
-		return getEventDisplayMap().containsKey(type);
+		return getTimelineEvents().contains(type);
 	}
 
 	@Override

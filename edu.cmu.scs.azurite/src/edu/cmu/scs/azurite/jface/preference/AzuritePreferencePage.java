@@ -24,6 +24,7 @@ import org.eclipse.ui.XMLMemento;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.azurite.plugin.Activator;
 import edu.cmu.scs.azurite.preferences.Initializer;
+import edu.cmu.scs.azurite.views.TimelineViewPart;
 
 public class AzuritePreferencePage extends PreferencePage implements IWorkbenchPreferencePage {
 	
@@ -124,7 +125,11 @@ public class AzuritePreferencePage extends PreferencePage implements IWorkbenchP
 		IPreferenceStore store = Activator.getDefault().getPreferenceStore();
 		store.setValue(Initializer.Pref_EventDisplaySettings, getStringFromTable());
 		
-		RuntimeHistoryManager.updateEventDisplayMap();
+		RuntimeHistoryManager.updateTimelineEventsList();
+		TimelineViewPart.updateTimelineEventColorMap();
+		TimelineViewPart.updateTimelineEventIconMap();
+		TimelineViewPart.updateTimelineEventDisplayMap();
+		TimelineViewPart.getInstance().redrawEvents();
 		
 		return super.performOk();
 	}
