@@ -25,6 +25,14 @@
             name="Code History Diff"
             restorable="false">
       </view>
+      <view
+            category="edu.cmu.scs.azurite"
+            class="edu.cmu.scs.azurite.views.ReviewViewPart"
+            icon="icons/time_machine.png"
+            id="edu.cmu.scs.azurite.views.ReviewViewPart"
+            name="Review"
+            restorable="false">
+      </view>
    </extension>
    <extension
          point="org.eclipse.ui.startup">
@@ -355,6 +363,10 @@
                   style="push">
             </command>
             <command
+                  commandId="edu.cmu.scs.azurite.ui.commands.launchReviewCommand"
+                  style="push">
+            </command>
+            <command
                   commandId="edu.cmu.scs.azurite.ui.commands.historySearchCommand"
                   style="push">
             </command>
@@ -370,6 +382,14 @@
                   commandId="edu.cmu.scs.fluorite.annotateCommand"
                   style="push"
                   tooltip="Please help the researcher by describing the intent of your recent backtracking / code editing">
+            </command>
+            <command
+                  commandId="edu.cmu.scs.azurite.ui.commands.tagNowCommand"
+                  style="push">
+            </command>
+            <command
+                  commandId="edu.cmu.scs.azurite.ui.commands.tagMarkerCommand"
+                  style="push">
             </command>
             <separator
                   name="edu.cmu.scs.azurite.separator5"
@@ -649,6 +669,16 @@
          </commandParameter>
       </command>
       <command
+            defaultHandler="edu.cmu.scs.azurite.ui.handlers.UndoAllFilesToThisPointInteractivelyHandler"
+            id="edu.cmu.scs.azurite.ui.commands.undoAllFilesToThisPointInteractively"
+            name="Undo All Files to This Point Interactively">
+         <commandParameter
+               id="edu.cmu.scs.azurite.ui.commands.undoAllFilesToThisPointInteractively.absTimestamp"
+               name="Absolute timestamp of the base point"
+               optional="false">
+         </commandParameter>
+      </command>
+      <command
             defaultHandler="edu.cmu.scs.azurite.ui.handlers.UndoCurrentFileToThisPointHandler"
             id="edu.cmu.scs.azurite.ui.commands.undoCurrentFileToThisPoint"
             name="Undo Current File to This Point">
@@ -735,6 +765,20 @@
             id="edu.cmu.scs.azurite.ui.commands.aboutCommand"
             name="About Azurite...">
       </command>
+      <command
+            description="Tag the current moment so that it can be referred back later"
+            id="edu.cmu.scs.azurite.ui.commands.tagNowCommand"
+            name="Tag Now">
+      </command>
+      <command
+            description="Tag the marker position so that it can be referred back later"
+            id="edu.cmu.scs.azurite.ui.commands.tagMarkerCommand"
+            name="Tag the Marker Position">
+      </command>
+      <command
+            id="edu.cmu.scs.azurite.ui.commands.launchReviewCommand"
+            name="Review Recent Changes">
+      </command>
    </extension>
    <extension
          point="org.eclipse.ui.bindings">
@@ -797,6 +841,18 @@
       <image
             commandId="edu.cmu.scs.azurite.ui.commands.selectedRange"
             icon="icons/selected_range.png">
+      </image>
+      <image
+            commandId="edu.cmu.scs.azurite.ui.commands.tagNowCommand"
+            icon="icons/tag.png">
+      </image>
+      <image
+            commandId="edu.cmu.scs.azurite.ui.commands.tagMarkerCommand"
+            icon="icons/tag.png">
+      </image>
+      <image
+            commandId="edu.cmu.scs.azurite.ui.commands.launchReviewCommand"
+            icon="icons/time_machine.png">
       </image>
    </extension>
    <extension
@@ -1074,6 +1130,23 @@
             class="edu.cmu.scs.azurite.ui.handlers.AboutHandler"
             commandId="edu.cmu.scs.azurite.ui.commands.aboutCommand">
       </handler>
+      <handler
+            class="edu.cmu.scs.azurite.ui.handlers.TagNowHandler"
+            commandId="edu.cmu.scs.azurite.ui.commands.tagNowCommand">
+      </handler>
+      <handler
+            class="edu.cmu.scs.azurite.ui.handlers.TagMarkerHandler"
+            commandId="edu.cmu.scs.azurite.ui.commands.tagMarkerCommand">
+         <enabledWhen>
+            <reference
+                  definitionId="markerVisible">
+            </reference>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="edu.cmu.scs.azurite.ui.handlers.LaunchReviewHandler"
+            commandId="edu.cmu.scs.azurite.ui.commands.launchReviewCommand">
+      </handler>
    </extension>
    <extension
          point="org.eclipse.core.expressions.definitions">
@@ -1120,6 +1193,13 @@
                property="edu.cmu.scs.azurite.selection.rangeSelected">
          </test>
       </definition>
+      <definition
+            id="markerVisible">
+         <test
+               forcePluginActivation="true"
+               property="edu.cmu.scs.azurite.selection.markerVisible">
+         </test>
+      </definition>
    </extension>
    <extension
          point="org.eclipse.core.expressions.propertyTesters">
@@ -1134,7 +1214,7 @@
             class="edu.cmu.scs.azurite.expressions.TimelineSelectionPropertyTester"
             id="edu.cmu.scs.azurite.timelineSelectionPropertyTester"
             namespace="edu.cmu.scs.azurite.selection"
-            properties="rectSelected,singleRectSelected,multiRectsSelected,rangeSelected"
+            properties="rectSelected,singleRectSelected,multiRectsSelected,rangeSelected,markerVisible"
             type="java.lang.Object">
       </propertyTester>
    </extension>
@@ -1238,7 +1318,7 @@
             textPreferenceKey="edu.cmu.scs.azurite.delete.text"
             textPreferenceValue="true"
             textStylePreferenceKey="edu.cmu.scs.azurite.delete.textStyle"
-            textStylePreferenceValue="BOX"
+            textStylePreferenceValue="IBEAM"
             verticalRulerPreferenceKey="edu.cmu.scs.azurite.delete.verticalRuler"
             verticalRulerPreferenceValue="true">
       </specification>
@@ -1268,6 +1348,14 @@
             verticalRulerPreferenceKey="edu.cmu.scs.azurite.replace.verticalRuler"
             verticalRulerPreferenceValue="true">
       </specification>
+   </extension>
+   <extension
+         point="org.eclipse.ui.preferencePages">
+      <page
+            class="edu.cmu.scs.azurite.jface.preference.AzuritePreferencePage"
+            id="edu.cmu.scs.azurite.jface.preference.azuritePreferencePage"
+            name="Azurite">
+      </page>
    </extension>
 
 </plugin>

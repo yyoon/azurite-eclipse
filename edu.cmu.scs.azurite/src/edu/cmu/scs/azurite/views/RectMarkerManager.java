@@ -12,6 +12,7 @@ import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.Path;
+import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.text.IDocument;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
@@ -19,6 +20,8 @@ import edu.cmu.scs.azurite.commands.runtime.Segment;
 import edu.cmu.scs.azurite.model.FileKey;
 import edu.cmu.scs.azurite.model.OperationId;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
+import edu.cmu.scs.azurite.plugin.Activator;
+import edu.cmu.scs.azurite.preferences.Initializer;
 
 public class RectMarkerManager implements RectSelectionListener {
 	
@@ -32,6 +35,11 @@ public class RectMarkerManager implements RectSelectionListener {
 
 	@Override
 	public void rectSelectionChanged() {
+		IPreferenceStore store = Activator.getDefault().getPreferenceStore();
+		if (!store.getBoolean(Initializer.Pref_EnableMarkers)) {
+			return;
+		}
+		
 		try {
 			// Get the workspace root.
 			IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
@@ -99,6 +107,7 @@ public class RectMarkerManager implements RectSelectionListener {
 			// Remove all the markers
 			IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
 			root.deleteMarkers(BASE_MARKER_ID, true, IResource.DEPTH_INFINITE);
+			this.currentMarkers.clear();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

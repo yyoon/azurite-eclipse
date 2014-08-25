@@ -2,8 +2,10 @@ package edu.cmu.scs.azurite.views;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.StringReader;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -24,23 +26,25 @@ import org.eclipse.jface.action.IMenuListener;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.Separator;
+import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.resource.ImageDescriptor;
-import org.eclipse.jface.text.ITextViewerExtension5;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.SWTException;
 import org.eclipse.swt.browser.Browser;
 import org.eclipse.swt.browser.BrowserFunction;
-import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IFileEditorInput;
+import org.eclipse.ui.IMemento;
 import org.eclipse.ui.IWorkbenchActionConstants;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.WorkbenchException;
+import org.eclipse.ui.XMLMemento;
 import org.eclipse.ui.handlers.IHandlerService;
 import org.eclipse.ui.ide.IDE;
 import org.eclipse.ui.part.ViewPart;
@@ -57,14 +61,14 @@ import edu.cmu.scs.azurite.model.RuntimeDCListener;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
 import edu.cmu.scs.azurite.plugin.Activator;
+import edu.cmu.scs.azurite.preferences.Initializer;
 import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 import edu.cmu.scs.fluorite.commands.Delete;
-import edu.cmu.scs.fluorite.commands.EclipseCommand;
 import edu.cmu.scs.fluorite.commands.FileOpenCommand;
 import edu.cmu.scs.fluorite.commands.ICommand;
 import edu.cmu.scs.fluorite.commands.ITimestampOverridable;
+import edu.cmu.scs.fluorite.commands.ITypeOverridable;
 import edu.cmu.scs.fluorite.commands.Insert;
-import edu.cmu.scs.fluorite.commands.JUnitCommand;
 import edu.cmu.scs.fluorite.commands.Replace;
 import edu.cmu.scs.fluorite.model.CommandExecutionListener;
 import edu.cmu.scs.fluorite.model.EventRecorder;
@@ -84,6 +88,12 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	private static final String TIMELINE_VIEW_ID = "edu.cmu.scs.azurite.views.TimelineViewPart";
 
 	private static TimelineViewPart me = null;
+	
+	private static Map<String, String> timelineEventColorMap;
+	
+	private static Map<String, String> timelineEventIconMap;
+	
+	private static Map<String, Boolean> timelineEventDisplayMap;
 	
 	/**
 	 * Not a singleton pattern per se.
@@ -107,6 +117,99 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 				}
 			}
 		}
+	}
+	
+	public static void updateTimelineEventColorMap() {
+		timelineEventColorMap = new HashMap<String, String>();
+		
+		if (Activator.getDefault() != null && Activator.getDefault().getPreferenceStore() != null) {
+			IPreferenceStore store = Activator.getDefault().getPreferenceStore();
+			String str = store.getString(Initializer.Pref_EventDisplaySettings);
+			if (str == null) {
+				str = store.getDefaultString(Initializer.Pref_EventDisplaySettings);
+			}
+			
+			if (str != null) {
+				try (StringReader reader = new StringReader(str)) {
+					IMemento root = XMLMemento.createReadRoot(reader);
+					for (IMemento child : root.getChildren()) {
+						timelineEventColorMap.put(child.getString("type"), child.getString("color"));
+					}
+				} catch (WorkbenchException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+	
+	private static Map<String, String> getTimelineEventColorMap() {
+		if (timelineEventColorMap == null) {
+			updateTimelineEventColorMap();
+		}
+		
+		return Collections.unmodifiableMap(timelineEventColorMap);
+	}
+	
+	public static void updateTimelineEventIconMap() {
+		timelineEventIconMap = new HashMap<String, String>();
+		
+		if (Activator.getDefault() != null && Activator.getDefault().getPreferenceStore() != null) {
+			IPreferenceStore store = Activator.getDefault().getPreferenceStore();
+			String str = store.getString(Initializer.Pref_EventDisplaySettings);
+			if (str == null) {
+				str = store.getDefaultString(Initializer.Pref_EventDisplaySettings);
+			}
+			
+			if (str != null) {
+				try (StringReader reader = new StringReader(str)) {
+					IMemento root = XMLMemento.createReadRoot(reader);
+					for (IMemento child : root.getChildren()) {
+						timelineEventIconMap.put(child.getString("type"), child.getString("iconPath"));
+					}
+				} catch (WorkbenchException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+	
+	private static Map<String, String> getTimelineEventIconMap() {
+		if (timelineEventIconMap == null) {
+			updateTimelineEventIconMap();
+		}
+		
+		return Collections.unmodifiableMap(timelineEventIconMap);
+	}
+	
+	public static void updateTimelineEventDisplayMap() {
+		timelineEventDisplayMap = new HashMap<String, Boolean>();
+		
+		if (Activator.getDefault() != null && Activator.getDefault().getPreferenceStore() != null) {
+			IPreferenceStore store = Activator.getDefault().getPreferenceStore();
+			String str = store.getString(Initializer.Pref_EventDisplaySettings);
+			if (str == null) {
+				str = store.getDefaultString(Initializer.Pref_EventDisplaySettings);
+			}
+			
+			if (str != null) {
+				try (StringReader reader = new StringReader(str)) {
+					IMemento root = XMLMemento.createReadRoot(reader);
+					for (IMemento child : root.getChildren()) {
+						timelineEventDisplayMap.put(child.getString("type"), child.getBoolean("enabled"));
+					}
+				} catch (WorkbenchException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+	
+	private static Map<String, Boolean> getTimelineEventDisplayMap() {
+		if (timelineEventDisplayMap == null) {
+			updateTimelineEventDisplayMap();
+		}
+		
+		return Collections.unmodifiableMap(timelineEventDisplayMap);
 	}
 
 	private Browser browser;
@@ -285,7 +388,13 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 						}
 						
 						case "marker": {
-							long absTimestamp = ((Number) browser.evaluate("return global.selectedTimestamp;")).longValue();
+							long absTimestamp = getMarkerTimestamp();
+							
+							Action tagThisPointAction = new CommandAction(
+									"Tag This Point",
+									"edu.cmu.scs.azurite.ui.commands.tagMarkerCommand");
+							
+							manager.add(tagThisPointAction);
 							
 							paramMap.clear();
 							paramMap.put("edu.cmu.scs.azurite.ui.commands.undoAllFilesToThisPoint.absTimestamp", Long.toString(absTimestamp));
@@ -295,6 +404,15 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 									paramMap);
 							
 							manager.add(undoAllFilesToThisPointAction);
+							
+							paramMap.clear();
+							paramMap.put("edu.cmu.scs.azurite.ui.commands.undoAllFilesToThisPointInteractively.absTimestamp", Long.toString(absTimestamp));
+							Action undoAllFilesToThisPointInteractivelyAction = new CommandAction(
+									"Undo All Files to This Point Interactively",
+									"edu.cmu.scs.azurite.ui.commands.undoAllFilesToThisPointInteractively",
+									paramMap);
+							
+							manager.add(undoAllFilesToThisPointInteractivelyAction);
 
 							// Get the active editor, and display the file name.
 							IEditorPart activeEditor = Utilities.getActiveEditor();
@@ -396,6 +514,10 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		new EclipseCommandFunction(browser, BROWSER_FUNC_PREFIX + "eclipseCommand");
 		
 		new NotifySelectionChangedFunction(browser, BROWSER_FUNC_PREFIX + "notifySelectionChanged");
+		
+		new EventColorFunction(browser, BROWSER_FUNC_PREFIX + "eventColorFunc");
+		new EventIconFunction(browser, BROWSER_FUNC_PREFIX + "eventIconFunc");
+		new EventDisplayFunction(browser, BROWSER_FUNC_PREFIX + "eventDisplayFunc");
 	}
 
 	@Override
@@ -532,21 +654,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 				long sid = ((Number)arguments[2]).longValue();
 				long id = ((Number)arguments[3]).longValue();
 				
-				File fileToOpen = new File(key.getFilePath());
-				
-				IEditorPart editor = null;
-				if (fileToOpen.exists() && fileToOpen.isFile()) {
-				    IFileStore fileStore = EFS.getLocalFileSystem().getStore(fileToOpen.toURI());
-				    IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
-				 
-				    try {
-				        editor = IDE.openEditorOnFileStore( page, fileStore );
-				    } catch ( PartInitException e ) {
-				        //Put your exception handler here if you wish to
-				    }
-				} else {
-				    //Do something if the file does not exist
-				}
+				IEditorPart editor = edu.cmu.scs.azurite.util.Utilities.openEditorWithKey(key);
 
 				// Move to the location.
 				RuntimeDC runtimeDC = RuntimeHistoryManager.getInstance()
@@ -557,31 +665,13 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 					return RETURN_CODE_FAIL;
 				}
 				
-				if (editor != null) {
-					final ITextViewerExtension5 textViewerExt5 = Utilities.getTextViewerExtension5(editor);
-					
-					final int offset = runtimeDC.getAllSegments().get(0).getOffset();
-					final StyledText styledText = Utilities.getStyledText(editor);
-					UIJob job = new UIJob("Jump to the Code") {
-						
-						@Override
-						public IStatus runInUIThread(IProgressMonitor monitor) {
-							styledText.setSelection(textViewerExt5.modelOffset2WidgetOffset(offset));
-							styledText.setFocus();
-							styledText.showSelection();
-							return Status.OK_STATUS;
-						}
-					};
-					
-					job.schedule();
-				}
+				edu.cmu.scs.azurite.util.Utilities.moveCursorToChangeLocation(editor, runtimeDC);
 				
 				return RETURN_CODE_OK;
 			} catch (Exception e) {
 				return RETURN_CODE_FAIL;
 			}
 		}
-		
 	}
 	
 	class GetInfoFunction extends BrowserFunction {
@@ -787,6 +877,71 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		}
 	}
 	
+	class EventColorFunction extends BrowserFunction {
+		
+		public EventColorFunction(Browser browser, String name) {
+			super(browser, name);
+		}
+		
+		@Override
+		public Object function(Object[] arguments) {
+			if (arguments.length != 1) {
+				return "";
+			}
+			
+			Map<String, String> colorMap = TimelineViewPart.getTimelineEventColorMap();
+			if (colorMap == null || !colorMap.containsKey(arguments[0])) {
+				return "";
+			}
+			
+			return colorMap.get(arguments[0]);
+		}
+	}
+	
+	class EventIconFunction extends BrowserFunction {
+		
+		private static final String ERROR_ICON = "images/event_icons/error.png";
+		
+		public EventIconFunction(Browser browser, String name) {
+			super(browser, name);
+		}
+		
+		@Override
+		public Object function(Object[] arguments) {
+			if (arguments.length != 1) {
+				return ERROR_ICON;
+			}
+			
+			Map<String, String> iconMap = TimelineViewPart.getTimelineEventIconMap();
+			if (iconMap == null || !iconMap.containsKey(arguments[0])) {
+				return ERROR_ICON;
+			}
+			
+			return iconMap.get(arguments[0]);
+		}
+	}
+	
+	class EventDisplayFunction extends BrowserFunction {
+		
+		public EventDisplayFunction(Browser browser, String name) {
+			super(browser, name);
+		}
+		
+		@Override
+		public Object function(Object[] arguments) {
+			if (arguments.length != 1) {
+				return "none";
+			}
+			
+			Map<String, Boolean> displayMap = TimelineViewPart.getTimelineEventDisplayMap();
+			if (displayMap == null || !displayMap.containsKey(arguments[0])) {
+				return "none";
+			}
+			
+			return Boolean.valueOf(displayMap.get(arguments[0])) ? "" : "none";
+		}
+	}
+	
 	@Override
 	public void activeFileChanged(String projectName, String filePath) {
 		if (projectName == null || filePath == null) {
@@ -805,6 +960,10 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	@Override
 	public void documentChangeAdded(BaseDocumentChangeEvent docChange) {
 		addOperation(docChange, true, true);
+	}
+	
+	public RectMarkerManager getMarkerManager() {
+		return this.rectMarkerManager;
 	}
 
 	private void addFile(String projectName, String filePath) {
@@ -834,15 +993,12 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		long displayTimestamp = event instanceof ITimestampOverridable
 				? ((ITimestampOverridable) event).getTimestampForDisplay()
 				: sessionId + timestamp;
-		String type = "EclipseCommand".equals(event.getCommandType())
-				? ((EclipseCommand) event).getCommandID()
-				: event.getCommandType();
-		
-		if (event instanceof JUnitCommand) {
-			JUnitCommand junitCommand = (JUnitCommand) event;
-			if (junitCommand.getRootData() != null) {
-				type += "(" + Boolean.toString(junitCommand.getRootData().getSucceeded()) + ")";
-			}
+
+		String type = null;
+		if (event instanceof ITypeOverridable) {
+			type = ((ITypeOverridable) event).getTypeForDisplay();
+		} else {
+			type = event.getCommandType();
 		}
 		
 		String executeStr = String.format("addEvent(%1$d, %2$d, %3$d, %4$d, '%5$s', '%6$s');",
@@ -868,7 +1024,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		// Add the operations
 		StringBuilder builder = new StringBuilder();
 		
-		long start = System.currentTimeMillis();
+//		long start = System.currentTimeMillis();
 		
 		for (ICommand command : events.getCommands()) {
 			if (!(command instanceof BaseDocumentChangeEvent)) {
@@ -886,13 +1042,13 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 			}
 		}
 		
-		long end = System.currentTimeMillis();
-		System.out.println("Building String: " + (end - start) + "ms");
+//		long end = System.currentTimeMillis();
+//		System.out.println("Building String: " + (end - start) + "ms");
 		
-		start = System.currentTimeMillis();
+//		start = System.currentTimeMillis();
 		browser.execute(builder.toString());
-		end = System.currentTimeMillis();
-		System.out.println("Executing String: " + (end - start) + "ms");
+//		end = System.currentTimeMillis();
+//		System.out.println("Executing String: " + (end - start) + "ms");
 		
 		// Restore the last file
 		browser.execute("popCurrentFile();");
@@ -1101,6 +1257,19 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 			return false;
 		}
 	}
+	
+	public boolean isMarkerVisible() {
+		try {
+			Object result = evaluateJSCode("return isMarkerVisible();");
+			if (result instanceof Boolean) {
+				return ((Boolean) result).booleanValue();
+			} else {
+				return false;
+			}
+		} catch (SWTException e) {
+			return false;
+		}
+	}
 
 	public static List<OperationId> translateSelection(Object selected) {
 		Object[] selectedArray = (Object[]) selected;
@@ -1135,6 +1304,10 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	private void performLayout() {
 		browser.execute("layout();");
 	}
+	
+	public long getMarkerTimestamp() {
+		return ((Number) browser.evaluate("return global.markerTimestamp;")).longValue();
+	}
 
 	public long getTimeRangeStart() {
 		return ((Number) browser.evaluate("return global.selectedTimestampRange[0];")).longValue();
@@ -1142,6 +1315,10 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 
 	public long getTimeRangeEnd() {
 		return ((Number) browser.evaluate("return global.selectedTimestampRange[1];")).longValue();
+	}
+	
+	public void redrawEvents() {
+		browser.execute("updateEvents();");
 	}
 	
 }

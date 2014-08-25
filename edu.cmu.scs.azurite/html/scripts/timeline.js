@@ -2,7 +2,7 @@
 /*global d3, azurite */
 
 /* Things to be called from Azurite */
-/*exported updateOperation, getRightmostTimestamp, addSelectionsByIds, removeSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarkerAtTimestamp, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile, addEvent, activateFirebugLite, showAllFilesEditedInRange, openAllFilesEditedInRange, removeAllSelections, showUp, showDown */
+/*exported updateOperation, getRightmostTimestamp, addSelectionsByIds, removeSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarkerAtTimestamp, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile, addEvent, activateFirebugLite, showAllFilesEditedInRange, openAllFilesEditedInRange, removeAllSelections, showUp, showDown, isMarkerVisible */
 
 /* Things to be called manually when debugging */
 /*exported test, testMarker, showEvents */
@@ -150,81 +150,19 @@ eventDraw.y1Func = function() {
 	return -(getSvgHeight() - TICKS_HEIGHT - EVENTS_HEIGHT);
 };
 eventDraw.colorFunc = function(d) {
-	switch (d.type) {
-		case 'JUnitCommand':
-			return 'green';
-
-		case 'RunCommand':
-			return 'green';
-
-		case 'Annotation':
-			return 'goldenrod';
-
-		case 'org.eclipse.ui.file.save':
-			return 'lightskyblue';
-
-		case 'org.eclipse.egit.ui.team.Commit':
-		case 'org.eclipse.egit.ui.team.Pull':
-		case 'org.eclipse.egit.ui.team.Fetch':
-		case 'org.eclipse.egit.ui.team.Push':
-		case 'org.eclipse.egit.ui.team.Merge':
-		case 'org.eclipse.egit.ui.team.Reset':
-		case 'org.eclipse.egit.ui.team.Rebase':
-		case 'org.eclipse.egit.ui.CheckoutCommand':
-			return 'goldenrod';
-
-		default:
-			return 'gold';
-	}
+	return azurite.eventColorFunc(d.type);
 };
+
 eventDraw.iconFunc = function(d) {
-	switch (d.type) {
-		case 'JUnitCommand':
-		case 'JUnitCommand(true)':
-			return 'images/event_icons/junitsucc.gif';
-
-		case 'JUnitCommand(false)':
-			return 'images/event_icons/juniterr.gif';
-
-		case 'RunCommand':
-			return 'images/event_icons/run_exc.gif';
-
-		case 'Annotation':
-			return 'images/event_icons/tag.png';
-
-		case 'org.eclipse.ui.file.save':
-			return 'images/event_icons/save_edit.gif';
-
-		case 'org.eclipse.egit.ui.team.Commit':
-			return 'images/event_icons/commit.gif';
-
-		case 'org.eclipse.egit.ui.team.Pull':
-			return 'images/event_icons/pull.gif';
-
-		case 'org.eclipse.egit.ui.team.Fetch':
-			return 'images/event_icons/fetch.gif';
-
-		case 'org.eclipse.egit.ui.team.Push':
-			return 'images/event_icons/push.gif';
-
-		case 'org.eclipse.egit.ui.team.Merge':
-			return 'images/event_icons/merge.gif';
-
-		case 'org.eclipse.egit.ui.team.Reset':
-			return 'images/event_icons/reset.gif';
-
-		case 'org.eclipse.egit.ui.team.Rebase':
-			return 'images/event_icons/rebase.gif';
-
-		case 'org.eclipse.egit.ui.CheckoutCommand':
-			return 'images/event_icons/checkout.gif';
-
-		default:
-			return 'images/event_icons/error.png';
-	}
+	return azurite.eventIconFunc(d.type);
 };
+
 eventDraw.iconXFunc = function(d) {
 	return timestampToPixel(d.dt) - EVENT_ICON_WIDTH / 2;
+};
+
+eventDraw.displayFunc = function(d) {
+	return azurite.eventDisplayFunc(d.type);
 };
 
 var timeTickDraw = {};
@@ -561,8 +499,9 @@ function recalculateClipPaths() {
 	svg.subRangeStartLine.attr('y2', svgHeight);
 	
 	svg.clipMarkerWrap
+		.attr('x', -MARKER_SIZE)
 		.attr('y', -MARKER_SIZE)
-		.attr('width', (svgWidth * (1.0 - FILES_PORTION)))
+		.attr('width', (svgWidth * (1.0 - FILES_PORTION)) + 2 * MARKER_SIZE)
 		.attr('height', (svgHeight + 2 * MARKER_SIZE));
 
 	svg.subTicksWrap
@@ -582,8 +521,9 @@ function recalculateClipPaths() {
 	svg.subEvents.selectAll('.event_line').attr('y1', eventDraw.y1Func);
 
 	svg.clipEventsWrap
+		.attr('x', -EVENT_ICON_WIDTH / 2)
 		.attr('y', -(svgHeight - TICKS_HEIGHT - EVENTS_HEIGHT))
-		.attr('width', (svgWidth * (1.0 - FILES_PORTION)))
+		.attr('width', (svgWidth * (1.0 - FILES_PORTION)) + EVENT_ICON_WIDTH)
 		.attr('height', svgHeight - TICKS_HEIGHT);
 }
 
@@ -1041,7 +981,8 @@ function addEvent(sid, id, t, dt, type, desc) {
 		.attr('y1', eventDraw.y1Func)
 		.attr('y2', EVENTS_HEIGHT / 2)
 		.attr('stroke-width', EVENT_WIDTH)
-		.attr('stroke', eventDraw.colorFunc);
+		.attr('stroke', eventDraw.colorFunc)
+		.attr('display', eventDraw.displayFunc);
 
 	// Add icon. The size should be 16x16
 	var eventIcon = svg.subEvents.append('image').datum(newEvent);
@@ -1051,7 +992,8 @@ function addEvent(sid, id, t, dt, type, desc) {
 		.attr('x', eventDraw.iconXFunc)
 		.attr('y', (EVENTS_HEIGHT - EVENT_ICON_HEIGHT) / 2)
 		.attr('width', EVENT_ICON_WIDTH)
-		.attr('height', EVENT_ICON_HEIGHT);
+		.attr('height', EVENT_ICON_HEIGHT)
+		.attr('display', eventDraw.displayFunc);
 
 	$(eventIcon.node()).tipsy({
 		gravity: 'n',
@@ -1296,6 +1238,49 @@ function pixelToTimestamp(pixel) {
 	return global.timeScale.invert(pixel / global.scaleX).getTime();
 }
 
+function nearestSnapPixel(pixel) {
+	if (global.rangeArray === undefined || global.rangeArray === null || global.rangeArray.length === 0) {
+		return 0;
+	}
+
+	var pixelToFind = pixel / global.scaleX;
+
+	var begin = 0;
+	var end = global.rangeArray.length;
+
+	while (begin < end) {
+		var mid = Math.floor((begin + end) / 2);
+		var midval = global.rangeArray[mid];
+
+		if (pixelToFind === midval) {
+			return pixelToFind * global.scaleX;
+		}
+
+		if (pixelToFind < midval) {
+			end = mid;
+		} else {
+			begin = mid + 1;
+		}
+	}
+
+	if (begin === 0) {
+		return global.rangeArray[0] * global.scaleX;
+	}
+
+	if (begin === global.rangeArray.length) {
+		return global.rangeArray[global.rangeArray.length - 1] * global.scaleX;
+	}
+
+	var leftDiff = Math.abs(global.rangeArray[begin - 1] - pixelToFind);
+	var rightDiff = Math.abs(global.rangeArray[begin] - pixelToFind);
+
+	if (leftDiff <= rightDiff) {
+		return global.rangeArray[begin - 1] * global.scaleX;
+	} else {
+		return global.rangeArray[begin] * global.scaleX;
+	}
+}
+
 /*
  * When the page loads, load a log file
  */
@@ -1470,7 +1455,28 @@ function initMouseDownHandler() {
 
 			// Filter only the icons.
 			d3.selectAll(list).filter('.event_icon').each(function(d) {
-				// In this case, this should be notified to the Azurite plug-in.
+				// Handle shift key and range selection ---------------------------------
+				if (event.shiftKey) {
+					global.draggingMarkerShift = true;
+
+					var pixelPosition = timestampToPixel(d.dt);
+
+					if (global.selectedPixelRange !== null) {
+						// If there is already a selected range, just update the end pixel
+						updateEndPixelRange(pixelPosition);
+					}
+					else if (global.markerPos !== null) {
+						// If there is no range selection, make a new one.
+						selectPixelRange(global.markerPos, pixelPosition);
+					}
+				}
+				else {
+					global.draggingMarkerShift = false;
+
+					deselectRange();
+				}
+				// ----------------------------------------------------------------------
+				
 				showMarkerAtTimestamp(d.dt, true);
 			});
 		}
@@ -2744,9 +2750,12 @@ function getAllFilesEditedInRange() {
 function updateEvents() {
 	svg.subEvents.selectAll('.event_line')
 		.attr('x1', eventDraw.xFunc)
-		.attr('x2', eventDraw.xFunc);
+		.attr('x2', eventDraw.xFunc)
+		.attr('stroke', eventDraw.colorFunc)
+		.attr('display', eventDraw.displayFunc);
 	svg.subEvents.selectAll('.event_icon')
-		.attr('x', eventDraw.iconXFunc);
+		.attr('x', eventDraw.iconXFunc)
+		.attr('display', eventDraw.displayFunc);
 }
 
 function showMarkerAtPixel(pixel, notify, noupdate) {
@@ -2756,6 +2765,7 @@ function showMarkerAtPixel(pixel, notify, noupdate) {
 		return;
 	}
 
+	pixel = nearestSnapPixel(pixel);
 	global.markerPos = pixel;
 	if (noupdate !== true) {
 		global.markerTimestamp = pixelToTimestamp(pixel);
@@ -2773,6 +2783,10 @@ function showMarkerAtPixel(pixel, notify, noupdate) {
 		// Tell Azurite about this marker move!
 		azurite.markerMove(global.markerTimestamp);
 	}
+}
+
+function isMarkerVisible() {
+	return svg.subMarker.style('display') !== 'none';
 }
 
 function showMarkerAtTimestamp(absTimestamp, notify) {
@@ -2801,6 +2815,9 @@ function hideMarker() {
 
 function selectPixelRange(startPixel, endPixel) {
 	if (global.lastOperation !== null) {
+		startPixel = nearestSnapPixel(startPixel);
+		endPixel = nearestSnapPixel(endPixel);
+
 		global.selectedPixelRange = [startPixel, endPixel];
 		global.selectedTimestampRange = [pixelToTimestamp(startPixel), pixelToTimestamp(endPixel)];
 

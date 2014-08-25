@@ -73,8 +73,12 @@ public class BaseRuntimeDocumentChangeTest {
 			public String getCategory() { return null; }
 			public String getCategoryID() { return null; }
 			public boolean combine(ICommand anotherCommand) { return false; }
-			public void applyToDocument(IDocument doc) {}
-			public String applyToString(String original) { return original; }
+			public void apply(IDocument doc) {}
+			public String apply(String original) { return original; }
+			public void apply(StringBuilder builder) {}
+			public void applyInverse(IDocument doc) {}
+			public String applyInverse(String original) { return original; }
+			public void applyInverse(StringBuilder builder) {}
 			public double getY1() { return 0; }
 			public double getY2() { return 0; }
 		};

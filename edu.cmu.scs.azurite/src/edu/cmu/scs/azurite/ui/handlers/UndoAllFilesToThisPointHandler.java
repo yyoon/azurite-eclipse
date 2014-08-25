@@ -26,7 +26,7 @@ public class UndoAllFilesToThisPointHandler extends AbstractHandler {
 		RuntimeHistoryManager history = RuntimeHistoryManager.getInstance();
 		
 		for (FileKey key : history.getFileKeys()) {
-			params.put(key, history.filterDocumentChangesLaterThanTimestamp(key, absTimestamp));
+			params.put(key, history.filterDocumentChangesLaterThanOrEqualToTimestamp(key, absTimestamp));
 		}
 		
 		SelectiveUndoEngine.getInstance().doSelectiveUndoOnMultipleFiles(params);
