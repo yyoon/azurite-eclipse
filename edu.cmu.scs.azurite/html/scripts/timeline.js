@@ -499,8 +499,9 @@ function recalculateClipPaths() {
 	svg.subRangeStartLine.attr('y2', svgHeight);
 	
 	svg.clipMarkerWrap
+		.attr('x', -MARKER_SIZE)
 		.attr('y', -MARKER_SIZE)
-		.attr('width', (svgWidth * (1.0 - FILES_PORTION)))
+		.attr('width', (svgWidth * (1.0 - FILES_PORTION)) + 2 * MARKER_SIZE)
 		.attr('height', (svgHeight + 2 * MARKER_SIZE));
 
 	svg.subTicksWrap
@@ -520,8 +521,9 @@ function recalculateClipPaths() {
 	svg.subEvents.selectAll('.event_line').attr('y1', eventDraw.y1Func);
 
 	svg.clipEventsWrap
+		.attr('x', -EVENT_ICON_WIDTH / 2)
 		.attr('y', -(svgHeight - TICKS_HEIGHT - EVENTS_HEIGHT))
-		.attr('width', (svgWidth * (1.0 - FILES_PORTION)))
+		.attr('width', (svgWidth * (1.0 - FILES_PORTION)) + EVENT_ICON_WIDTH)
 		.attr('height', svgHeight - TICKS_HEIGHT);
 }
 
