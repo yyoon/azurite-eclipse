@@ -155,7 +155,7 @@ eventDraw.colorFunc = function(d) {
 
 eventDraw.iconFunc = function(d) {
 	return azurite.eventIconFunc(d.type);
-}
+};
 
 eventDraw.iconXFunc = function(d) {
 	return timestampToPixel(d.dt) - EVENT_ICON_WIDTH / 2;
@@ -163,7 +163,7 @@ eventDraw.iconXFunc = function(d) {
 
 eventDraw.displayFunc = function(d) {
 	return azurite.eventDisplayFunc(d.type);
-}
+};
 
 var timeTickDraw = {};
 timeTickDraw.xFunc = function(d) {
