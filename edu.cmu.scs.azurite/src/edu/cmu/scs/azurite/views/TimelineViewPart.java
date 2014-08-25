@@ -952,6 +952,10 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	public void documentChangeAdded(BaseDocumentChangeEvent docChange) {
 		addOperation(docChange, true, true);
 	}
+	
+	public RectMarkerManager getMarkerManager() {
+		return this.rectMarkerManager;
+	}
 
 	private void addFile(String projectName, String filePath) {
 		String executeStr = getAddFileString(projectName, filePath);

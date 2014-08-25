@@ -130,7 +130,22 @@ public class AzuritePreferencePage extends PreferencePage implements IWorkbenchP
 	@Override
 	public boolean performOk() {
 		IPreferenceStore store = Activator.getDefault().getPreferenceStore();
-		store.setValue(Initializer.Pref_EnableMarkers, this.buttonMarker.getSelection());
+		
+		// Enable markers
+		boolean enableMarkers = this.buttonMarker.getSelection();
+		store.setValue(Initializer.Pref_EnableMarkers, enableMarkers);
+		
+		TimelineViewPart timeline = TimelineViewPart.getInstance();
+		
+		if (timeline != null) {
+			if (enableMarkers) {
+				timeline.getMarkerManager().rectSelectionChanged();
+			} else {
+				timeline.getMarkerManager().removeAllMarkers();
+			}
+		}
+		
+		// Display settings table.
 		store.setValue(Initializer.Pref_EventDisplaySettings, getStringFromTable());
 		
 		RuntimeHistoryManager.updateTimelineEventsList();
