@@ -1236,6 +1236,49 @@ function pixelToTimestamp(pixel) {
 	return global.timeScale.invert(pixel / global.scaleX).getTime();
 }
 
+function nearestSnapPixel(pixel) {
+	if (global.rangeArray === undefined || global.rangeArray === null || global.rangeArray.length === 0) {
+		return 0;
+	}
+
+	var pixelToFind = pixel / global.scaleX;
+
+	var begin = 0;
+	var end = global.rangeArray.length;
+
+	while (begin < end) {
+		var mid = Math.floor((begin + end) / 2);
+		var midval = global.rangeArray[mid];
+
+		if (pixelToFind === midval) {
+			return pixelToFind * global.scaleX;
+		}
+
+		if (pixelToFind < midval) {
+			end = mid;
+		} else {
+			begin = mid + 1;
+		}
+	}
+
+	if (begin === 0) {
+		return global.rangeArray[0] * global.scaleX;
+	}
+
+	if (begin === global.rangeArray.length) {
+		return global.rangeArray[global.rangeArray.length - 1] * global.scaleX;
+	}
+
+	var leftDiff = Math.abs(global.rangeArray[begin - 1] - pixelToFind);
+	var rightDiff = Math.abs(global.rangeArray[begin] - pixelToFind);
+
+	if (leftDiff <= rightDiff) {
+		return global.rangeArray[begin - 1] * global.scaleX;
+	} else {
+		return global.rangeArray[begin] * global.scaleX;
+	}
+}
+
 /*
  * When the page loads, load a log file
  */
@@ -2720,6 +2763,7 @@ function showMarkerAtPixel(pixel, notify, noupdate) {
 		return;
 	}
 
+	pixel = nearestSnapPixel(pixel);
 	global.markerPos = pixel;
 	if (noupdate !== true) {
 		global.markerTimestamp = pixelToTimestamp(pixel);
@@ -2769,6 +2813,9 @@ function hideMarker() {
 
 function selectPixelRange(startPixel, endPixel) {
 	if (global.lastOperation !== null) {
+		startPixel = nearestSnapPixel(startPixel);
+		endPixel = nearestSnapPixel(endPixel);
+
 		global.selectedPixelRange = [startPixel, endPixel];
 		global.selectedTimestampRange = [pixelToTimestamp(startPixel), pixelToTimestamp(endPixel)];
 
