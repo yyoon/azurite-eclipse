@@ -669,6 +669,16 @@
          </commandParameter>
       </command>
       <command
+            defaultHandler="edu.cmu.scs.azurite.ui.handlers.UndoAllFilesToThisPointInteractivelyHandler"
+            id="edu.cmu.scs.azurite.ui.commands.undoAllFilesToThisPointInteractively"
+            name="Undo All Files to This Point Interactively">
+         <commandParameter
+               id="edu.cmu.scs.azurite.ui.commands.undoAllFilesToThisPointInteractively.absTimestamp"
+               name="Absolute timestamp of the base point"
+               optional="false">
+         </commandParameter>
+      </command>
+      <command
             defaultHandler="edu.cmu.scs.azurite.ui.handlers.UndoCurrentFileToThisPointHandler"
             id="edu.cmu.scs.azurite.ui.commands.undoCurrentFileToThisPoint"
             name="Undo Current File to This Point">

@@ -404,6 +404,15 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 									paramMap);
 							
 							manager.add(undoAllFilesToThisPointAction);
+							
+							paramMap.clear();
+							paramMap.put("edu.cmu.scs.azurite.ui.commands.undoAllFilesToThisPointInteractively.absTimestamp", Long.toString(absTimestamp));
+							Action undoAllFilesToThisPointInteractivelyAction = new CommandAction(
+									"Undo All Files to This Point Interactively",
+									"edu.cmu.scs.azurite.ui.commands.undoAllFilesToThisPointInteractively",
+									paramMap);
+							
+							manager.add(undoAllFilesToThisPointInteractivelyAction);
 
 							// Get the active editor, and display the file name.
 							IEditorPart activeEditor = Utilities.getActiveEditor();
