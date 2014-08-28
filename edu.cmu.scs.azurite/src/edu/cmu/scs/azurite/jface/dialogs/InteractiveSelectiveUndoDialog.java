@@ -20,7 +20,6 @@ import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.ToolBarManager;
 import org.eclipse.jface.dialogs.TitleAreaDialog;
-import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.Document;
@@ -779,6 +778,9 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		// Setup the menu
 		createMenuBar();
 		
+		// Set the initial input
+		setChunksTreeViewerInput();
+		
 		return composite;
 	}
 
@@ -862,9 +864,6 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		
 		// This means that the top-level elements will automatically be expanded.
 		mChunksTreeViewer.setAutoExpandLevel(2);
-		
-		// Set the initial input
-		setChunksTreeViewerInput();
 		
 		// Set the content of the ViewerPane to the tree-control.
 		chunksPane.setContent(mChunksTreeViewer.getControl());
@@ -984,6 +983,11 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 				if (restoreSelectionsForTopElement(oldChunkElem, oldTopElem, newTopElem)) {
 					break;
 				}
+			}
+		} else if (oldSelection == null) {
+			// Select the first item, if there's any.
+			if (newInput != null && newInput.length > 0) {
+				mChunksTreeViewer.setSelection(new StructuredSelection(newInput[0]), true);
 			}
 		}
 	}
