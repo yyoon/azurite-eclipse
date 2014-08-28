@@ -66,14 +66,21 @@ public class HandlerUtilities {
 			
 			IEditorSite iEditorSite = editorPart.getEditorSite();
 			if (iEditorSite != null) {
-				ISelectionProvider selectionProvider = iEditorSite
-						.getSelectionProvider();
+				ISelectionProvider selectionProvider = iEditorSite.getSelectionProvider();
 				if (selectionProvider != null) {
-					ISelection iSelection = selectionProvider
-							.getSelection();
-					offset = ((ITextSelection) iSelection).getOffset();
-					if (!iSelection.isEmpty()) {
-						length = ((ITextSelection) iSelection).getLength();
+					ISelection iSelection = selectionProvider.getSelection();
+					if (iSelection instanceof ITextSelection) {
+						ITextSelection textSelection = (ITextSelection) iSelection; 
+						offset = textSelection.getOffset();
+						length = textSelection.getLength();
+						
+						// Strip out the ending newline characters from the selection.
+						String text = textSelection.getText();
+						if (text.endsWith("\r\n")) {
+							length -= 2;
+						} else if (text.endsWith("\r") || text.endsWith("\n")) {
+							length -= 1;
+						}
 					}
 				}
 			}
@@ -89,6 +96,8 @@ public class HandlerUtilities {
 							}
 						});
 			}
+			
+			// Check if the selected region ends with newline characters.
 
 			// In all the other cases.
 			List<RuntimeDC> dcs = RuntimeHistoryManager.getInstance()

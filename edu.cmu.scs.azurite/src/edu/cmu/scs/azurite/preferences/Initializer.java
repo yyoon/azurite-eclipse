@@ -17,6 +17,7 @@ public class Initializer extends AbstractPreferenceInitializer {
 	public static final String Pref_HistorySearchCaseSensitive = "Azurite_HistorySearchCaseSensitive";
 	
 	public static final String Pref_EnableMarkers = "Azurite_EnableMarkers";
+	public static final String Pref_InteractiveSelectiveUndoShowChunks = "Azurite_InteractiveSelectiveUndoShowChunks";
 	public static final String Pref_EventDisplaySettings = "Azurite_EventDisplaySettings";
 	
 	private static final String[][] DefaultEventDisplaySettings = {
@@ -47,7 +48,8 @@ public class Initializer extends AbstractPreferenceInitializer {
 		store.setDefault(Pref_HistorySearchCurrentSession, false);
 		store.setDefault(Pref_HistorySearchCaseSensitive, false);
 		
-		store.setDefault(Pref_EnableMarkers, true);
+		store.setDefault(Pref_EnableMarkers, false);
+		store.setDefault(Pref_InteractiveSelectiveUndoShowChunks, false);
 		
 		try (StringWriter writer = new StringWriter()) {
 			XMLMemento root = XMLMemento.createWriteRoot(Pref_EventDisplaySettings);
