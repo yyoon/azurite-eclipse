@@ -13,8 +13,13 @@ import org.eclipse.compare.CompareConfiguration;
 import org.eclipse.compare.CompareUI;
 import org.eclipse.compare.CompareViewerSwitchingPane;
 import org.eclipse.compare.contentmergeviewer.TextMergeViewer;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
 import org.eclipse.jdt.ui.text.IJavaPartitions;
 import org.eclipse.jface.action.Action;
+import org.eclipse.jface.action.ActionContributionItem;
+import org.eclipse.jface.action.IContributionItem;
 import org.eclipse.jface.action.IMenuListener;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.MenuManager;
@@ -59,6 +64,7 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.ui.ISharedImages;
 import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.progress.UIJob;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.compare.AzuriteCompareInput;
@@ -914,8 +920,19 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		return new ISelectionChangedListener() {
 			@Override
 			public void selectionChanged(SelectionChangedEvent event) {
-				IStructuredSelection sel = (IStructuredSelection) event.getSelection();
-				updateBottomPanel(sel);
+				final IStructuredSelection sel = (IStructuredSelection) event.getSelection();
+				UIJob job = new UIJob("Interactive Selective Undo Dialog Update") {
+					
+					@Override
+					public IStatus runInUIThread(IProgressMonitor monitor) {
+						updateBottomPanel(sel);
+						return Status.OK_STATUS;
+					}
+				};
+				
+				job.setSystem(true);
+				job.setUser(false);
+				job.schedule();
 			}
 		};
 	}
@@ -1101,6 +1118,34 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			protected Viewer getViewer(Viewer oldViewer, Object input) {
 				Viewer v = CompareUI.findContentViewer(oldViewer, input, this, mCompareConfiguration);
 				v.getControl().setData(CompareUI.COMPARE_VIEWER_TITLE, mCompareTitle);
+				
+				ToolBarManager tbm = CompareViewerSwitchingPane.getToolBarManager(this);
+				
+				// Delete unwanted toolbar buttons.
+				List<IContributionItem> toBeDeleted = new ArrayList<IContributionItem>();
+				String[] unwanted = new String[] {
+						"Next Difference",
+						"Previous Difference",
+						"Copy Current Change to Right",
+						"Copy Current Change to Left",
+						"Copy Left to Right",
+						"Copy Right to Left" };
+				List<String> unwantedList = Arrays.asList(unwanted);
+				
+				for (IContributionItem item : tbm.getItems()) {
+					if (!(item instanceof ActionContributionItem)) {
+						continue;
+					}
+					
+					ActionContributionItem aci = (ActionContributionItem) item;
+					if (aci.getAction() != null && unwantedList.contains(aci.getAction().getText())) {
+						toBeDeleted.add(item);
+					}
+				}
+				
+				for (IContributionItem item : toBeDeleted) {
+					tbm.remove(item);
+				}
 				
 				mLeftSourceViewer = null;
 				SourceViewer rightSourceViewer = null;
