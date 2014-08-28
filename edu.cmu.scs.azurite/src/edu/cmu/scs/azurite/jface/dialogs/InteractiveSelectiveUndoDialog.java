@@ -13,8 +13,13 @@ import org.eclipse.compare.CompareConfiguration;
 import org.eclipse.compare.CompareUI;
 import org.eclipse.compare.CompareViewerSwitchingPane;
 import org.eclipse.compare.contentmergeviewer.TextMergeViewer;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
 import org.eclipse.jdt.ui.text.IJavaPartitions;
 import org.eclipse.jface.action.Action;
+import org.eclipse.jface.action.ActionContributionItem;
+import org.eclipse.jface.action.IContributionItem;
 import org.eclipse.jface.action.IMenuListener;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.MenuManager;
@@ -59,6 +64,7 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.ui.ISharedImages;
 import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.progress.UIJob;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.compare.AzuriteCompareInput;
@@ -106,6 +112,8 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	private static final String INFORMATION_SELECT_CHUNK = "Select a chunk from the list on the top to see the preview.";
 	
 	private static final String GENERATING_PREVIEW_ERROR_MSG = "Error occurred while generating the preview.";
+	
+	private static final String KEEP_ACTION_ID = "edu.cmu.scs.azurite.keepAction";
 	
 	private static InteractiveSelectiveUndoDialog instance = null;
 	public static InteractiveSelectiveUndoDialog getInstance() {
@@ -173,17 +181,21 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	}
 
 	private class KeepSelectedCodeUnchanged extends Action {
-		private final ITextSelection sel;
-
-		private KeepSelectedCodeUnchanged(String text, ITextSelection sel) {
+		private KeepSelectedCodeUnchanged(String text) {
 			super(text);
-			this.sel = sel;
+			super.setId(KEEP_ACTION_ID);
+		}
+		
+		private KeepSelectedCodeUnchanged(String text, ImageDescriptor image) {
+			super(text, image);
+			super.setId(KEEP_ACTION_ID);
 		}
 
 		@Override
 		public void run() {
 			// Determine the currently shown file.
 			try {
+				ITextSelection sel = (ITextSelection) mLeftSourceViewer.getSelection();
 				IStructuredSelection treeSelection = (IStructuredSelection) mChunksTreeViewer.getSelection();
 				Object treeSelElem = treeSelection.getFirstElement();
 				
@@ -811,7 +823,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 				if (mLeftSourceViewer != null) {
 					final ITextSelection sel = (ITextSelection) mLeftSourceViewer.getSelection();
 					if (sel.getLength() > 0) {
-						manager.add(new KeepSelectedCodeUnchanged("Keep this code unchanged", sel));
+						manager.add(new KeepSelectedCodeUnchanged("Keep this code unchanged"));
 					}
 				}
 			}
@@ -914,8 +926,19 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		return new ISelectionChangedListener() {
 			@Override
 			public void selectionChanged(SelectionChangedEvent event) {
-				IStructuredSelection sel = (IStructuredSelection) event.getSelection();
-				updateBottomPanel(sel);
+				final IStructuredSelection sel = (IStructuredSelection) event.getSelection();
+				UIJob job = new UIJob("Interactive Selective Undo Dialog Update") {
+					
+					@Override
+					public IStatus runInUIThread(IProgressMonitor monitor) {
+						updateBottomPanel(sel);
+						return Status.OK_STATUS;
+					}
+				};
+				
+				job.setSystem(true);
+				job.setUser(false);
+				job.schedule();
 			}
 		};
 	}
@@ -1102,6 +1125,34 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 				Viewer v = CompareUI.findContentViewer(oldViewer, input, this, mCompareConfiguration);
 				v.getControl().setData(CompareUI.COMPARE_VIEWER_TITLE, mCompareTitle);
 				
+				ToolBarManager tbm = CompareViewerSwitchingPane.getToolBarManager(this);
+				
+				// Delete unwanted toolbar buttons.
+				List<IContributionItem> toBeDeleted = new ArrayList<IContributionItem>();
+				String[] unwanted = new String[] {
+						"Next Difference",
+						"Previous Difference",
+						"Copy Current Change to Right",
+						"Copy Current Change to Left",
+						"Copy Left to Right",
+						"Copy Right to Left" };
+				List<String> unwantedList = Arrays.asList(unwanted);
+				
+				for (IContributionItem item : tbm.getItems()) {
+					if (!(item instanceof ActionContributionItem)) {
+						continue;
+					}
+					
+					ActionContributionItem aci = (ActionContributionItem) item;
+					if (aci.getAction() != null && unwantedList.contains(aci.getAction().getText())) {
+						toBeDeleted.add(item);
+					}
+				}
+				
+				for (IContributionItem item : toBeDeleted) {
+					tbm.remove(item);
+				}
+				
 				mLeftSourceViewer = null;
 				SourceViewer rightSourceViewer = null;
 				
@@ -1127,6 +1178,28 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 				if (rightSourceViewer != null) {
 					StyledText te = rightSourceViewer.getTextWidget();
 					te.setMenu(null);
+				}
+				
+				// Add the keep this change button.
+				if (tbm.find(KEEP_ACTION_ID) == null) {
+					final Action keepAction = new KeepSelectedCodeUnchanged(
+							"Keep Selection Unchanged",
+							Activator.getImageDescriptor("icons/copycont_r_co.gif"));
+					
+					final ActionContributionItem keepActionContributionItem = new ActionContributionItem(keepAction);
+					tbm.appendToGroup("merge", keepActionContributionItem);
+					
+					if (mLeftSourceViewer != null) {
+						mLeftSourceViewer.addSelectionChangedListener(new ISelectionChangedListener() {
+							@Override
+							public void selectionChanged(SelectionChangedEvent event) {
+								ITextSelection sel = (ITextSelection) event.getSelection();
+								boolean selected = sel != null && sel.getLength() > 0;
+								keepAction.setEnabled(selected);
+								keepActionContributionItem.update();
+							}
+						});
+					}
 				}
 				
 				return v;
