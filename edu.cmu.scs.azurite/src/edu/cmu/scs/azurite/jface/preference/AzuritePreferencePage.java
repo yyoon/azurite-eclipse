@@ -30,6 +30,7 @@ import edu.cmu.scs.azurite.views.TimelineViewPart;
 public class AzuritePreferencePage extends PreferencePage implements IWorkbenchPreferencePage {
 	
 	private Button buttonMarker;
+	private Button buttonShowChunks;
 	private Table table;
 
 	@Override
@@ -43,6 +44,10 @@ public class AzuritePreferencePage extends PreferencePage implements IWorkbenchP
 		this.buttonMarker = new Button(comp, SWT.CHECK);
 		this.buttonMarker.setText("Enable code highlighting for the selected rectangles");
 		this.buttonMarker.setSelection(store.getBoolean(Initializer.Pref_EnableMarkers));
+		
+		this.buttonShowChunks = new Button(comp, SWT.CHECK);
+		this.buttonShowChunks.setText("Show individual chunks in the Interactive Selective Undo Dialog");
+		this.buttonShowChunks.setSelection(store.getBoolean(Initializer.Pref_InteractiveSelectiveUndoShowChunks));
 		
 		Label label = new Label(comp, SWT.NONE);
 		label.setText("Events to be displayed in the Timeline View");
@@ -122,6 +127,7 @@ public class AzuritePreferencePage extends PreferencePage implements IWorkbenchP
 	protected void performDefaults() {
 		IPreferenceStore store = Activator.getDefault().getPreferenceStore();
 		this.buttonMarker.setSelection(store.getDefaultBoolean(Initializer.Pref_EnableMarkers));
+		this.buttonShowChunks.setSelection(store.getDefaultBoolean(Initializer.Pref_InteractiveSelectiveUndoShowChunks));
 		readIntoTable(store.getDefaultString(Initializer.Pref_EventDisplaySettings));
 		
 		super.performDefaults();
@@ -144,6 +150,10 @@ public class AzuritePreferencePage extends PreferencePage implements IWorkbenchP
 				timeline.getMarkerManager().removeAllMarkers();
 			}
 		}
+		
+		// Show individual chunks
+		boolean showChunks = this.buttonShowChunks.getSelection();
+		store.setValue(Initializer.Pref_InteractiveSelectiveUndoShowChunks, showChunks);
 		
 		// Display settings table.
 		store.setValue(Initializer.Pref_EventDisplaySettings, getStringFromTable());
