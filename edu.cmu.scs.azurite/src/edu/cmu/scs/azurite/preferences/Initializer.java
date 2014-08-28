@@ -47,7 +47,7 @@ public class Initializer extends AbstractPreferenceInitializer {
 		store.setDefault(Pref_HistorySearchCurrentSession, false);
 		store.setDefault(Pref_HistorySearchCaseSensitive, false);
 		
-		store.setDefault(Pref_EnableMarkers, true);
+		store.setDefault(Pref_EnableMarkers, false);
 		
 		try (StringWriter writer = new StringWriter()) {
 			XMLMemento root = XMLMemento.createWriteRoot(Pref_EventDisplaySettings);
