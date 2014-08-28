@@ -113,6 +113,8 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	
 	private static final String GENERATING_PREVIEW_ERROR_MSG = "Error occurred while generating the preview.";
 	
+	private static final String KEEP_ACTION_ID = "edu.cmu.scs.azurite.keepAction";
+	
 	private static InteractiveSelectiveUndoDialog instance = null;
 	public static InteractiveSelectiveUndoDialog getInstance() {
 		return instance;
@@ -179,17 +181,21 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 	}
 
 	private class KeepSelectedCodeUnchanged extends Action {
-		private final ITextSelection sel;
-
-		private KeepSelectedCodeUnchanged(String text, ITextSelection sel) {
+		private KeepSelectedCodeUnchanged(String text) {
 			super(text);
-			this.sel = sel;
+			super.setId(KEEP_ACTION_ID);
+		}
+		
+		private KeepSelectedCodeUnchanged(String text, ImageDescriptor image) {
+			super(text, image);
+			super.setId(KEEP_ACTION_ID);
 		}
 
 		@Override
 		public void run() {
 			// Determine the currently shown file.
 			try {
+				ITextSelection sel = (ITextSelection) mLeftSourceViewer.getSelection();
 				IStructuredSelection treeSelection = (IStructuredSelection) mChunksTreeViewer.getSelection();
 				Object treeSelElem = treeSelection.getFirstElement();
 				
@@ -817,7 +823,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 				if (mLeftSourceViewer != null) {
 					final ITextSelection sel = (ITextSelection) mLeftSourceViewer.getSelection();
 					if (sel.getLength() > 0) {
-						manager.add(new KeepSelectedCodeUnchanged("Keep this code unchanged", sel));
+						manager.add(new KeepSelectedCodeUnchanged("Keep this code unchanged"));
 					}
 				}
 			}
@@ -1172,6 +1178,28 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 				if (rightSourceViewer != null) {
 					StyledText te = rightSourceViewer.getTextWidget();
 					te.setMenu(null);
+				}
+				
+				// Add the keep this change button.
+				if (tbm.find(KEEP_ACTION_ID) == null) {
+					final Action keepAction = new KeepSelectedCodeUnchanged(
+							"Keep Selection Unchanged",
+							Activator.getImageDescriptor("icons/copycont_r_co.gif"));
+					
+					final ActionContributionItem keepActionContributionItem = new ActionContributionItem(keepAction);
+					tbm.appendToGroup("merge", keepActionContributionItem);
+					
+					if (mLeftSourceViewer != null) {
+						mLeftSourceViewer.addSelectionChangedListener(new ISelectionChangedListener() {
+							@Override
+							public void selectionChanged(SelectionChangedEvent event) {
+								ITextSelection sel = (ITextSelection) event.getSelection();
+								boolean selected = sel != null && sel.getLength() > 0;
+								keepAction.setEnabled(selected);
+								keepActionContributionItem.update();
+							}
+						});
+					}
 				}
 				
 				return v;
