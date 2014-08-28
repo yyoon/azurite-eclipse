@@ -73,6 +73,7 @@ import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoParams;
 import edu.cmu.scs.azurite.model.undo.UndoAlternative;
 import edu.cmu.scs.azurite.plugin.Activator;
+import edu.cmu.scs.azurite.preferences.Initializer;
 import edu.cmu.scs.azurite.views.RectSelectionListener;
 import edu.cmu.scs.azurite.views.TimelineViewPart;
 
@@ -318,17 +319,34 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 			int curIndex = Arrays.asList(topElements).indexOf(topElem);
 			
 			if (next) {
-				// There must be some children here.
-				candidate = topElem.getChunkElements().get(0);
-			} else {
-				// Find the last chunk of the previous top level element.
-				if (curIndex > 0) {
-					TopLevelElement prevTopElem = topElements[curIndex - 1];
-					candidate = prevTopElem.getChunkElements().get(prevTopElem.getChunkElements().size() - 1);
+				if (mShowChunks) {
+					// There must be some children here.
+					candidate = topElem.getChunkElements().get(0);
 				} else {
-					candidate = null;
+					if (curIndex < topElements.length - 1) {
+						candidate = topElements[curIndex + 1];
+					} else {
+						candidate = null;
+					}
+				}
+			} else {
+				if (mShowChunks) {
+					// Find the last chunk of the previous top level element.
+					if (curIndex > 0) {
+						TopLevelElement prevTopElem = topElements[curIndex - 1];
+						candidate = prevTopElem.getChunkElements().get(prevTopElem.getChunkElements().size() - 1);
+					} else {
+						candidate = null;
+					}
+				} else {
+					if (curIndex > 0) {
+						candidate = topElements[curIndex - 1];
+					} else {
+						candidate = null;
+					}
 				}
 			}
+			
 			return candidate;
 		}
 	}
@@ -511,9 +529,11 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 
 		@Override
 		public Object[] getChildren(Object parentElement) {
-			if (parentElement instanceof TopLevelElement) {
-				TopLevelElement topElem = (TopLevelElement) parentElement;
-				return topElem.getChunkElements().toArray();
+			if (mShowChunks) {
+				if (parentElement instanceof TopLevelElement) {
+					TopLevelElement topElem = (TopLevelElement) parentElement;
+					return topElem.getChunkElements().toArray();
+				}
 			}
 			
 			return null;
@@ -621,6 +641,12 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		
 	}
 	
+	// Indicates whether to show the individual chunk-level elements or not.
+	// Retrieve this preference setting when the dialog is first launched,
+	// and then use that until this dialog is closed.
+	// (i.e., in order to change the setting, the user has to relaunch the ISUD.)
+	private boolean mShowChunks;
+	
 	// Menu
 	private MenuManager mLeftSourceViewerMenuMgr;
 	// ----------------------------------------
@@ -666,6 +692,9 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		
 		// Create the default compare configuration.
 		mCompareConfiguration = createCompareConfiguration();
+		
+		mShowChunks = Activator.getDefault().getPreferenceStore()
+				.getBoolean(Initializer.Pref_InteractiveSelectiveUndoShowChunks);
 	}
 
 	private CompareConfiguration createCompareConfiguration() {
@@ -748,6 +777,9 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		
 		// Setup the menu
 		createMenuBar();
+		
+		// Set the initial input
+		setChunksTreeViewerInput();
 		
 		return composite;
 	}
@@ -832,9 +864,6 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 		
 		// This means that the top-level elements will automatically be expanded.
 		mChunksTreeViewer.setAutoExpandLevel(2);
-		
-		// Set the initial input
-		setChunksTreeViewerInput();
 		
 		// Set the content of the ViewerPane to the tree-control.
 		chunksPane.setContent(mChunksTreeViewer.getControl());
@@ -954,6 +983,11 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 				if (restoreSelectionsForTopElement(oldChunkElem, oldTopElem, newTopElem)) {
 					break;
 				}
+			}
+		} else if (oldSelection == null) {
+			// Select the first item, if there's any.
+			if (newInput != null && newInput.length > 0) {
+				mChunksTreeViewer.setSelection(new StructuredSelection(newInput[0]), true);
 			}
 		}
 	}
