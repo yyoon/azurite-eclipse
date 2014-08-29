@@ -600,6 +600,28 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 		});
 	}
 	
+	public List<RuntimeDC> filterDocumentChangesByRegionInclusive(final int startOffset, final int endOffset) {
+		return filterDocumentChangesByRegionInclusive(getCurrentFileKey(), startOffset, endOffset);
+	}
+	
+	public List<RuntimeDC> filterDocumentChangesByRegionInclusive(FileKey key, final int startOffset, final int endOffset) {
+		return filterDocumentChanges(key, new IRuntimeDCFilter() {
+			@Override
+			public boolean filter(RuntimeDC runtimeDC) {
+				List<Segment> segments = runtimeDC.getAllSegments();
+				
+				for (Segment segment : segments) {
+					if (startOffset <= segment.getEffectiveEndOffset() &&
+						segment.getOffset() <= endOffset) {
+						return true;
+					}
+				}
+				
+				return false;
+			}
+		});
+	}
+	
 	public List<RuntimeDC> filterDocumentChanges(IRuntimeDCFilter filter) {
 		return filterDocumentChanges(getCurrentFileKey(), filter);
 	}
