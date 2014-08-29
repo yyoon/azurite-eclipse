@@ -546,6 +546,20 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 					TopLevelElement topElem = (TopLevelElement) parentElement;
 					return topElem.getChunkElements().toArray();
 				}
+			} else {
+				if (parentElement instanceof TopLevelElement) {
+					TopLevelElement topElem = (TopLevelElement) parentElement;
+					if (topElem.hasUnresolvedConflict()) {
+						List<ChunkLevelElement> unresolvedChunks = new ArrayList<ChunkLevelElement>();
+						for (ChunkLevelElement chunkElem : topElem.getChunkElements()) {
+							if (chunkElem.hasUnresolvedConflict()) {
+								unresolvedChunks.add(chunkElem);
+							}
+						}
+						
+						return unresolvedChunks.toArray();
+					}
+				}
 			}
 			
 			return null;
