@@ -208,7 +208,7 @@ public class InteractiveSelectiveUndoDialog extends TitleAreaDialog implements R
 				
 				// Get the runtime dcs.
 				List<RuntimeDC> runtimeDCs = RuntimeHistoryManager.getInstance()
-						.filterDocumentChangesByRegion(
+						.filterDocumentChangesByRegionInclusive(
 								key,
 								sel.getOffset(),
 								sel.getOffset() + sel.getLength());
