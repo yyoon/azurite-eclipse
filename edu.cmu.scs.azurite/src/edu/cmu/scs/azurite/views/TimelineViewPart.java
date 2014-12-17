@@ -62,14 +62,14 @@ import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
 import edu.cmu.scs.azurite.plugin.Activator;
 import edu.cmu.scs.azurite.preferences.Initializer;
-import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
-import edu.cmu.scs.fluorite.commands.Delete;
 import edu.cmu.scs.fluorite.commands.FileOpenCommand;
 import edu.cmu.scs.fluorite.commands.ICommand;
 import edu.cmu.scs.fluorite.commands.ITimestampOverridable;
 import edu.cmu.scs.fluorite.commands.ITypeOverridable;
-import edu.cmu.scs.fluorite.commands.Insert;
-import edu.cmu.scs.fluorite.commands.Replace;
+import edu.cmu.scs.fluorite.commands.document.DocChange;
+import edu.cmu.scs.fluorite.commands.document.Delete;
+import edu.cmu.scs.fluorite.commands.document.Insert;
+import edu.cmu.scs.fluorite.commands.document.Replace;
 import edu.cmu.scs.fluorite.model.CommandExecutionListener;
 import edu.cmu.scs.fluorite.model.EventRecorder;
 import edu.cmu.scs.fluorite.model.Events;
@@ -958,7 +958,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	}
 	
 	@Override
-	public void documentChangeAdded(BaseDocumentChangeEvent docChange) {
+	public void documentChangeAdded(DocChange docChange) {
 		addOperation(docChange, true, true);
 	}
 	
@@ -1012,7 +1012,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		return executeStr;
 	}
 
-	private void addOperation(BaseDocumentChangeEvent docChange, boolean scroll, boolean current) {
+	private void addOperation(DocChange docChange, boolean scroll, boolean current) {
 		String executeStr = getAddOperationString(docChange, scroll, true, current);
 		browser.execute(executeStr);
 	}
@@ -1027,11 +1027,11 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 //		long start = System.currentTimeMillis();
 		
 		for (ICommand command : events.getCommands()) {
-			if (!(command instanceof BaseDocumentChangeEvent)) {
+			if (!(command instanceof DocChange)) {
 				continue;
 			}
 			
-			BaseDocumentChangeEvent docChange = (BaseDocumentChangeEvent)command;
+			DocChange docChange = (DocChange)command;
 			if (docChange instanceof FileOpenCommand) {
 				FileOpenCommand foc = (FileOpenCommand)docChange;
 				if (foc.getFilePath() != null) {
@@ -1054,7 +1054,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		browser.execute("popCurrentFile();");
 	}
 
-	private String getAddOperationString(BaseDocumentChangeEvent docChange,
+	private String getAddOperationString(DocChange docChange,
 			boolean scroll, boolean layout, boolean current) {
 		String executeStr = String.format("addOperation(%1$d, %2$d, %3$d, %4$d, %5$f, %6$f, %7$d, %8$s, %9$s, %10$s);",
 				docChange.getSessionId(),
@@ -1082,7 +1082,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		browser.execute(builder.toString());
 	}
 	
-	private int getTypeIndex(BaseDocumentChangeEvent docChange) {
+	private int getTypeIndex(DocChange docChange) {
 		if (docChange instanceof DiffInsert) {
 			return 10;
 		} else if (docChange instanceof DiffDelete) {
@@ -1099,7 +1099,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	}
 
 	@Override
-	public void documentChangeUpdated(BaseDocumentChangeEvent docChange) {
+	public void documentChangeUpdated(DocChange docChange) {
 		String executeStr = String.format(
 				"updateOperation(%1$d, %2$d, %3$d, %4$f, %5$f, %6$d, true);",
 				docChange.getSessionId(),
@@ -1112,7 +1112,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	}
 	
 	@Override
-	public void documentChangeAmended(BaseDocumentChangeEvent oldDocChange, BaseDocumentChangeEvent newDocChange) {
+	public void documentChangeAmended(DocChange oldDocChange, DocChange newDocChange) {
 		String executeStr = String.format(
 				"updateOperation(%1$d, %2$d, %3$d, %4$f, %5$f, %6$d, true);",
 				oldDocChange.getSessionId(),

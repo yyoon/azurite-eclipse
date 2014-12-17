@@ -10,11 +10,12 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
-import edu.cmu.scs.fluorite.commands.Delete;
 import edu.cmu.scs.fluorite.commands.ICommand;
-import edu.cmu.scs.fluorite.commands.Insert;
-import edu.cmu.scs.fluorite.commands.Replace;
+import edu.cmu.scs.fluorite.commands.document.Delete;
+import edu.cmu.scs.fluorite.commands.document.DocChange;
+import edu.cmu.scs.fluorite.commands.document.Insert;
+import edu.cmu.scs.fluorite.commands.document.Range;
+import edu.cmu.scs.fluorite.commands.document.Replace;
 
 public class BaseRuntimeDocumentChangeTest {
 	
@@ -62,7 +63,7 @@ public class BaseRuntimeDocumentChangeTest {
 	
 	@Test
 	public void testCreateInvalid() {
-		BaseDocumentChangeEvent event = new BaseDocumentChangeEvent() {
+		DocChange event = new DocChange() {
 			public boolean execute(IEditorPart target) { return false; }
 			public void dump() {}
 			public Map<String, String> getAttributesMap() { return null; }
@@ -81,6 +82,10 @@ public class BaseRuntimeDocumentChangeTest {
 			public void applyInverse(StringBuilder builder) {}
 			public double getY1() { return 0; }
 			public double getY2() { return 0; }
+			public Range getDeletionRange() { return null; }
+			public String getDeletedText() { return null; }
+			public Range getInsertionRange() { return null; }
+			public String getInsertedText() { return null; }
 		};
 		
 		exception.expect(IllegalArgumentException.class);

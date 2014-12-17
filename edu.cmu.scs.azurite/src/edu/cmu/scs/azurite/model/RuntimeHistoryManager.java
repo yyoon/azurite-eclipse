@@ -19,11 +19,11 @@ import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.commands.runtime.Segment;
 import edu.cmu.scs.azurite.plugin.Activator;
 import edu.cmu.scs.azurite.preferences.Initializer;
-import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 import edu.cmu.scs.fluorite.commands.FileOpenCommand;
 import edu.cmu.scs.fluorite.commands.ICommand;
 import edu.cmu.scs.fluorite.commands.ITypeOverridable;
-import edu.cmu.scs.fluorite.commands.Replace;
+import edu.cmu.scs.fluorite.commands.document.DocChange;
+import edu.cmu.scs.fluorite.commands.document.Replace;
 import edu.cmu.scs.fluorite.model.CommandExecutionListener;
 import edu.cmu.scs.fluorite.model.DocumentChangeListener;
 import edu.cmu.scs.fluorite.model.EventRecorder;
@@ -185,13 +185,13 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 		}
 	}
 	
-	private void fireDocumentChangeAddedEvent(BaseDocumentChangeEvent docChange) {
+	private void fireDocumentChangeAddedEvent(DocChange docChange) {
 		for (Object listenerObj : mRuntimeDocumentChangeListeners.getListeners()) {
 			((RuntimeDCListener)listenerObj).documentChangeAdded(docChange);
 		}
 	}
 	
-	private void fireDocumentChangeUpdatedEvent(BaseDocumentChangeEvent docChange) {
+	private void fireDocumentChangeUpdatedEvent(DocChange docChange) {
 		for (Object listenerObj : mRuntimeDocumentChangeListeners.getListeners()) {
 			((RuntimeDCListener)listenerObj).documentChangeUpdated(docChange);
 		}
@@ -203,7 +203,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 		}
 	}
 	
-	private void fireDocumentChangeAmendedEvent(BaseDocumentChangeEvent oldDocChange, BaseDocumentChangeEvent newDocChange) {
+	private void fireDocumentChangeAmendedEvent(DocChange oldDocChange, DocChange newDocChange) {
 		for (Object listenerObj : mRuntimeDocumentChangeListeners.getListeners()) {
 			((RuntimeDCListener)listenerObj).documentChangeAmended(oldDocChange, newDocChange);
 		}
@@ -303,9 +303,9 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 					new IAddCommand() {							// what to do with the created diffs.
 						@Override
 						public void addCommand(ICommand command) {
-							if (command instanceof BaseDocumentChangeEvent) {
-								BaseDocumentChangeEvent docChange =
-										(BaseDocumentChangeEvent) command;
+							if (command instanceof DocChange) {
+								DocChange docChange =
+										(DocChange) command;
 								documentChanged(docChange);
 								documentChangeFinalized(docChange);
 							}
@@ -331,7 +331,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 	}
 
 	@Override
-	public void documentChanged(BaseDocumentChangeEvent docChange) {
+	public void documentChanged(DocChange docChange) {
 		if (isEntireFileReplace(docChange)) {
 			// In this case, inject diff DCs.
 			Replace replace = (Replace) docChange;
@@ -350,9 +350,9 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 						new IAddCommand() {
 							@Override
 							public void addCommand(ICommand command) {
-								if (command instanceof BaseDocumentChangeEvent) {
-									BaseDocumentChangeEvent docChange =
-											(BaseDocumentChangeEvent) command;
+								if (command instanceof DocChange) {
+									DocChange docChange =
+											(DocChange) command;
 									documentChanged(docChange);
 									documentChangeFinalized(docChange);
 								}
@@ -365,17 +365,17 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 		}
 	}
 
-	private boolean isEntireFileReplace(BaseDocumentChangeEvent docChange) {
+	private boolean isEntireFileReplace(DocChange docChange) {
 		return docChange instanceof Replace && ((Replace) docChange).isEntireFileChange();
 	}
 	
 	@Override
-	public void documentChangeUpdated(BaseDocumentChangeEvent docChange) {
+	public void documentChangeUpdated(DocChange docChange) {
 		fireDocumentChangeUpdatedEvent(docChange);
 	}
 	
 	@Override
-	public void documentChangeFinalized(BaseDocumentChangeEvent docChange) {
+	public void documentChangeFinalized(DocChange docChange) {
 		if (isEntireFileReplace(docChange)) {
 			// Do nothing, because everything should have been handled in documentChanged
 		} else {
@@ -383,15 +383,15 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 		}
 	}
 	
-	private void addRuntimeDCFromOriginalDC(BaseDocumentChangeEvent docChange) {
+	private void addRuntimeDCFromOriginalDC(DocChange docChange) {
 		addRuntimeDCFromOriginalDC(docChange, getCurrentFileKey());
 	}
 	
-	private void addRuntimeDCFromOriginalDC(BaseDocumentChangeEvent docChange, FileKey key) {
+	private void addRuntimeDCFromOriginalDC(DocChange docChange, FileKey key) {
 		addRuntimeDCFromOriginalDC(docChange, key, true);
 	}
 	
-	private void addRuntimeDCFromOriginalDC(BaseDocumentChangeEvent docChange, FileKey key, boolean fireEvent) {
+	private void addRuntimeDCFromOriginalDC(DocChange docChange, FileKey key, boolean fireEvent) {
 		RuntimeDC runtimeDC = RuntimeDC.createRuntimeDocumentChange(docChange);
 		runtimeDC.setBelongsTo(key);
 		
@@ -739,11 +739,11 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 					continue;
 				}
 				
-				if (!(command instanceof BaseDocumentChangeEvent)) {
+				if (!(command instanceof DocChange)) {
 					continue;
 				}
 				
-				BaseDocumentChangeEvent docChange = (BaseDocumentChangeEvent)command;
+				DocChange docChange = (DocChange)command;
 				if (docChange instanceof FileOpenCommand) {
 					processFileOpenCommand((FileOpenCommand)docChange);
 				} else {
@@ -758,7 +758,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 		firePastLogsReadEvent(listAllEvents);
 	}
 
-	private void processDocumentChange(BaseDocumentChangeEvent docChange) {
+	private void processDocumentChange(DocChange docChange) {
 		// Doc Change generated by Diff. (see PastHistoryManager)
 		if (docChange instanceof IDiffDC) {
 			addRuntimeDCFromOriginalDC(docChange,
@@ -802,7 +802,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 	}
 
 	@Override
-	public void documentChangeAmended(BaseDocumentChangeEvent oldDocChange, BaseDocumentChangeEvent newDocChange) {
+	public void documentChangeAmended(DocChange oldDocChange, DocChange newDocChange) {
 		// Find out the runtime DC associated with the oldDocChange,
 		// and replace the originalDC to the new one.
 		// Presumably, this is the last runtime DC associated with the current file.

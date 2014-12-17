@@ -6,10 +6,10 @@ import java.util.List;
 
 import edu.cmu.scs.azurite.model.FileKey;
 import edu.cmu.scs.azurite.model.OperationId;
-import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
-import edu.cmu.scs.fluorite.commands.Delete;
-import edu.cmu.scs.fluorite.commands.Insert;
-import edu.cmu.scs.fluorite.commands.Replace;
+import edu.cmu.scs.fluorite.commands.document.DocChange;
+import edu.cmu.scs.fluorite.commands.document.Delete;
+import edu.cmu.scs.fluorite.commands.document.Insert;
+import edu.cmu.scs.fluorite.commands.document.Replace;
 
 /**
  * @author YoungSeok Yoon
@@ -17,13 +17,13 @@ import edu.cmu.scs.fluorite.commands.Replace;
  */
 public abstract class RuntimeDC {
 
-	private BaseDocumentChangeEvent mOriginal;
+	private DocChange mOriginal;
 	
 	private List<RuntimeDC> mConflicts;
 	
 	private FileKey mBelongsTo;
 	
-	public static RuntimeDC createRuntimeDocumentChange(BaseDocumentChangeEvent original) {
+	public static RuntimeDC createRuntimeDocumentChange(DocChange original) {
 		if (original instanceof Insert) {
 			return new RuntimeInsert((Insert) original);
 		} else if (original instanceof Delete) {
@@ -35,13 +35,13 @@ public abstract class RuntimeDC {
 		}
 	}
 	
-	protected RuntimeDC(BaseDocumentChangeEvent original) {
+	protected RuntimeDC(DocChange original) {
 		mOriginal = original;
 		
 		mConflicts = new ArrayList<RuntimeDC>();
 	}
 	
-	public BaseDocumentChangeEvent getOriginal() {
+	public DocChange getOriginal() {
 		return mOriginal;
 	}
 	

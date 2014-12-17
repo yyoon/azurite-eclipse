@@ -3,7 +3,7 @@ package edu.cmu.scs.azurite.model;
 import java.util.List;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
-import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
+import edu.cmu.scs.fluorite.commands.document.DocChange;
 import edu.cmu.scs.fluorite.model.Events;
 
 
@@ -22,17 +22,17 @@ public interface RuntimeDCListener {
 	/**
 	 * Fired when a document change was first added.
 	 */
-	void documentChangeAdded(BaseDocumentChangeEvent docChange);
+	void documentChangeAdded(DocChange docChange);
 	
 	/**
 	 * Fired when a document change was updated.
 	 */
-	void documentChangeUpdated(BaseDocumentChangeEvent docChange);
+	void documentChangeUpdated(DocChange docChange);
 	
 	/**
 	 * Fired when a document change was amended.
 	 */
-	void documentChangeAmended(BaseDocumentChangeEvent oldDocChange, BaseDocumentChangeEvent newDocChange);
+	void documentChangeAmended(DocChange oldDocChange, DocChange newDocChange);
 	
 	/**
 	 * Fired when some past history files were read.

@@ -2,7 +2,7 @@ package edu.cmu.scs.azurite.commands.runtime;
 
 import java.util.List;
 
-import edu.cmu.scs.fluorite.commands.Insert;
+import edu.cmu.scs.fluorite.commands.document.Insert;
 
 /**
  * @author YoungSeok Yoon

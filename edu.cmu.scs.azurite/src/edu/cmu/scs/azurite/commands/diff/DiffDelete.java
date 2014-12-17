@@ -6,7 +6,7 @@ import java.util.Map;
 import org.eclipse.jface.text.IDocument;
 
 import edu.cmu.scs.azurite.model.FileKey;
-import edu.cmu.scs.fluorite.commands.Delete;
+import edu.cmu.scs.fluorite.commands.document.Delete;
 
 public class DiffDelete extends Delete implements IDiffDC {
 	

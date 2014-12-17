@@ -3,7 +3,7 @@ package edu.cmu.scs.azurite.commands.runtime;
 import java.util.ArrayList;
 import java.util.List;
 
-import edu.cmu.scs.fluorite.commands.Delete;
+import edu.cmu.scs.fluorite.commands.document.Delete;
 
 /**
  * @author YoungSeok Yoon
