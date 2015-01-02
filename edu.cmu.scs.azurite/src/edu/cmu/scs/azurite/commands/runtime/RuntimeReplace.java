@@ -113,6 +113,10 @@ public class RuntimeReplace extends RuntimeDC {
 	public String getHtmlInfo() {
 		StringBuilder builder = new StringBuilder();
 		
+		if ("true".equals(System.getProperty("azuriteDebug"))) {
+			builder.append("ID: " + getOriginal().getCommandIndex() + ", [" + getCollapseID(0) + ", " + getCollapseID(1) + ", " + getCollapseID(2) + "]<br>");
+		}
+		
 		builder.append("----------\n");
 		builder.append(transformToHtmlString(getOriginal().getDeletedText()));
 		builder.append("\n----------");

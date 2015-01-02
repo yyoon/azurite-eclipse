@@ -1,13 +1,17 @@
 package edu.cmu.scs.azurite.commands.runtime;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
+import org.eclipse.jface.text.IDocument;
+
 import edu.cmu.scs.azurite.model.FileKey;
+import edu.cmu.scs.azurite.model.OperationGrouper;
 import edu.cmu.scs.azurite.model.OperationId;
-import edu.cmu.scs.fluorite.commands.document.DocChange;
 import edu.cmu.scs.fluorite.commands.document.Delete;
+import edu.cmu.scs.fluorite.commands.document.DocChange;
 import edu.cmu.scs.fluorite.commands.document.Insert;
 import edu.cmu.scs.fluorite.commands.document.Replace;
 
@@ -22,6 +26,8 @@ public abstract class RuntimeDC {
 	private List<RuntimeDC> mConflicts;
 	
 	private FileKey mBelongsTo;
+	
+	private int[] mCollapseTo;
 	
 	public static RuntimeDC createRuntimeDocumentChange(DocChange original) {
 		if (original instanceof Insert) {
@@ -39,6 +45,9 @@ public abstract class RuntimeDC {
 		mOriginal = original;
 		
 		mConflicts = new ArrayList<RuntimeDC>();
+		
+		mCollapseTo = new int[OperationGrouper.NUM_LEVELS];
+		Arrays.fill(mCollapseTo, -1);
 	}
 	
 	public DocChange getOriginal() {
@@ -137,4 +146,50 @@ public abstract class RuntimeDC {
 		
 		return mOperationId;
 	}
+	
+	public int getCollapseID(int level) {
+		return mCollapseTo[level];
+	}
+	
+	public void setCollapseID(int level, int id) {
+		mCollapseTo[level] = id;
+	}
+	
+	public static DocChange mergeChanges(RuntimeDC oldDC, RuntimeDC newDC) {
+		return mergeChanges(oldDC, newDC, null);
+	}
+	
+	public static DocChange mergeChanges(RuntimeDC oldDC, RuntimeDC newDC, IDocument docBefore) {
+		return DocChange.mergeChanges(oldDC.getOriginal(), newDC.getOriginal(), docBefore);
+	}
+	
+	public static DocChange mergeChanges(RuntimeDC oldDC, List<RuntimeDC> newDCs) {
+		return mergeChanges(oldDC, newDCs, null);
+	}
+	
+	public static DocChange mergeChanges(RuntimeDC oldDC, List<RuntimeDC> newDCs, IDocument docBefore) {
+		return mergeChanges(oldDC.getOriginal(), newDCs, docBefore);
+	}
+	
+	public static DocChange mergeChanges(DocChange oldChange, List<RuntimeDC> newDCs) {
+		return mergeChanges(oldChange, newDCs, null);
+	}
+	
+	public static DocChange mergeChanges(DocChange oldChange, List<RuntimeDC> newDCs, IDocument docBefore) {
+		DocChange result = oldChange;
+		for (RuntimeDC newDC : newDCs) {
+			result = DocChange.mergeChanges(result, newDC.getOriginal(), docBefore);
+		}
+		
+		return result;
+	}
+	
+	public static DocChange mergeChanges(List<RuntimeDC> dcs) {
+		return mergeChanges(dcs, null);
+	}
+	
+	public static DocChange mergeChanges(List<RuntimeDC> dcs, IDocument docBefore) {
+		return mergeChanges(dcs.get(0), dcs.subList(1, dcs.size()), docBefore);
+	}
+	
 }

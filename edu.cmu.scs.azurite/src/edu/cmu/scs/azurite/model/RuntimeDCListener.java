@@ -12,7 +12,7 @@ public interface RuntimeDCListener {
 	/**
 	 * Fired when a new file was opened and the active file was changed. 
 	 */
-	void activeFileChanged(String projectName, String filePath);
+	void activeFileChanged(FileKey fileKey, String snapshot);
 	
 	/**
 	 * Fired when a new runtime document change was recorded.

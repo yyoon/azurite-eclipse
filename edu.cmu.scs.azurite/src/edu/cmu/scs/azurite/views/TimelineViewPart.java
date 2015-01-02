@@ -943,7 +943,10 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	}
 	
 	@Override
-	public void activeFileChanged(String projectName, String filePath) {
+	public void activeFileChanged(FileKey fileKey, String snapshot) {
+		String projectName = fileKey.getProjectName();
+		String filePath = fileKey.getFilePath();
+		
 		if (projectName == null || filePath == null) {
 			// Some non-text file is opened maybe?
 			return;
