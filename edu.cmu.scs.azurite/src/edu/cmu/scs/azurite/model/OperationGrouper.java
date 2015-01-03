@@ -172,24 +172,18 @@ public class OperationGrouper implements RuntimeDCListener {
 		Document docIntermediate = new Document(docBefore.get());
 		oldEvent.apply(docIntermediate);
 		
-		if (docBefore != null) {
-			try {
-				Document doc = new Document(docBefore.get());
-				oldEvent.apply(doc);
-				if (!DocChange.overlap(oldEvent, newEvent) &&
-					docIntermediate.getLineOfOffset(oldEvent.getInsertionRange().getEndOffset()) !=
-					docIntermediate.getLineOfOffset(newEvent.getDeletionRange().getOffset()) &&
-					docIntermediate.getLineOfOffset(oldEvent.getInsertionRange().getOffset()) !=
-					docIntermediate.getLineOfOffset(newEvent.getDeletionRange().getEndOffset())) {
-					return false;
-				}
-			} catch (BadLocationException e) {
-				e.printStackTrace();
-				if (!DocChange.overlap(oldEvent, newEvent)) {
-					return false;
-				}
+		try {
+			Document doc = new Document(docBefore.get());
+			oldEvent.apply(doc);
+			if (!DocChange.overlap(oldEvent, newEvent) &&
+				docIntermediate.getLineOfOffset(oldEvent.getInsertionRange().getEndOffset()) !=
+				docIntermediate.getLineOfOffset(newEvent.getDeletionRange().getOffset()) &&
+				docIntermediate.getLineOfOffset(oldEvent.getInsertionRange().getOffset()) !=
+				docIntermediate.getLineOfOffset(newEvent.getDeletionRange().getEndOffset())) {
+				return false;
 			}
-		} else {
+		} catch (BadLocationException e) {
+			e.printStackTrace();
 			if (!DocChange.overlap(oldEvent, newEvent)) {
 				return false;
 			}
