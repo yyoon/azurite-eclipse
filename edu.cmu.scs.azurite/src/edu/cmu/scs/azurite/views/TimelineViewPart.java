@@ -66,16 +66,15 @@ import edu.cmu.scs.fluorite.commands.FileOpenCommand;
 import edu.cmu.scs.fluorite.commands.ICommand;
 import edu.cmu.scs.fluorite.commands.ITimestampOverridable;
 import edu.cmu.scs.fluorite.commands.ITypeOverridable;
-import edu.cmu.scs.fluorite.commands.document.DocChange;
 import edu.cmu.scs.fluorite.commands.document.Delete;
+import edu.cmu.scs.fluorite.commands.document.DocChange;
 import edu.cmu.scs.fluorite.commands.document.Insert;
 import edu.cmu.scs.fluorite.commands.document.Replace;
-import edu.cmu.scs.fluorite.model.CommandExecutionListener;
 import edu.cmu.scs.fluorite.model.EventRecorder;
 import edu.cmu.scs.fluorite.model.Events;
 import edu.cmu.scs.fluorite.util.Utilities;
 
-public class TimelineViewPart extends ViewPart implements RuntimeDCListener, CommandExecutionListener {
+public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 	
 	private static final String RETURN_CODE_OK = "ok";
 	private static final String RETURN_CODE_FAIL = "fail";
@@ -253,7 +252,6 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		
 		// Register to the EventRecorder.
 		RuntimeHistoryManager.getInstance().addRuntimeDocumentChangeListener(this);
-		EventRecorder.getInstance().addCommandExecutionListener(this);
 	}
 
 	private void setupContextMenu() {
@@ -523,7 +521,6 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	@Override
 	public void dispose() {
 		RuntimeHistoryManager.getInstance().removeRuntimeDocumentChangeListener(this);
-		EventRecorder.getInstance().removeCommandExecutionListener(this);
 		this.rectMarkerManager.removeAllMarkers();
 		removeRectSelectionListener(this.rectMarkerManager);
 		
@@ -1206,6 +1203,11 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		performLayout();
 	}
 	
+	@Override
+	public void codingEventOccurred(ICommand command) {
+		addEventToTimeline(command);
+	}
+	
 	private void scrollToEnd() {
 		browser.execute("scrollToEnd()");
 	}
@@ -1294,14 +1296,6 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 			}
 		}
 		return ids;
-	}
-
-	@Override
-	public void commandExecuted(ICommand command) {
-		// Some events should be displayed in the timeline
-		if (RuntimeHistoryManager.shouldCommandBeDisplayed(command)) {
-			addEventToTimeline(command);
-		}
 	}
 	
 	private void performLayout() {

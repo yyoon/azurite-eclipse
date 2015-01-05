@@ -18,6 +18,7 @@ import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.Document;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
+import edu.cmu.scs.fluorite.commands.ICommand;
 import edu.cmu.scs.fluorite.commands.document.DocChange;
 import edu.cmu.scs.fluorite.commands.document.Range;
 import edu.cmu.scs.fluorite.model.Events;
@@ -97,6 +98,13 @@ public class OperationGrouper implements RuntimeDCListener {
 	@Override
 	public void pastLogsRead(List<Events> listEvents) {
 		// TODO Do something with this as well.
+	}
+	
+	@Override
+	public void codingEventOccurred(ICommand command) {
+		for (int level = 0; level < NUM_LEVELS; ++level) {
+			flushPendingChanges(level);
+		}
 	}
 	
 	private Document getCurrentSnapshot(int level) {

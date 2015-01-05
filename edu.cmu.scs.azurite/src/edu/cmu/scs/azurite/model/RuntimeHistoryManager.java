@@ -216,6 +216,12 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 			((RuntimeDCListener) listenerObj).documentChangeAmended(oldDocChange, newDocChange);
 		}
 	}
+	
+	private void fireCodingEventOccurredEvent(ICommand command) {
+		for (Object listenerObj : mRuntimeDocumentChangeListeners.getListeners()) {
+			((RuntimeDCListener) listenerObj).codingEventOccurred(command);
+		}
+	}
 
 	public Set<FileKey> getFileKeys() {
 		return mDocumentChanges.keySet();
@@ -662,8 +668,7 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 			throw new IllegalArgumentException();
 		}
 
-		// It's a little bit odd, but make sure that there's no pending document
-		// changes
+		// It's a little bit odd, but make sure that there's no pending document changes
 		// in the EventRecorder side
 		EventRecorder.getInstance().fireLastDocumentChangeFinalizedEvent();
 
@@ -814,8 +819,9 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 	}
 
 	public static boolean shouldCommandBeDisplayed(ICommand command) {
-		String type = command instanceof ITypeOverridable ? ((ITypeOverridable) command)
-				.getTypeForDisplay() : command.getCommandType();
+		String type = command instanceof ITypeOverridable
+				? ((ITypeOverridable) command).getTypeForDisplay()
+				: command.getCommandType();
 
 		return getTimelineEvents().contains(type);
 	}
@@ -825,6 +831,9 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 		if (shouldCommandBeDisplayed(command)) {
 			mCurrentSessionEvents.addCommand(command);
 			mEventsToBeDisplayed.add(command);
+			
+			EventRecorder.getInstance().fireLastDocumentChangeFinalizedEvent();
+			fireCodingEventOccurredEvent(command);
 		}
 	}
 
