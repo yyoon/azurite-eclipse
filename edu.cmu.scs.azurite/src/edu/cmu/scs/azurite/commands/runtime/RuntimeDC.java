@@ -8,8 +8,8 @@ import java.util.List;
 import org.eclipse.jface.text.IDocument;
 
 import edu.cmu.scs.azurite.model.FileKey;
-import edu.cmu.scs.azurite.model.OperationGrouper;
 import edu.cmu.scs.azurite.model.OperationId;
+import edu.cmu.scs.azurite.model.grouper.OperationGrouper;
 import edu.cmu.scs.fluorite.commands.document.Delete;
 import edu.cmu.scs.fluorite.commands.document.DocChange;
 import edu.cmu.scs.fluorite.commands.document.Insert;

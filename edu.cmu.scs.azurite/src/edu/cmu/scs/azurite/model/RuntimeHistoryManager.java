@@ -17,6 +17,7 @@ import org.eclipse.ui.XMLMemento;
 import edu.cmu.scs.azurite.commands.diff.IDiffDC;
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.commands.runtime.Segment;
+import edu.cmu.scs.azurite.model.grouper.OperationGrouper;
 import edu.cmu.scs.azurite.plugin.Activator;
 import edu.cmu.scs.azurite.preferences.Initializer;
 import edu.cmu.scs.fluorite.commands.FileOpenCommand;

@@ -1,4 +1,4 @@
-package edu.cmu.scs.azurite.model;
+package edu.cmu.scs.azurite.model.grouper;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -18,6 +18,8 @@ import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.Document;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
+import edu.cmu.scs.azurite.model.FileKey;
+import edu.cmu.scs.azurite.model.RuntimeDCListener;
 import edu.cmu.scs.fluorite.commands.ICommand;
 import edu.cmu.scs.fluorite.commands.document.DocChange;
 import edu.cmu.scs.fluorite.commands.document.Range;
@@ -25,7 +27,9 @@ import edu.cmu.scs.fluorite.model.Events;
 
 public class OperationGrouper implements RuntimeDCListener {
 	
-	private static final int MERGE_TIME_THRESHOLD = 10000;	// in milliseconds
+	private static final int MERGE_TIME_THRESHOLD = 2000;	// in milliseconds
+	
+	private static final boolean MERGE_WHITESPACES = true;
 	
 	public static final int LEVEL_PARSABLE = 0;
 	public static final int LEVEL_METHOD = 1;
@@ -37,6 +41,7 @@ public class OperationGrouper implements RuntimeDCListener {
 	
 	private List<RuntimeDC>[] pendingChangesList;
 	private DocChange[] mergedPendingChanges;
+	private IChangeInformation[] pendingChangeInformation;
 	
 	@SuppressWarnings("unchecked")
 	public OperationGrouper() {
@@ -51,14 +56,15 @@ public class OperationGrouper implements RuntimeDCListener {
 		
 		this.mergedPendingChanges = new DocChange[NUM_LEVELS];
 		Arrays.fill(this.mergedPendingChanges, null);
+		
+		this.pendingChangeInformation = new IChangeInformation[NUM_LEVELS];
+		Arrays.fill(this.pendingChangeInformation, null);
 	}
 
 	@Override
 	public void activeFileChanged(FileKey fileKey, String snapshot) {
 		// Flush all the pending changes.
-		for (int i = 0; i < NUM_LEVELS; ++i) {
-			flushPendingChanges(i);
-		}
+		flushAllPendingChanges();
 		
 		this.currentFile = fileKey;
 		
@@ -74,12 +80,18 @@ public class OperationGrouper implements RuntimeDCListener {
 		}
 	}
 
+	public void flushAllPendingChanges() {
+		for (int level = 0; level < NUM_LEVELS; ++level) {
+			flushPendingChanges(level);
+		}
+	}
+
 	@Override
 	public void runtimeDCAdded(RuntimeDC dc) {
 		Document currentSnapshot = getCurrentSnapshot(0);
 		if (currentSnapshot == null) { return; }
 		
-		processRuntimeDC(0, Collections.singletonList(dc));
+		processRuntimeDCs(0, Collections.singletonList(dc));
 	}
 
 	@Override
@@ -102,9 +114,7 @@ public class OperationGrouper implements RuntimeDCListener {
 	
 	@Override
 	public void codingEventOccurred(ICommand command) {
-		for (int level = 0; level < NUM_LEVELS; ++level) {
-			flushPendingChanges(level);
-		}
+		flushAllPendingChanges();
 	}
 	
 	private Document getCurrentSnapshot(int level) {
@@ -114,21 +124,36 @@ public class OperationGrouper implements RuntimeDCListener {
 	}
 	
 	// c.f. LogProcessor#addPendingChange of fluorite-grouper.
-	private void processRuntimeDC(int level, List<RuntimeDC> dcs) {
+	private void processRuntimeDCs(int level, List<RuntimeDC> dcs) {
 		DocChange mergedChange = RuntimeDC.mergeChanges(dcs);
 		
+		System.out.printf("### processRuntimeDCs(%d) called\n", level);
+		System.out.printf("%s\n### ---\n", mergedChange);
+		System.out.printf("this.pendingChangesList[%d].isEmpty(): %s\n", level, this.pendingChangesList[level].isEmpty());
+		
 		if (this.pendingChangesList[level].isEmpty() || shouldBeMerged(level, dcs, mergedChange)) {
+			System.out.printf("### processRuntimeDCs(%d) first branch\n", level);
 			addPendingChanges(level, dcs, mergedChange);
 		} else {
+			System.out.printf("### processRuntimeDCs(%d) second branch\n", level);
 			flushPendingChanges(level);
 			addPendingChanges(level, dcs, mergedChange);
 		}
+		
+		System.out.println("=== processRuntimeDCs end");
+		System.out.println();
 	}
 	
 	// c.f. LogProcessor#setPendingChange of fluorite-grouper.
 	private void addPendingChanges(int level, List<RuntimeDC> dcs, DocChange mergedChange) {
 		this.pendingChangesList[level].addAll(dcs);
 		this.mergedPendingChanges[level] = DocChange.mergeChanges(this.mergedPendingChanges[level], mergedChange);
+		
+		if (this.mergedPendingChanges[level] != null) {
+		this.pendingChangeInformation[level] = determineChangeType(level, getCurrentSnapshot(level).get(), this.mergedPendingChanges[level]);
+		} else {
+			this.pendingChangeInformation[level] = null;
+		}
 		
 		int firstId = this.pendingChangesList[level].get(0).getOriginal().getCommandIndex();
 		for (RuntimeDC dc : dcs) {
@@ -169,13 +194,15 @@ public class OperationGrouper implements RuntimeDCListener {
 			throw new IllegalArgumentException();
 		}
 		
-		// If the previous pending changes were all cancelled out themselves,
-		// Do not merge the new ones with them.
-		if (this.mergedPendingChanges[0] == null) { return false; }
+		// If the previous pending changes were all cancelled out themselves, just merge them.
+		if (this.mergedPendingChanges[0] == null) { return true; }
 		
 		Document docBefore = getCurrentSnapshot(0);
 		DocChange oldEvent = this.mergedPendingChanges[0];
 		DocChange newEvent = dcs.get(0).getOriginal();
+		
+		// Do NOT merge whitespace only changes with non-whitespace changes.
+		if (!MERGE_WHITESPACES && oldEvent.isWhitespaceOnly() ^ newEvent.isWhitespaceOnly()) { return false; }
 		
 		Document docIntermediate = new Document(docBefore.get());
 		oldEvent.apply(docIntermediate);
@@ -209,13 +236,129 @@ public class OperationGrouper implements RuntimeDCListener {
 	}
 
 	private boolean shouldBeMergedLevel1(List<RuntimeDC> dcs, DocChange mergedChange) {
-		// TODO implement this properly.
+		int level = 1;
+		
+		// The mergedChange can be null when the new set of document changes cancel themselves out.
+		if (this.mergedPendingChanges[level] == null || mergedChange == null) { return true; }
+		
+		if (this.pendingChangeInformation[level] == null) {
+			this.pendingChangeInformation[level] = determineChangeType(level, getCurrentSnapshot(level).get(), this.mergedPendingChanges[level]);
+		}
+		
+		// The level 0 snapshot should contain the presnapshot.
+		IChangeInformation prevChange = this.pendingChangeInformation[level];
+		IChangeInformation nextChange = determineChangeType(level, getCurrentSnapshot(level - 1).get(), mergedChange);
+		
+		if (prevChange != null && nextChange != null) {
+			return prevChange.shouldBeMerged(level, nextChange);
+		}
+		
 		return false;
 	}
 	
 	private boolean shouldBeMergedLevel2(List<RuntimeDC> dcs, DocChange mergedChange) {
 		// TODO implement this properly.
 		return false;
+	}
+	
+	private static IChangeInformation determineChangeType(int level, String preSnapshot, DocChange docChange) {
+		if (level == 0) {
+			return null;
+		}
+		
+		// Pre-AST
+		Range preRange = docChange.getDeletionRange();
+		ASTNode preRoot = parseSnapshot(preSnapshot);
+		NodeFinder preFinder = new NodeFinder(preRoot, preRange.getOffset(), preRange.getLength());
+		
+		ASTNode preCovered = preFinder.getCoveredNode();
+//		ASTNode preCovering = preFinder.getCoveringNode();
+		
+		// Post-AST
+		Range postRange = docChange.getInsertionRange();
+		String postSnapshot = docChange.apply(preSnapshot);
+		ASTNode postRoot = parseSnapshot(postSnapshot);
+		NodeFinder postFinder = new NodeFinder(postRoot, postRange.getOffset(), postRange.getLength());
+		
+		ASTNode postCovered = postFinder.getCoveredNode();
+		ASTNode postCovering = postFinder.getCoveringNode();
+		
+		// Add Import Statement
+		if (preCovered == null && getNodeType(postCovered) == ASTNode.IMPORT_DECLARATION) {
+			return AddImportStatementInformation.getInstance();
+		}
+		
+		// Delete Import Statement
+		if (getNodeType(preCovered) == ASTNode.IMPORT_DECLARATION && postCovered == null) {
+			return DeleteImportStatementInformation.getInstance();
+		}
+		
+		// Add Field
+		if (preCovered == null && getNodeType(postCovered) == ASTNode.FIELD_DECLARATION) {
+			return new AddFieldInformation(new Range(postCovered));
+		}
+		
+		// Delete Field
+		if (getNodeType(preCovered) == ASTNode.FIELD_DECLARATION && postCovered == null) {
+			return new DeleteFieldInformation(new Range(preCovered));
+		}
+		
+		// Change Field
+		if (postCovering != null) {
+			ASTNode node = postCovering;
+			while (node != null) {
+				if (node.getNodeType() == ASTNode.FIELD_DECLARATION) {
+					Range postFieldRange = new Range(node);
+					Range preFieldRange = null;
+					try {
+						preFieldRange = docChange.applyInverse(postFieldRange);
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+					
+					return new ChangeFieldInformation(preFieldRange, postFieldRange);
+				}
+				
+				node = node.getParent();
+			}
+		}
+		
+		// Add Method
+		if (preCovered == null && postCovered != null && postCovered.getNodeType() == ASTNode.METHOD_DECLARATION) {
+			return new AddMethodInformation(new Range(postCovered));
+		}
+		
+		// Delete Method
+		if (preCovered != null && preCovered.getNodeType() == ASTNode.METHOD_DECLARATION && postCovered == null) {
+			return new DeleteMethodInformation(new Range(preCovered));
+		}
+		
+		// Determine Method Change
+		if (postCovering != null) {
+			ASTNode node = postCovering;
+			while (node != null) {
+				if (node.getNodeType() == ASTNode.METHOD_DECLARATION) {
+					Range postMethodRange = new Range(node);
+					Range preMethodRange = null;
+					try {
+						preMethodRange = docChange.applyInverse(postMethodRange);
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+					
+					return new ChangeMethodInformation(preMethodRange, postMethodRange);
+				}
+				
+				node = node.getParent();
+			}
+		}
+		
+		return new UnknownInformation();
+	}
+	
+	private static int getNodeType(ASTNode node) {
+		if (node == null) { return -1; }
+		return node.getNodeType();
 	}
 	
 	private boolean isLocallyParsable(String snapshot, DocChange lastChange) {
@@ -276,20 +419,21 @@ public class OperationGrouper implements RuntimeDCListener {
 		}
 		
 		// TODO notify to the timeline view from here somehow?
+
+		// Go up one level
+		if (level + 1 < NUM_LEVELS) {
+			processRuntimeDCs(level + 1, dcs);
+		}
 		
 		Document snapshot = getCurrentSnapshot(level);
 		if (this.mergedPendingChanges[level] != null) {
 			this.mergedPendingChanges[level].apply(snapshot);
 		}
-
-		// Go up one level
-		if (level + 1 < NUM_LEVELS) {
-			processRuntimeDC(level + 1, dcs);
-		}
 		
 		// Clear the pending changes.
 		this.pendingChangesList[level].clear();
 		this.mergedPendingChanges[level] = null;
+		this.pendingChangeInformation[level] = null;
 	}
 	
 	private class MalformedNodeFinder extends ASTVisitor {
