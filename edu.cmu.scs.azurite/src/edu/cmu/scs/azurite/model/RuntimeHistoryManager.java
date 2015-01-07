@@ -871,5 +871,9 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 		// Finally, notify the listeners
 		fireDocumentChangeAmendedEvent(oldDocChange, newDocChange);
 	}
+	
+	public OperationGrouper getOperationGrouper() {
+		return mOperationGrouper;
+	}
 
 }

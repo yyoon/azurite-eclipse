@@ -125,32 +125,38 @@ public class OperationGrouper implements RuntimeDCListener {
 	
 	// c.f. LogProcessor#addPendingChange of fluorite-grouper.
 	private void processRuntimeDCs(int level, List<RuntimeDC> dcs) {
-		DocChange mergedChange = RuntimeDC.mergeChanges(dcs);
+		Document docBefore = getCurrentSnapshot(level);
+		if (this.mergedPendingChanges[level] != null) {
+			docBefore = new Document(docBefore.get());
+			this.mergedPendingChanges[level].apply(docBefore);
+		}
+		DocChange mergedChange = RuntimeDC.mergeChanges(dcs, docBefore);
 		
-		System.out.printf("### processRuntimeDCs(%d) called\n", level);
-		System.out.printf("%s\n### ---\n", mergedChange);
-		System.out.printf("this.pendingChangesList[%d].isEmpty(): %s\n", level, this.pendingChangesList[level].isEmpty());
+//		System.out.printf("### processRuntimeDCs(%d) called\n", level);
+//		System.out.printf("%s\n### ---\n", mergedChange);
+//		System.out.printf("this.pendingChangesList[%d].isEmpty(): %s\n", level, this.pendingChangesList[level].isEmpty());
 		
 		if (this.pendingChangesList[level].isEmpty() || shouldBeMerged(level, dcs, mergedChange)) {
-			System.out.printf("### processRuntimeDCs(%d) first branch\n", level);
+//			System.out.printf("### processRuntimeDCs(%d) first branch\n", level);
 			addPendingChanges(level, dcs, mergedChange);
 		} else {
-			System.out.printf("### processRuntimeDCs(%d) second branch\n", level);
+//			System.out.printf("### processRuntimeDCs(%d) second branch\n", level);
 			flushPendingChanges(level);
 			addPendingChanges(level, dcs, mergedChange);
 		}
 		
-		System.out.println("=== processRuntimeDCs end");
-		System.out.println();
+//		System.out.println("=== processRuntimeDCs end");
+//		System.out.println();
 	}
 	
 	// c.f. LogProcessor#setPendingChange of fluorite-grouper.
 	private void addPendingChanges(int level, List<RuntimeDC> dcs, DocChange mergedChange) {
+		Document docBefore = getCurrentSnapshot(level);
 		this.pendingChangesList[level].addAll(dcs);
-		this.mergedPendingChanges[level] = DocChange.mergeChanges(this.mergedPendingChanges[level], mergedChange);
+		this.mergedPendingChanges[level] = DocChange.mergeChanges(this.mergedPendingChanges[level], mergedChange, docBefore);
 		
 		if (this.mergedPendingChanges[level] != null) {
-		this.pendingChangeInformation[level] = determineChangeType(level, getCurrentSnapshot(level).get(), this.mergedPendingChanges[level]);
+			this.pendingChangeInformation[level] = determineChangeType(level, getCurrentSnapshot(level).get(), this.mergedPendingChanges[level]);
 		} else {
 			this.pendingChangeInformation[level] = null;
 		}
@@ -189,6 +195,7 @@ public class OperationGrouper implements RuntimeDCListener {
 	 * 
 	 * @return true if the two edits should be merged; false otherwise.
 	 */
+	@SuppressWarnings("unused")
 	private boolean shouldBeMergedLevel0(List<RuntimeDC> dcs, DocChange mergedChange) {
 		if (dcs == null || dcs.size() != 1 || dcs.get(0) == null || dcs.get(0).getOriginal() == null) {
 			throw new IllegalArgumentException();
