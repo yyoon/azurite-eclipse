@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.eclipse.core.runtime.ListenerList;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTNode;
@@ -43,6 +44,8 @@ public class OperationGrouper implements RuntimeDCListener {
 	private DocChange[] mergedPendingChanges;
 	private IChangeInformation[] pendingChangeInformation;
 	
+	private ListenerList listeners;
+	
 	@SuppressWarnings("unchecked")
 	public OperationGrouper() {
 		this.knownSnapshots = new Map[NUM_LEVELS];
@@ -59,6 +62,8 @@ public class OperationGrouper implements RuntimeDCListener {
 		
 		this.pendingChangeInformation = new IChangeInformation[NUM_LEVELS];
 		Arrays.fill(this.pendingChangeInformation, null);
+		
+		this.listeners = new ListenerList();
 	}
 
 	@Override
@@ -151,9 +156,14 @@ public class OperationGrouper implements RuntimeDCListener {
 		}
 		
 		int firstId = this.pendingChangesList[level].get(0).getOriginal().getCommandIndex();
+		updateCollapseIDs(dcs, level, firstId);
+	}
+	
+	private void updateCollapseIDs(List<RuntimeDC> dcs, int level, int collapseID) {
 		for (RuntimeDC dc : dcs) {
 			for (int i = level; i < NUM_LEVELS; ++i) {
-				dc.setCollapseID(i, firstId);
+				dc.setCollapseID(i, collapseID);
+				fireCollapseIDsUpdatedEvent(dcs, i, collapseID);
 			}
 		}
 	}
@@ -408,13 +418,6 @@ public class OperationGrouper implements RuntimeDCListener {
 	private void flushPendingChanges(int level) {
 		List<RuntimeDC> dcs = this.pendingChangesList[level];
 		if (dcs.isEmpty()) { return; }
-		
-		int collapseID = dcs.get(0).getOriginal().getCommandIndex();
-		for (RuntimeDC dc : dcs) {
-			dc.setCollapseID(level, collapseID);
-		}
-		
-		// TODO notify to the timeline view from here somehow?
 
 		// Go up one level
 		if (level + 1 < NUM_LEVELS) {
@@ -430,6 +433,20 @@ public class OperationGrouper implements RuntimeDCListener {
 		this.pendingChangesList[level].clear();
 		this.mergedPendingChanges[level] = null;
 		this.pendingChangeInformation[level] = null;
+	}
+	
+	public void addOperationGrouperListener(OperationGrouperListener listener) {
+		this.listeners.add(listener);
+	}
+	
+	public void removeOperationGrouperListener(OperationGrouperListener listener) {
+		this.listeners.remove(listener);
+	}
+	
+	private void fireCollapseIDsUpdatedEvent(List<RuntimeDC> dcs, int level, int collapseID) {
+		for (Object listenerObj : listeners.getListeners()) {
+			((OperationGrouperListener) listenerObj).collapseIDsUpdated(dcs, level, collapseID);
+		}
 	}
 	
 	private class MalformedNodeFinder extends ASTVisitor {

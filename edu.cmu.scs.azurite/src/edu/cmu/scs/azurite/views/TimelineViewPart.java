@@ -59,6 +59,7 @@ import edu.cmu.scs.azurite.model.FileKey;
 import edu.cmu.scs.azurite.model.OperationId;
 import edu.cmu.scs.azurite.model.RuntimeDCListener;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
+import edu.cmu.scs.azurite.model.grouper.OperationGrouperListener;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
 import edu.cmu.scs.azurite.plugin.Activator;
 import edu.cmu.scs.azurite.preferences.Initializer;
@@ -74,7 +75,7 @@ import edu.cmu.scs.fluorite.model.EventRecorder;
 import edu.cmu.scs.fluorite.model.Events;
 import edu.cmu.scs.fluorite.util.Utilities;
 
-public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
+public class TimelineViewPart extends ViewPart implements RuntimeDCListener, OperationGrouperListener {
 	
 	private static final String RETURN_CODE_OK = "ok";
 	private static final String RETURN_CODE_FAIL = "fail";
@@ -251,7 +252,9 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 
 		
 		// Register to the EventRecorder.
-		RuntimeHistoryManager.getInstance().addRuntimeDocumentChangeListener(this);
+		RuntimeHistoryManager manager = RuntimeHistoryManager.getInstance();
+		manager.addRuntimeDocumentChangeListener(this);
+		manager.getOperationGrouper().addOperationGrouperListener(this);
 	}
 
 	private void setupContextMenu() {
@@ -1316,6 +1319,29 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener {
 	
 	public void redrawEvents() {
 		browser.execute("updateEvents();");
+	}
+
+	@Override
+	public void collapseIDsUpdated(List<RuntimeDC> dcs, int level, int collapseID) {
+		if (dcs == null || dcs.isEmpty()) { return; }
+		
+		long sid = dcs.get(0).getOriginal().getSessionId();
+		String path = dcs.get(0).getBelongsTo().getFilePath();
+		if (path == null) { path = "null"; }
+		else { path = path.replace('\\', '/'); }
+		
+		StringBuilder idList = new StringBuilder();
+		idList.append("[");
+		idList.append(dcs.get(0).getOriginal().getCommandIndex());
+		for (int i = 1; i < dcs.size(); ++i) {
+			idList.append(",");
+			idList.append(dcs.get(i).getOriginal().getCommandIndex());
+		}
+		idList.append("]");
+		
+		String executeStr = String.format("updateCollapseIds(%d, '%s', %d, %d, %s);",
+				sid, path, level, collapseID, idList.toString());
+		browser.execute(executeStr);
 	}
 	
 }

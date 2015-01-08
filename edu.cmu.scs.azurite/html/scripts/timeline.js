@@ -2,7 +2,7 @@
 /*global d3, azurite */
 
 /* Things to be called from Azurite */
-/*exported updateOperation, getRightmostTimestamp, addSelectionsByIds, removeSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarkerAtTimestamp, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile, addEvent, activateFirebugLite, showAllFilesEditedInRange, openAllFilesEditedInRange, removeAllSelections, showUp, showDown, isMarkerVisible */
+/*exported updateOperation, updateCollapseIds, getRightmostTimestamp, addSelectionsByIds, removeSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarkerAtTimestamp, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile, addEvent, activateFirebugLite, showAllFilesEditedInRange, openAllFilesEditedInRange, removeAllSelections, showUp, showDown, isMarkerVisible */
 
 /* Things to be called manually when debugging */
 /*exported test, testMarker, showEvents */
@@ -259,8 +259,9 @@ var LayoutEnum = {
 };
 
 // Use COMPACT by default.
-// TODO Save this to somewhere in the preferences store.
+// TODO Save these to somewhere in the preferences store.
 global.layout = LayoutEnum.COMPACT;
+global.collapseLevel = 0;
 
 // transforms
 global.translateX = 0;
@@ -632,7 +633,7 @@ function EditOperation(sid, id, t1, t2, y1, y2, type, fileGroup) {
 			return "type_diff_delete";
 		}
 	};
-	
+
 	this.fileGroup = fileGroup;
 	this.session = fileGroup.session;
 	
@@ -658,6 +659,8 @@ function EditOperation(sid, id, t1, t2, y1, y2, type, fileGroup) {
 		
 		return date.toLocaleString() + '<br>' + info;
 	};
+
+	this.collapseTo = [id, id, id];
 }
 
 /**
@@ -960,6 +963,59 @@ function updateOperation(sid, id, t2, y1, y2, type, scroll) {
 	
 	if (scroll === true) {
 		showUntil(lastOp.getAbsT2());
+	}
+}
+
+/**
+ * Called by Azurite
+ */
+function updateCollapseIds(sid, path, level, collapseId, ids) {
+	if (ids.length === 0) { return; }
+
+	var session = findSession(sid);
+	if (session === null) { return; }
+
+	var fileGroup = null;
+	var i;
+	for (i = 0; i < session.fileGroups.length; ++i) {
+		if (session.fileGroups[i].file.path === path) {
+			fileGroup = session.fileGroups[i];
+			break;
+		}
+	}
+
+	if (fileGroup === null) { return; }
+
+	// Now find the first id using binary search.
+	var firstId = ids[0];
+	var start = 0;
+	var end = fileGroup.operations.length;
+
+	var firstIndex = -1;
+	while (start < end) {
+		var mid = (start + end) / 2;
+		var midId = fileGroup.operations[mid].id;
+
+		if (midId > firstId) {
+			end = mid;
+		} else if (midId < firstId) {
+			start = mid + 1;
+		} else {
+			firstIndex = mid;
+			break;
+		}
+	}
+
+	if (firstIndex === -1) { return; }
+
+	// Finally, update collapse ids.
+	for (i = 0; i < ids.length && fileGroup.operations[firstIndex + i].id === ids[i]; ++i) {
+		fileGroup.operations[firstIndex + i].collapseTo[level] = collapseId;
+	}
+
+	// TODO And, if the level equals the current level, merge the corresponding rectangles into a single rectangle.
+	if (level === global.collapseLevel) {
+		// TODO do something here.
 	}
 }
 
