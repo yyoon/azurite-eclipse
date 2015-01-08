@@ -123,7 +123,6 @@ public class OperationGrouper implements RuntimeDCListener {
 				: null;
 	}
 	
-	// c.f. LogProcessor#addPendingChange of fluorite-grouper.
 	private void processRuntimeDCs(int level, List<RuntimeDC> dcs) {
 		Document docBefore = getCurrentSnapshot(level);
 		if (this.mergedPendingChanges[level] != null) {
@@ -132,24 +131,14 @@ public class OperationGrouper implements RuntimeDCListener {
 		}
 		DocChange mergedChange = RuntimeDC.mergeChanges(dcs, docBefore);
 		
-//		System.out.printf("### processRuntimeDCs(%d) called\n", level);
-//		System.out.printf("%s\n### ---\n", mergedChange);
-//		System.out.printf("this.pendingChangesList[%d].isEmpty(): %s\n", level, this.pendingChangesList[level].isEmpty());
-		
 		if (this.pendingChangesList[level].isEmpty() || shouldBeMerged(level, dcs, mergedChange)) {
-//			System.out.printf("### processRuntimeDCs(%d) first branch\n", level);
 			addPendingChanges(level, dcs, mergedChange);
 		} else {
-//			System.out.printf("### processRuntimeDCs(%d) second branch\n", level);
 			flushPendingChanges(level);
 			addPendingChanges(level, dcs, mergedChange);
 		}
-		
-//		System.out.println("=== processRuntimeDCs end");
-//		System.out.println();
 	}
 	
-	// c.f. LogProcessor#setPendingChange of fluorite-grouper.
 	private void addPendingChanges(int level, List<RuntimeDC> dcs, DocChange mergedChange) {
 		Document docBefore = getCurrentSnapshot(level);
 		this.pendingChangesList[level].addAll(dcs);
