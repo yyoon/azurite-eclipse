@@ -27,6 +27,16 @@ public class ChangeMethodInformation extends BaseChangeInformation {
 	public ChangeType getChangeType() {
 		return ChangeType.CHANGE_METHOD;
 	}
+	
+	@Override
+	public String getChangeSummary() {
+		String methodName = getMethodName(getPostMethodNode());
+		if (methodName != null) {
+			return String.format("Changed method '%s'", methodName);
+		} else {
+			return "Changed a method";
+		}
+	}
 
 	@Override
 	public boolean shouldBeMerged(int level, IChangeInformation nextChange) {

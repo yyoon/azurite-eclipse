@@ -21,6 +21,16 @@ public class AddFieldInformation extends BaseChangeInformation {
 	public ChangeType getChangeType() {
 		return ChangeType.ADD_FIELD;
 	}
+	
+	@Override
+	public String getChangeSummary() {
+		String fieldName = getFieldName(getPostFieldNode());
+		if (fieldName != null) {
+			return String.format("Added field '%s'", fieldName);
+		} else {
+			return "Added a field";
+		}
+	}
 
 	@Override
 	public boolean shouldBeMerged(int level, IChangeInformation nextChange) {

@@ -8,6 +8,8 @@ public interface IChangeInformation {
 	
 	String getChangeTypeString();
 	
+	String getChangeSummary();
+	
 	boolean shouldBeMerged(int level, IChangeInformation nextChange);
 	
 	/**

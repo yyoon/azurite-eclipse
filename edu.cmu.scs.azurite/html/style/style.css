@@ -383,6 +383,20 @@ fill: orange;
 fill: #ffb733;
 }
 
+div.code {
+display: block;
+margin: 0px;
+padding: 0px;
+}
+
+div.code_deletion {
+background-color: lightpink;
+}
+
+div.code_insertion {
+background-color: lightgreen;
+}
+
 div#level_buttons_wrapper .level_button {
 width: 10px;
 height: 10px;

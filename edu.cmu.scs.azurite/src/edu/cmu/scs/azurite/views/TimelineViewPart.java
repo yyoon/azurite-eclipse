@@ -683,11 +683,12 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Ope
 
 		@Override
 		public Object function(Object[] arguments) {
-			if (arguments == null || arguments.length != 4
+			if (arguments == null || arguments.length != 5
 					|| !(arguments[0] instanceof String)
 					|| !(arguments[1] instanceof String)
 					|| !(arguments[2] instanceof Number)
-					|| !(arguments[3] instanceof Number)) {
+					|| !(arguments[3] instanceof Number)
+					|| !(arguments[4] instanceof Number)) {
 				return RETURN_CODE_FAIL;
 			}
 			
@@ -700,11 +701,13 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Ope
 				long id = ((Number)arguments[3]).longValue();
 				OperationId oid = new OperationId(sid, id);
 				
+				int level = ((Number)arguments[4]).intValue();
+				
 				RuntimeDC runtimeDC = RuntimeHistoryManager.getInstance()
 						.filterDocumentChangeByIdWithoutCalculating(key, oid);
 				
 				if (runtimeDC != null) {
-					String result = runtimeDC.getHtmlInfo();
+					String result = runtimeDC.getHtmlInfo(level);
 					if (result != null) {
 						return result;
 					}

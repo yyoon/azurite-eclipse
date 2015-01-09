@@ -359,6 +359,18 @@ global.timeScale.clamp(true);
 global.idFunc = function(d) { return d.sid + '_' + d.id; };
 global.valuesFunc = function(d) { return d.values; };
 
+global.tooltipObject = {
+	gravity: $.fn.tipsy.autoNS,
+	html: true,
+	checkFn: function() {
+		return !global.dragging;
+	},
+	title: function() {
+		var d = this.__data__;
+		return d.getInfo();
+	}
+};
+
 // Move to front function for d3 selection.
 d3.selection.prototype.moveToFront = function() {
 	return this.each(function(){
@@ -675,9 +687,9 @@ function EditOperation(sid, id, t1, t2, y1, y2, type, fileGroup) {
 		var date = new Date(this.sid + this.t1);
 		var info = azurite.getInfo(
 				this.fileGroup.file.project, this.fileGroup.file.path,
-				this.sid, this.id);
+				this.sid, this.id, -1);
 		
-		return date.toLocaleString() + '<br>' + info;
+		return (d3.time.format('%m/%d @ %I:%M %p'))(date) + '<br>' + info;
 	};
 
 	this.collapseTo = [id, id, id];
@@ -728,9 +740,11 @@ function OperationGroup(operations) {
 	
 	this.getInfo = function() {
 		var date = new Date(this.sid + this.t1);
+		var info = azurite.getInfo(
+				this.fileGroup.file.project, this.fileGroup.file.path,
+				this.sid, this.id, global.collapseLevel);
 		
-		// TODO implement this.
-		return date.toLocaleString() + '<br>';
+		return (d3.time.format('%m/%d @ %I:%M %p'))(date) + '<br>' + info;
 	};
 }
 
@@ -908,19 +922,6 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current
 		}
 	}
 	
-	// Add tipsy.
-	$(rectToAppend.node()).tipsy({
-		gravity: $.fn.tipsy.autoNS,
-		html: true,
-		checkFn: function() {
-			return !global.dragging;
-		},
-		title: function() {
-			var d = this.__data__;
-			return d.getInfo();
-		}
-	});
-	
 	global.lastRect = rectToAppend;
 	
 	// Move the indicator.
@@ -1037,12 +1038,17 @@ function applyRectAttributes(rectSelection) {
 		.attr('rx', RECT_RADIUS)
 		.attr('ry', RECT_RADIUS)
 		.attr('vector-effect', 'non-scaling-stroke');
+
+	// Add tipsy.
+	rectSelection.each(function() {
+		$(this).tipsy(global.tooltipObject);
+	});
 }
 
 /**
  * Called by Azurite
  */
-function updateCollapseIds(sid, path, level, collapseId, ids) {
+function updateCollapseIds(sid, path, level, collapseId, collapseType, ids) {
 	if (ids.length === 0) { return; }
 
 	var session = findSession(sid);

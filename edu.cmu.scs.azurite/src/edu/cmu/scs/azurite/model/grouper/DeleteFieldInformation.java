@@ -21,6 +21,16 @@ public class DeleteFieldInformation extends BaseChangeInformation {
 	public ChangeType getChangeType() {
 		return ChangeType.DELETE_FIELD;
 	}
+	
+	@Override
+	public String getChangeSummary() {
+		String fieldName = getFieldName(getPreFieldNode());
+		if (fieldName != null) {
+			return String.format("Deleted field '%s'", fieldName);
+		} else {
+			return "Deleted a field";
+		}
+	}
 
 	@Override
 	public boolean shouldBeMerged(int level, IChangeInformation nextChange) {

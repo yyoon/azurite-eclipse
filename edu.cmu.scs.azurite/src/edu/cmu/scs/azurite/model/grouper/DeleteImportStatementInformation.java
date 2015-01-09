@@ -12,6 +12,11 @@ public class DeleteImportStatementInformation extends BaseChangeInformation {
 	public ChangeType getChangeType() {
 		return ChangeType.DELETE_IMPORT_STATEMENT;
 	}
+	
+	@Override
+	public String getChangeSummary() {
+		return "Deleted import statement(s)";
+	}
 
 	@Override
 	public boolean shouldBeMerged(int level, IChangeInformation nextChange) {

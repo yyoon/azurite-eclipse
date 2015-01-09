@@ -134,7 +134,55 @@ public abstract class RuntimeDC {
 		return commandIDComparator;
 	}
 	
-	public abstract String getHtmlInfo();
+	public String getHtmlInfo(int level) {
+		StringBuilder builder = new StringBuilder();
+		
+		if ("true".equals(System.getProperty("azuriteDebug"))) {
+			builder.append("ID: " + getOriginal().getCommandIndex() + ", [" + getCollapseID(0) + ", " + getCollapseID(1) + ", " + getCollapseID(2) + "]<br>");
+		}
+		
+		DocChange docChange = null;
+		String changeSummary = null;
+		if (level == -1) {
+			docChange = getOriginal();
+		} else if (mChangeInformation[level] != null) {
+			docChange = mChangeInformation[level].getMergedChange();
+			changeSummary = mChangeInformation[level].getChangeSummary();
+		}
+		
+		boolean empty = true;
+		
+		if (docChange != null) {
+			if (changeSummary != null) {
+				builder.append("<div class='change_summary'>");
+				builder.append(changeSummary);
+				builder.append("</div>");
+			}
+			
+			String deletedText = docChange.getDeletedText();
+			String insertedText = docChange.getInsertedText();
+			
+			if (deletedText != null && !deletedText.isEmpty()) {
+				builder.append("<div class='code code_deletion'>");
+				builder.append(transformToHtmlString(deletedText));
+				builder.append("</div>");
+				empty = false;
+			}
+			
+			if (insertedText != null && !insertedText.isEmpty()) {
+				builder.append("<div class='code code_insertion'>");
+				builder.append(transformToHtmlString(insertedText));
+				builder.append("</div>");
+				empty = false;
+			}
+		}
+		
+		if (empty) {
+			builder.append("No Changes");
+		}
+		
+		return builder.toString().replace("\n", "<br>");
+	}
 	
 	protected String transformToHtmlString(String originalCode) {
 		return originalCode.replace("\r\n", "\n").replace("\r", "\n").replace("\n", "<br>");

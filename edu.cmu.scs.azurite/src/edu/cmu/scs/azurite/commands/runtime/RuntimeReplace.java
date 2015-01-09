@@ -110,24 +110,6 @@ public class RuntimeReplace extends RuntimeDC {
 	}
 
 	@Override
-	public String getHtmlInfo() {
-		StringBuilder builder = new StringBuilder();
-		
-		if ("true".equals(System.getProperty("azuriteDebug"))) {
-			builder.append("ID: " + getOriginal().getCommandIndex() + ", [" + getCollapseID(0) + ", " + getCollapseID(1) + ", " + getCollapseID(2) + "]<br>");
-		}
-		
-		builder.append("----------\n");
-		builder.append(transformToHtmlString(getOriginal().getDeletedText()));
-		builder.append("\n----------");
-		builder.append("\n++++++++++\n");
-		builder.append(transformToHtmlString(getOriginal().getInsertedText()));
-		builder.append("\n++++++++++");
-		
-		return builder.toString().replace("\n", "<br>");
-	}
-
-	@Override
 	public String getTypeString() {
 		return "replace";
 	}

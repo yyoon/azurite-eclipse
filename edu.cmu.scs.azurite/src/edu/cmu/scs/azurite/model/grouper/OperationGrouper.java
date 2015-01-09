@@ -149,22 +149,30 @@ public class OperationGrouper implements RuntimeDCListener {
 		this.pendingChangesList[level].addAll(dcs);
 		this.mergedPendingChanges[level] = DocChange.mergeChanges(this.mergedPendingChanges[level], mergedChange, docBefore);
 		
-		if (this.mergedPendingChanges[level] != null) {
-			this.pendingChangeInformation[level] = determineChangeType(level, getCurrentSnapshot(level).get(), this.mergedPendingChanges[level]);
-		} else {
-			this.pendingChangeInformation[level] = null;
-		}
+		RuntimeDC firstDC = this.pendingChangesList[level].get(0);
+		int firstId = firstDC.getOriginal().getCommandIndex();
 		
-		int firstId = this.pendingChangesList[level].get(0).getOriginal().getCommandIndex();
-		updateCollapseIDs(dcs, level, firstId);
+		updateCollapseIDs(dcs, level, firstDC, firstId);
 	}
 	
-	private void updateCollapseIDs(List<RuntimeDC> dcs, int level, int collapseID) {
-		for (RuntimeDC dc : dcs) {
-			for (int i = level; i < NUM_LEVELS; ++i) {
+	private void updateCollapseIDs(List<RuntimeDC> dcs, int level, RuntimeDC collapseDC, int collapseID) {
+		DocChange mergedChange = this.mergedPendingChanges[level];
+		IChangeInformation ci = mergedChange != null
+				? determineChangeType(level, getCurrentSnapshot(level).get(), mergedChange)
+				: null;
+		
+		this.pendingChangeInformation[level] = ci;
+		
+		for (int i = level; i < NUM_LEVELS; ++i) {
+			collapseDC.setChangeInformation(i, ci);
+			
+			for (RuntimeDC dc : dcs) {
+				if (dc == collapseDC) { continue; }
 				dc.setCollapseID(i, collapseID);
-				fireCollapseIDsUpdatedEvent(dcs, i, collapseID, this.pendingChangeInformation[level]);
+				dc.setChangeInformation(i, null);
 			}
+			
+			fireCollapseIDsUpdatedEvent(dcs, i, collapseID, ci);
 		}
 	}
 	

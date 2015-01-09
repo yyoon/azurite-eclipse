@@ -12,6 +12,11 @@ public class AddImportStatementInformation extends BaseChangeInformation {
 	public ChangeType getChangeType() {
 		return ChangeType.ADD_IMPORT_STATEMENT;
 	}
+	
+	@Override
+	public String getChangeSummary() {
+		return "Added import statement(s)";
+	}
 
 	@Override
 	public boolean shouldBeMerged(int level, IChangeInformation nextChange) {

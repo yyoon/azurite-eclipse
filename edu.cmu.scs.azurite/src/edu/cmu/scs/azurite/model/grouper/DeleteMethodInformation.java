@@ -21,6 +21,16 @@ public class DeleteMethodInformation extends BaseChangeInformation {
 	public ChangeType getChangeType() {
 		return ChangeType.DELETE_METHOD;
 	}
+	
+	@Override
+	public String getChangeSummary() {
+		String methodName = getMethodName(getPreMethodNode());
+		if (methodName != null) {
+			return String.format("Deleted method '%s'", methodName);
+		} else {
+			return "Deleted a method";
+		}
+	}
 
 	@Override
 	public boolean shouldBeMerged(int level, IChangeInformation nextChange) {
