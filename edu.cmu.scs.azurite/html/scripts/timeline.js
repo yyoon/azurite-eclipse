@@ -694,6 +694,8 @@ function EditOperation(sid, id, t1, t2, y1, y2, type, fileGroup) {
 
 	this.collapseTo = [id, id, id];
 	this.collapseType = ["type_unknown", "type_unknown", "type_unknown"];
+
+	this.finalized = false;
 }
 
 /**
@@ -1114,6 +1116,7 @@ function updateCollapseIds(sid, path, level, collapseId, collapseType, ids) {
 	for (i = 0; i < ids.length && fileGroup.operations[firstIndex + i].id === ids[i]; ++i) {
 		var op = fileGroup.operations[firstIndex + i];
 		op.collapseTo[level] = collapseId;
+		op.finalized = true;
 		if (ids[i] != collapseId) { op.collapseType[level] = "type_unknown"; }
 	}
 
@@ -1190,7 +1193,7 @@ function collapse(level, data) {
 	return d3.nest()
 		.key(function(d) { return d.collapseTo[level]; })
 		.rollup(function(operations) {
-			if (operations.length === 1 && operations[0] === global.lastOperation) {
+			if (operations.length === 1 && !operations[0].finalized && operations[0] === global.lastOperation) {
 				return operations[0];
 			} else {
 				return new OperationGroup(operations);
