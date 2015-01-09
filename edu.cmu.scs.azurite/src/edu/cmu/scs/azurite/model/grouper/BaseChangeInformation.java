@@ -9,6 +9,11 @@ public abstract class BaseChangeInformation implements IChangeInformation {
 	public BaseChangeInformation(DocChange mergedChange) {
 		this.mergedChange = mergedChange;
 	}
+	
+	@Override
+	public String getChangeTypeString() {
+		return "type_" + getChangeType().toString().toLowerCase();
+	}
 
 	@Override
 	public DocChange getMergedChange() {

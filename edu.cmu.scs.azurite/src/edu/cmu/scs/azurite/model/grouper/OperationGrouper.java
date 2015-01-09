@@ -163,7 +163,7 @@ public class OperationGrouper implements RuntimeDCListener {
 		for (RuntimeDC dc : dcs) {
 			for (int i = level; i < NUM_LEVELS; ++i) {
 				dc.setCollapseID(i, collapseID);
-				fireCollapseIDsUpdatedEvent(dcs, i, collapseID);
+				fireCollapseIDsUpdatedEvent(dcs, i, collapseID, this.pendingChangeInformation[level]);
 			}
 		}
 	}
@@ -268,10 +268,6 @@ public class OperationGrouper implements RuntimeDCListener {
 	}
 	
 	private static IChangeInformation determineChangeType(int level, String preSnapshot, DocChange docChange) {
-		if (level == 0) {
-			return null;
-		}
-		
 		// Pre-AST
 		Range preRange = docChange.getDeletionRange();
 		ASTNode preRoot = parseSnapshot(preSnapshot);
@@ -447,9 +443,9 @@ public class OperationGrouper implements RuntimeDCListener {
 		this.listeners.remove(listener);
 	}
 	
-	private void fireCollapseIDsUpdatedEvent(List<RuntimeDC> dcs, int level, int collapseID) {
+	private void fireCollapseIDsUpdatedEvent(List<RuntimeDC> dcs, int level, int collapseID, IChangeInformation changeInformation) {
 		for (Object listenerObj : listeners.getListeners()) {
-			((OperationGrouperListener) listenerObj).collapseIDsUpdated(dcs, level, collapseID);
+			((OperationGrouperListener) listenerObj).collapseIDsUpdated(dcs, level, collapseID, changeInformation);
 		}
 	}
 	

@@ -59,6 +59,7 @@ import edu.cmu.scs.azurite.model.FileKey;
 import edu.cmu.scs.azurite.model.OperationId;
 import edu.cmu.scs.azurite.model.RuntimeDCListener;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
+import edu.cmu.scs.azurite.model.grouper.IChangeInformation;
 import edu.cmu.scs.azurite.model.grouper.OperationGrouperListener;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
 import edu.cmu.scs.azurite.plugin.Activator;
@@ -1323,13 +1324,16 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Ope
 	}
 
 	@Override
-	public void collapseIDsUpdated(List<RuntimeDC> dcs, int level, int collapseID) {
+	public void collapseIDsUpdated(List<RuntimeDC> dcs, int level, int collapseID, IChangeInformation changeInformation) {
 		if (dcs == null || dcs.isEmpty()) { return; }
 		
 		long sid = dcs.get(0).getOriginal().getSessionId();
 		String path = dcs.get(0).getBelongsTo().getFilePath();
 		if (path == null) { path = "null"; }
 		else { path = path.replace('\\', '/'); }
+		
+		String collapseType = changeInformation == null ? "type_unknown"
+				: "type_" + changeInformation.getChangeType().toString().toLowerCase();
 		
 		StringBuilder idList = new StringBuilder();
 		idList.append("[");
@@ -1340,8 +1344,8 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Ope
 		}
 		idList.append("]");
 		
-		String executeStr = String.format("updateCollapseIds(%d, '%s', %d, %d, %s);",
-				sid, path, level, collapseID, idList.toString());
+		String executeStr = String.format("updateCollapseIds(%d, '%s', %d, %d, '%s', %s);",
+				sid, path, level, collapseID, collapseType, idList.toString());
 		executeJSCode(executeStr);
 	}
 	

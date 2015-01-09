@@ -681,6 +681,7 @@ function EditOperation(sid, id, t1, t2, y1, y2, type, fileGroup) {
 	};
 
 	this.collapseTo = [id, id, id];
+	this.collapseType = ["type_unknown", "type_unknown", "type_unknown"];
 }
 
 /**
@@ -701,9 +702,8 @@ function OperationGroup(operations) {
 		return sum;
 	};
 
-	// TODO implement this properly.
 	this.typeString = function() {
-		return "type_unknown";
+		return this.operations[0].collapseType[global.collapseLevel];
 	};
 
 	this.sid = firstOp.sid;
@@ -1059,15 +1059,38 @@ function updateCollapseIds(sid, path, level, collapseId, ids) {
 
 	if (fileGroup === null) { return; }
 
-	// Now find the first id using binary search.
-	var firstId = ids[0];
+	// Find the collapseId and update the collapse type.
 	var start = 0;
 	var end = fileGroup.operations.length;
+	var collapseOpIndex = -1;
+	var mid, midId;
+	while (start < end) {
+		mid = Math.floor((start + end) / 2);
+		midId = fileGroup.operations[mid].id;
+
+		if (midId > collapseId) {
+			end = mid;
+		} else if (midId < collapseId) {
+			start = mid + 1;
+		} else {
+			collapseOpIndex = mid;
+			break;
+		}
+	}
+
+	if (collapseOpIndex === -1) { return; }
+
+	fileGroup.operations[collapseOpIndex].collapseType[level] = collapseType;
+
+	// Now find the first id using binary search.
+	var firstId = ids[0];
+	start = collapseOpIndex;
+	end = fileGroup.operations.length;
 
 	var firstIndex = -1;
 	while (start < end) {
-		var mid = Math.floor((start + end) / 2);
-		var midId = fileGroup.operations[mid].id;
+		mid = Math.floor((start + end) / 2);
+		midId = fileGroup.operations[mid].id;
 
 		if (midId > firstId) {
 			end = mid;
@@ -1083,7 +1106,9 @@ function updateCollapseIds(sid, path, level, collapseId, ids) {
 
 	// Finally, update collapse ids.
 	for (i = 0; i < ids.length && fileGroup.operations[firstIndex + i].id === ids[i]; ++i) {
-		fileGroup.operations[firstIndex + i].collapseTo[level] = collapseId;
+		var op = fileGroup.operations[firstIndex + i];
+		op.collapseTo[level] = collapseId;
+		if (ids[i] != collapseId) { op.collapseType[level] = "type_unknown"; }
 	}
 
 	// And, if the level equals the current level, merge the corresponding rectangles into a single rectangle.

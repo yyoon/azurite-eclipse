@@ -301,6 +301,58 @@ rect.op_rect.type_diff_delete {
 fill: #ec9999;
 }
 
+rect.op_rect.type_add_field {
+fill: yellowgreen;
+}
+
+rect.op_rect.type_change_field {
+fill: lightskyblue;
+}
+
+rect.op_rect.type_delete_field {
+fill: pink;
+}
+
+rect.op_rect.type_add_method {
+fill: yellowgreen;
+}
+
+rect.op_rect.type_change_method {
+fill: lightskyblue;
+}
+
+rect.op_rect.type_delete_method {
+fill: pink;
+}
+
+rect.op_rect.type_add_class {
+fill: yellowgreen;
+}
+
+rect.op_rect.type_change_class {
+fill: lightskyblue;
+}
+
+rect.op_rect.type_delete_class {
+fill: pink;
+}
+
+rect.op_rect.type_add_import_statement {
+fill: yellowgreen;
+}
+
+rect.op_rect.type_delete_import_statement {
+fill: pink;
+}
+
+rect.op_rect.type_non_code_change {
+fill: grey;
+}
+
+rect.op_rect.type_mixed {
+fill: slateblue;
+}
+
 rect.op_rect.type_unknown {
 fill: grey;
 }

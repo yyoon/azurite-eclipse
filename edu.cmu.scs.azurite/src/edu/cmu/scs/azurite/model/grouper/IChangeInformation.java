@@ -6,6 +6,8 @@ public interface IChangeInformation {
 	
 	ChangeType getChangeType();
 	
+	String getChangeTypeString();
+	
 	boolean shouldBeMerged(int level, IChangeInformation nextChange);
 	
 	/**

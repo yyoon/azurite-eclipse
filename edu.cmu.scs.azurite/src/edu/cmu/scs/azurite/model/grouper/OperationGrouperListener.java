@@ -6,6 +6,6 @@ import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 
 public interface OperationGrouperListener {
 
-	void collapseIDsUpdated(List<RuntimeDC> dcs, int level, int collapseID);
+	void collapseIDsUpdated(List<RuntimeDC> dcs, int level, int collapseID, IChangeInformation changeInformation);
 	
 }

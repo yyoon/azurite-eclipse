@@ -9,6 +9,7 @@ import org.eclipse.jface.text.IDocument;
 
 import edu.cmu.scs.azurite.model.FileKey;
 import edu.cmu.scs.azurite.model.OperationId;
+import edu.cmu.scs.azurite.model.grouper.IChangeInformation;
 import edu.cmu.scs.azurite.model.grouper.OperationGrouper;
 import edu.cmu.scs.fluorite.commands.document.Delete;
 import edu.cmu.scs.fluorite.commands.document.DocChange;
@@ -29,6 +30,8 @@ public abstract class RuntimeDC {
 	
 	private int[] mCollapseTo;
 	
+	private IChangeInformation[] mChangeInformation;
+	
 	public static RuntimeDC createRuntimeDocumentChange(DocChange original) {
 		if (original instanceof Insert) {
 			return new RuntimeInsert((Insert) original);
@@ -48,6 +51,9 @@ public abstract class RuntimeDC {
 		
 		mCollapseTo = new int[OperationGrouper.NUM_LEVELS];
 		Arrays.fill(mCollapseTo, -1);
+		
+		mChangeInformation = new IChangeInformation[OperationGrouper.NUM_LEVELS];
+		Arrays.fill(mChangeInformation, null);
 	}
 	
 	public DocChange getOriginal() {
@@ -131,7 +137,7 @@ public abstract class RuntimeDC {
 	public abstract String getHtmlInfo();
 	
 	protected String transformToHtmlString(String originalCode) {
-		return originalCode.replace("\r\n", "\n").replace("\r", "\n").replace("\n", "&crarr;<br>");
+		return originalCode.replace("\r\n", "\n").replace("\r", "\n").replace("\n", "<br>");
 	}
 	
 	public abstract String getTypeString();
@@ -153,6 +159,14 @@ public abstract class RuntimeDC {
 	
 	public void setCollapseID(int level, int id) {
 		mCollapseTo[level] = id;
+	}
+	
+	public IChangeInformation getChangeInformation(int level) {
+		return mChangeInformation[level];
+	}
+	
+	public void setChangeInformation(int level, IChangeInformation changeInformation) {
+		mChangeInformation[level] = changeInformation;
 	}
 	
 	public static DocChange mergeChanges(RuntimeDC oldDC, RuntimeDC newDC) {
