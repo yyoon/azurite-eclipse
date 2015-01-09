@@ -1,15 +1,11 @@
 package edu.cmu.scs.azurite.model.grouper;
 
-public class AddImportStatementInformation implements IChangeInformation {
+import edu.cmu.scs.fluorite.commands.document.DocChange;
+
+public class AddImportStatementInformation extends BaseChangeInformation {
 	
-	private static AddImportStatementInformation _instance;
-	
-	public static AddImportStatementInformation getInstance() {
-		if (_instance == null) {
-			_instance = new AddImportStatementInformation();
-		}
-		
-		return _instance;
+	public AddImportStatementInformation(DocChange mergedChange) {
+		super(mergedChange);
 	}
 
 	@Override

@@ -291,22 +291,22 @@ public class OperationGrouper implements RuntimeDCListener {
 		
 		// Add Import Statement
 		if (preCovered == null && getNodeType(postCovered) == ASTNode.IMPORT_DECLARATION) {
-			return AddImportStatementInformation.getInstance();
+			return new AddImportStatementInformation(docChange);
 		}
 		
 		// Delete Import Statement
 		if (getNodeType(preCovered) == ASTNode.IMPORT_DECLARATION && postCovered == null) {
-			return DeleteImportStatementInformation.getInstance();
+			return new DeleteImportStatementInformation(docChange);
 		}
 		
 		// Add Field
 		if (preCovered == null && getNodeType(postCovered) == ASTNode.FIELD_DECLARATION) {
-			return new AddFieldInformation(new Range(postCovered));
+			return new AddFieldInformation(docChange, postCovered);
 		}
 		
 		// Delete Field
 		if (getNodeType(preCovered) == ASTNode.FIELD_DECLARATION && postCovered == null) {
-			return new DeleteFieldInformation(new Range(preCovered));
+			return new DeleteFieldInformation(docChange, preCovered);
 		}
 		
 		// Change Field
@@ -316,13 +316,15 @@ public class OperationGrouper implements RuntimeDCListener {
 				if (node.getNodeType() == ASTNode.FIELD_DECLARATION) {
 					Range postFieldRange = new Range(node);
 					Range preFieldRange = null;
+					ASTNode preFieldNode = null;
 					try {
 						preFieldRange = docChange.applyInverse(postFieldRange);
+						preFieldNode = NodeFinder.perform(preRoot, preFieldRange);
 					} catch (Exception e) {
 						e.printStackTrace();
 					}
 					
-					return new ChangeFieldInformation(preFieldRange, postFieldRange);
+					return new ChangeFieldInformation(docChange, preFieldNode, preFieldRange, node);
 				}
 				
 				node = node.getParent();
@@ -331,12 +333,12 @@ public class OperationGrouper implements RuntimeDCListener {
 		
 		// Add Method
 		if (preCovered == null && postCovered != null && postCovered.getNodeType() == ASTNode.METHOD_DECLARATION) {
-			return new AddMethodInformation(new Range(postCovered));
+			return new AddMethodInformation(docChange, postCovered);
 		}
 		
 		// Delete Method
 		if (preCovered != null && preCovered.getNodeType() == ASTNode.METHOD_DECLARATION && postCovered == null) {
-			return new DeleteMethodInformation(new Range(preCovered));
+			return new DeleteMethodInformation(docChange, preCovered);
 		}
 		
 		// Determine Method Change
@@ -346,20 +348,22 @@ public class OperationGrouper implements RuntimeDCListener {
 				if (node.getNodeType() == ASTNode.METHOD_DECLARATION) {
 					Range postMethodRange = new Range(node);
 					Range preMethodRange = null;
+					ASTNode preMethodNode = null;
 					try {
 						preMethodRange = docChange.applyInverse(postMethodRange);
+						preMethodNode = NodeFinder.perform(preRoot, preMethodRange);
 					} catch (Exception e) {
 						e.printStackTrace();
 					}
 					
-					return new ChangeMethodInformation(preMethodRange, postMethodRange);
+					return new ChangeMethodInformation(docChange, preMethodNode, preMethodRange, node);
 				}
 				
 				node = node.getParent();
 			}
 		}
 		
-		return new UnknownInformation();
+		return new UnknownInformation(docChange);
 	}
 	
 	private static int getNodeType(ASTNode node) {

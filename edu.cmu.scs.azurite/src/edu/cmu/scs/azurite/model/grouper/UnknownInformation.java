@@ -1,6 +1,12 @@
 package edu.cmu.scs.azurite.model.grouper;
 
-public class UnknownInformation implements IChangeInformation {
+import edu.cmu.scs.fluorite.commands.document.DocChange;
+
+public class UnknownInformation extends BaseChangeInformation {
+	
+	public UnknownInformation(DocChange mergedChange) {
+		super(mergedChange);
+	}
 
 	@Override
 	public ChangeType getChangeType() {

@@ -1,15 +1,26 @@
 package edu.cmu.scs.azurite.model.grouper;
 
+import org.eclipse.jdt.core.dom.ASTNode;
+
+import edu.cmu.scs.fluorite.commands.document.DocChange;
 import edu.cmu.scs.fluorite.commands.document.Range;
 
-public class ChangeFieldInformation implements IChangeInformation {
+public class ChangeFieldInformation extends BaseChangeInformation {
+	
+	private final ASTNode preFieldNode;
+	private final ASTNode postFieldNode;
 	
 	private final Range preFieldRange;
 	private final Range postFieldRange;
 	
-	public ChangeFieldInformation(Range preFieldRange, Range postFieldRange) {
+	public ChangeFieldInformation(DocChange mergedChange, ASTNode preFieldNode, Range preFieldRange, ASTNode postFieldNode) {
+		super(mergedChange);
+		
+		this.preFieldNode = preFieldNode;
+		this.postFieldNode = postFieldNode;
+		
 		this.preFieldRange = preFieldRange;
-		this.postFieldRange = postFieldRange;
+		this.postFieldRange = new Range(postFieldNode);
 	}
 
 	@Override
@@ -30,6 +41,14 @@ public class ChangeFieldInformation implements IChangeInformation {
 		}
 		
 		return false;
+	}
+	
+	public ASTNode getPreFieldNode() {
+		return this.preFieldNode;
+	}
+	
+	public ASTNode getPostFieldNode() {
+		return this.postFieldNode;
 	}
 	
 	public Range getPreFieldRange() {
