@@ -87,6 +87,10 @@ var CHART_MARGINS = {
 
 var MIN_SCROLL_THUMB_SIZE = 30;
 
+
+var NUM_COLLAPSE_LEVELS = 3;
+
+
 // draw functions
 
 var rectDraw = {};
@@ -101,7 +105,7 @@ rectDraw.yFunc = function(d) {
 	}
 };
 rectDraw.wFunc = function(d) {
-	return Math.max(MIN_WIDTH / global.scaleX, (d.t2 - d.t1) / DEFAULT_RATIO);
+	return d.getWidth();
 };
 rectDraw.hFunc = function(d) {
 	return Math.max(MIN_HEIGHT / global.scaleY, ROW_HEIGHT * (d.y2 - d.y1) / 100);
@@ -352,6 +356,9 @@ global.domainArray = [];
 global.rangeArray = [];
 global.timeScale.clamp(true);
 
+global.idFunc = function(d) { return d.sid + '_' + d.id; };
+global.valuesFunc = function(d) { return d.values; };
+
 // Move to front function for d3 selection.
 d3.selection.prototype.moveToFront = function() {
 	return this.each(function(){
@@ -580,6 +587,15 @@ function Session(sid, current) {
 		
 		return null;
 	};
+
+	this.getAllOperations = function() {
+		var operations = [];
+		for (var i = 0; i < this.fileGroups.length; ++i) {
+			operations = operations.concat(this.fileGroups[i].operations);
+		}
+
+		return operations;
+	};
 	
 	global.sessions.push(this);
 	global.sessions.sort(function (lhs, rhs) {
@@ -638,6 +654,10 @@ function EditOperation(sid, id, t1, t2, y1, y2, type, fileGroup) {
 	this.session = fileGroup.session;
 	
 	this.visible = true;
+
+	this.getWidth = function() {
+		return Math.max(MIN_WIDTH / global.scaleX, (this.t2 - this.t1) / DEFAULT_RATIO);
+	};
 	
 	this.isVisible = function () {
 		return this.fileGroup.isVisible() && this.visible;
@@ -661,6 +681,57 @@ function EditOperation(sid, id, t1, t2, y1, y2, type, fileGroup) {
 	};
 
 	this.collapseTo = [id, id, id];
+}
+
+/**
+ * operations: array of EditOperation objects
+ */
+function OperationGroup(operations) {
+	this.operations = operations.slice(0);
+
+	var firstOp = this.operations[0];
+	var lastOp = this.operations[this.operations.length - 1];
+
+	this.getWidth = function() {
+		var sum = 0;
+		for (var i = 0; i < this.operations.length; ++i) {
+			sum += this.operations[i].getWidth();
+		}
+
+		return sum;
+	};
+
+	// TODO implement this properly.
+	this.typeString = function() {
+		return "type_unknown";
+	};
+
+	this.sid = firstOp.sid;
+	this.id = firstOp.id;
+	this.t1 = firstOp.t1;
+	this.t2 = lastOp.t2;
+
+	this.y1 = firstOp.y1;
+	this.y2 = firstOp.y2;
+	for (var i = 1; i < operations.length; ++i) {
+		this.y1 = Math.min(this.y1, operations[i].y1);
+		this.y2 = Math.max(this.y2, operations[i].y2);
+	}
+
+	this.fileGroup = firstOp.fileGroup;
+
+	this.visible = true;
+
+	this.isVisible = function () {
+		return this.fileGroup.isVisible() && this.visible;
+	};
+	
+	this.getInfo = function() {
+		var date = new Date(this.sid + this.t1);
+		
+		// TODO implement this.
+		return date.toLocaleString() + '<br>';
+	};
 }
 
 /**
@@ -777,17 +848,7 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current
 
 	var rectToAppend = fileGroup.g.append('rect');
 	rectToAppend.datum(newOp);
-	rectToAppend
-		.attr('id', function(d) {
-			return d.sid + '_' + d.id;
-		})
-		.attr('class', rectDraw.classFunc)
-		.attr('y', rectDraw.yFunc)
-		.attr('width', rectDraw.wFunc)
-		.attr('height', rectDraw.hFunc)
-		.attr('rx', RECT_RADIUS)
-		.attr('ry', RECT_RADIUS)
-		.attr('vector-effect', 'non-scaling-stroke');
+	applyRectAttributes(rectToAppend);
 	
 	if (autolayout === true) {
 		var sessionTx = session.tx;
@@ -966,6 +1027,18 @@ function updateOperation(sid, id, t2, y1, y2, type, scroll) {
 	}
 }
 
+function applyRectAttributes(rectSelection) {
+	rectSelection
+		.attr('id', global.idFunc)
+		.attr('class', rectDraw.classFunc)
+		.attr('y', rectDraw.yFunc)
+		.attr('width', rectDraw.wFunc)
+		.attr('height', rectDraw.hFunc)
+		.attr('rx', RECT_RADIUS)
+		.attr('ry', RECT_RADIUS)
+		.attr('vector-effect', 'non-scaling-stroke');
+}
+
 /**
  * Called by Azurite
  */
@@ -993,7 +1066,7 @@ function updateCollapseIds(sid, path, level, collapseId, ids) {
 
 	var firstIndex = -1;
 	while (start < end) {
-		var mid = (start + end) / 2;
+		var mid = Math.floor((start + end) / 2);
 		var midId = fileGroup.operations[mid].id;
 
 		if (midId > firstId) {
@@ -1013,9 +1086,18 @@ function updateCollapseIds(sid, path, level, collapseId, ids) {
 		fileGroup.operations[firstIndex + i].collapseTo[level] = collapseId;
 	}
 
-	// TODO And, if the level equals the current level, merge the corresponding rectangles into a single rectangle.
+	// And, if the level equals the current level, merge the corresponding rectangles into a single rectangle.
 	if (level === global.collapseLevel) {
-		// TODO do something here.
+		var data = collapse(level, fileGroup.operations).map(global.valuesFunc);
+
+		// Remove unnecessary rects.
+		fileGroup.g.selectAll('rect.op_rect')
+			.filter(function(d) { return d.id !== collapseId && ids.indexOf(d.id) !== -1; })
+			.remove();
+
+		// Update the rects.
+		var rectSelection = fileGroup.g.selectAll('rect.op_rect').data(data);
+		applyRectAttributes(rectSelection);
 	}
 }
 
@@ -1073,7 +1155,20 @@ function findSession(sid) {
 	return null;
 }
 
-function layout(newLayout) {
+function collapse(level, data) {
+	return d3.nest()
+		.key(function(d) { return d.collapseTo[level]; })
+		.rollup(function(operations) {
+			if (operations.length === 1 && operations[0] === global.lastOperation) {
+				return operations[0];
+			} else {
+				return new OperationGroup(operations);
+			}
+		})
+		.entries(data);
+}
+
+function layout(newLayout, level) {
 	// profiling
 	var _startTick = new Date().valueOf();
 	if (global.profile) {
@@ -1086,6 +1181,13 @@ function layout(newLayout) {
 	// Change the layout, if specified.
 	if (newLayout !== undefined) {
 		global.layout = newLayout;
+	}
+
+	// Change the collapse level, if specified.
+	var levelChanging = false;
+	if (level !== undefined && global.collapseLevel !== level) {
+		global.collapseLevel = level;
+		levelChanging = true;
 	}
 	
 	global.tempSessionTx = 0;
@@ -1118,6 +1220,27 @@ function layout(newLayout) {
 		
 		session.g.attr('transform', 'translate(' + global.tempSessionTx + ' 0)');
 		session.tx = global.tempSessionTx;
+
+		if (levelChanging === true) {
+			// TODO reserve the selection in some reasonable way.
+			// For now, remove all the selections.
+			removeAllSelections();
+
+			// 1. For each FileGroup, re-create the rectangles.
+			for (var j = 0; j < session.fileGroups.length; ++j) {
+				var fileGroup = session.fileGroups[j];
+				var data = fileGroup.operations;
+
+				if (level >= 0) {
+					data = collapse(level, data).map(global.valuesFunc);
+				}
+
+				var rectSelection = fileGroup.g.selectAll('rect.op_rect').data(data);
+				rectSelection.exit().remove();
+				rectSelection.enter().append('rect');
+				applyRectAttributes(rectSelection);
+			}
+		}
 		
 		// Iterate through all the rects.
 		var rects = session.g.selectAll('rect.op_rect')[0].slice();
@@ -2626,6 +2749,8 @@ function addRandomOperations(sid, count, startover) {
 	}
 
 	for (i = 0; i < count; ++i) {
+		var prevOp = global.lastOperation;
+
 		++id;
 		var t1 = t + Math.floor(Math.random() * 15000) + 1000;
 		var t2 = t1 + Math.floor(Math.random() * 1000) + 1000;
@@ -2633,7 +2758,16 @@ function addRandomOperations(sid, count, startover) {
 
 		var y1 = Math.floor(Math.random() * 100);
 		var y2 = clamp(y1 + Math.floor(Math.random() * 30), y1, 100);
+
 		addOperation(sid, id, t1, t2, y1, y2, Math.floor(Math.random() * 3));
+
+		// Randomly merge with the previous one.
+		if (i === 0) { continue; }
+		for (var j = 0; j < NUM_COLLAPSE_LEVELS; ++j) {
+			if (j > 0 && prevOp.collapseTo[j - 1] === global.lastOperation.collapseTo[j - 1] || Math.random() < 0.5) {
+				global.lastOperation.collapseTo[j] = prevOp.collapseTo[j];
+			}
+		}
 	}
 }
 
