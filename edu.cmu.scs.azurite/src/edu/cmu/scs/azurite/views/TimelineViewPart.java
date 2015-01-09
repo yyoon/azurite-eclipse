@@ -971,7 +971,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Ope
 
 	private void addFile(String projectName, String filePath) {
 		String executeStr = getAddFileString(projectName, filePath);
-		browser.execute(executeStr);
+		executeJSCode(executeStr);
 	}
 
 	private String getAddFileString(String projectName, String filePath) {
@@ -985,7 +985,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Ope
 		final String executeStr = getAddEventString(event);
 		Display.getDefault().syncExec(new Runnable() {
 			public void run() {
-				browser.execute(executeStr);
+				executeJSCode(executeStr);
 			}
 		});
 	}
@@ -1017,12 +1017,12 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Ope
 
 	private void addOperation(DocChange docChange, boolean scroll, boolean current) {
 		String executeStr = getAddOperationString(docChange, scroll, true, current);
-		browser.execute(executeStr);
+		executeJSCode(executeStr);
 	}
 
 	private void addOperations(Events events) {
 		// Store the current file.
-		browser.execute("pushCurrentFile();");
+		executeJSCode("pushCurrentFile();");
 		
 		// Add the operations
 		StringBuilder builder = new StringBuilder();
@@ -1049,12 +1049,12 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Ope
 //		System.out.println("Building String: " + (end - start) + "ms");
 		
 //		start = System.currentTimeMillis();
-		browser.execute(builder.toString());
+		executeJSCode(builder.toString());
 //		end = System.currentTimeMillis();
 //		System.out.println("Executing String: " + (end - start) + "ms");
 		
 		// Restore the last file
-		browser.execute("popCurrentFile();");
+		executeJSCode("popCurrentFile();");
 	}
 
 	private String getAddOperationString(DocChange docChange,
@@ -1082,7 +1082,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Ope
 			}
 		}
 		
-		browser.execute(builder.toString());
+		executeJSCode(builder.toString());
 	}
 	
 	private int getTypeIndex(DocChange docChange) {
@@ -1111,7 +1111,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Ope
 				docChange.getY1(),
 				docChange.getY2(),
 				getTypeIndex(docChange));
-		browser.execute(executeStr);
+		executeJSCode(executeStr);
 	}
 	
 	@Override
@@ -1124,7 +1124,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Ope
 				newDocChange.getY1(),
 				newDocChange.getY2(),
 				getTypeIndex(newDocChange));
-		browser.execute(executeStr);
+		executeJSCode(executeStr);
 	}
 
 	/**
@@ -1140,7 +1140,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Ope
 		
 		buffer.append(", " + Boolean.toString(clearSelection) + ");");
 		
-		browser.execute(buffer.toString());
+		executeJSCode(buffer.toString());
 	}
 	
 	public void removeSelection(List<OperationId> ids) {
@@ -1151,7 +1151,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Ope
 		
 		buffer.append(");");
 		
-		browser.execute(buffer.toString());
+		executeJSCode(buffer.toString());
 	}
 
 	private void getJavaScriptListFromOperationIds(StringBuffer buffer,
@@ -1181,7 +1181,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Ope
 	}
 	
 	public void activateFirebugLite() {
-		browser.execute("activateFirebugLite();");
+		executeJSCode("activateFirebugLite();");
 	}
 
 	@Override
@@ -1212,10 +1212,11 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Ope
 	}
 	
 	private void scrollToEnd() {
-		browser.execute("scrollToEnd()");
+		executeJSCode("scrollToEnd();");
 	}
 	
 	public void executeJSCode(String codeToExecute) {
+//		System.out.println(codeToExecute);
 		browser.execute(codeToExecute);
 	}
 	
@@ -1228,11 +1229,11 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Ope
 	}
 	
 	public void showMarkerAtTimestamp(long absTimestamp) {
-		browser.execute("showMarkerAtTimestamp(" + absTimestamp + ");");
+		executeJSCode("showMarkerAtTimestamp(" + absTimestamp + ");");
 	}
 	
 	public void hideMarker() {
-		browser.execute("hideMarker();");
+		executeJSCode("hideMarker();");
 	}
 	
 	public int getSelectedRectsCount() {
@@ -1302,7 +1303,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Ope
 	}
 	
 	private void performLayout() {
-		browser.execute("layout();");
+		executeJSCode("layout();");
 	}
 	
 	public long getMarkerTimestamp() {
@@ -1318,7 +1319,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Ope
 	}
 	
 	public void redrawEvents() {
-		browser.execute("updateEvents();");
+		executeJSCode("updateEvents();");
 	}
 
 	@Override
@@ -1341,7 +1342,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Ope
 		
 		String executeStr = String.format("updateCollapseIds(%d, '%s', %d, %d, %s);",
 				sid, path, level, collapseID, idList.toString());
-		browser.execute(executeStr);
+		executeJSCode(executeStr);
 	}
 	
 }
