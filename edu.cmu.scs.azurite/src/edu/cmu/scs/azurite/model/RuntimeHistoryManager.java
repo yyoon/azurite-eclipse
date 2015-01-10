@@ -116,6 +116,10 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 		mCurrentFileKey = null;
 		mEventsToBeDisplayed = new ArrayList<ICommand>();
 		mEntireHistory = new ArrayList<RuntimeDC>();
+		
+		if (getOperationGrouper() != null) {
+			getOperationGrouper().clearData();
+		}
 	}
 
 	public void scheduleTask(Runnable runnable) {
@@ -785,6 +789,10 @@ public class RuntimeHistoryManager implements DocumentChangeListener, CommandExe
 				} else {
 					processDocumentChange(docChange);
 				}
+			}
+			
+			if (events != mCurrentSessionEvents && getOperationGrouper() != null) {
+				getOperationGrouper().flushAllPendingChanges();
 			}
 		}
 

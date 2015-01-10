@@ -46,8 +46,14 @@ public class OperationGrouper implements RuntimeDCListener {
 	
 	private ListenerList listeners;
 	
-	@SuppressWarnings("unchecked")
 	public OperationGrouper() {
+		clearData();
+		
+		this.listeners = new ListenerList();
+	}
+
+	@SuppressWarnings("unchecked")
+	public void clearData() {
 		this.knownSnapshots = new Map[NUM_LEVELS];
 		this.pendingChangesList = new ArrayList[NUM_LEVELS];
 		for (int i = 0; i < NUM_LEVELS; ++i) {
@@ -62,8 +68,6 @@ public class OperationGrouper implements RuntimeDCListener {
 		
 		this.pendingChangeInformation = new IChangeInformation[NUM_LEVELS];
 		Arrays.fill(this.pendingChangeInformation, null);
-		
-		this.listeners = new ListenerList();
 	}
 
 	@Override

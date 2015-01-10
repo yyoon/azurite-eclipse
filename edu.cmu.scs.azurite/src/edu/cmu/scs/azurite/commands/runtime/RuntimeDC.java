@@ -50,7 +50,7 @@ public abstract class RuntimeDC {
 		mConflicts = new ArrayList<RuntimeDC>();
 		
 		mCollapseTo = new int[OperationGrouper.NUM_LEVELS];
-		Arrays.fill(mCollapseTo, -1);
+		Arrays.fill(mCollapseTo, original != null ? original.getCommandIndex() : -1);
 		
 		mChangeInformation = new IChangeInformation[OperationGrouper.NUM_LEVELS];
 		Arrays.fill(mChangeInformation, null);

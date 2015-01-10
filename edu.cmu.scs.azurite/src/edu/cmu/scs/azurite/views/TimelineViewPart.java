@@ -60,11 +60,11 @@ import edu.cmu.scs.azurite.model.OperationId;
 import edu.cmu.scs.azurite.model.RuntimeDCListener;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.azurite.model.grouper.IChangeInformation;
+import edu.cmu.scs.azurite.model.grouper.OperationGrouper;
 import edu.cmu.scs.azurite.model.grouper.OperationGrouperListener;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
 import edu.cmu.scs.azurite.plugin.Activator;
 import edu.cmu.scs.azurite.preferences.Initializer;
-import edu.cmu.scs.fluorite.commands.FileOpenCommand;
 import edu.cmu.scs.fluorite.commands.ICommand;
 import edu.cmu.scs.fluorite.commands.ITimestampOverridable;
 import edu.cmu.scs.fluorite.commands.ITypeOverridable;
@@ -594,7 +594,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Ope
                     			
                     			addFile(key.getProjectName(), key.getFilePath());
                     			for (RuntimeDC dc : manager.getRuntimeDocumentChanges(key)) {
-                    				addOperation(dc.getOriginal(), false, dc.getOriginal().getSessionId() == currentTimestamp);
+                    				addOperation(dc, false, dc.getOriginal().getSessionId() == currentTimestamp);
                     			}
                     		}
                     		
@@ -1018,52 +1018,66 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Ope
 		
 		return executeStr;
 	}
+	
+	private void addOperation(RuntimeDC dc, boolean scroll, boolean current) {
+		String executeStr = getAddOperationString(dc, scroll, true, current);
+		executeJSCode(executeStr);
+	}
 
 	private void addOperation(DocChange docChange, boolean scroll, boolean current) {
 		String executeStr = getAddOperationString(docChange, scroll, true, current);
 		executeJSCode(executeStr);
 	}
-
-	private void addOperations(Events events) {
-		// Store the current file.
-		executeJSCode("pushCurrentFile();");
-		
-		// Add the operations
+	
+	private String getAddOperationString(RuntimeDC dc, boolean scroll, boolean layout, boolean current) {
 		StringBuilder builder = new StringBuilder();
 		
-//		long start = System.currentTimeMillis();
+		DocChange docChange = dc.getOriginal();
 		
-		for (ICommand command : events.getCommands()) {
-			if (!(command instanceof DocChange)) {
-				continue;
-			}
-			
-			DocChange docChange = (DocChange)command;
-			if (docChange instanceof FileOpenCommand) {
-				FileOpenCommand foc = (FileOpenCommand)docChange;
-				if (foc.getFilePath() != null) {
-					builder.append(getAddFileString(foc.getProjectName(), foc.getFilePath()));
-				}
-			} else {
-				builder.append(getAddOperationString(docChange, false, false, false));
-			}
+		builder.append("addOperation(");
+		builder.append(docChange.getSessionId());
+		builder.append(", ");
+		builder.append(docChange.getCommandIndex());
+		builder.append(", ");
+		builder.append(docChange.getTimestamp());
+		builder.append(", ");
+		builder.append(docChange.getTimestamp2());
+		builder.append(", ");
+		builder.append(docChange.getY1());
+		builder.append(", ");
+		builder.append(docChange.getY2());
+		builder.append(", ");
+		builder.append(getTypeIndex(docChange));
+		builder.append(", ");
+		builder.append(scroll);
+		builder.append(", ");
+		builder.append(layout);
+		builder.append(", ");
+		builder.append(current);
+		
+		builder.append(", [");
+		builder.append(dc.getCollapseID(0));
+		for (int i = 1; i < OperationGrouper.NUM_LEVELS; ++i) {
+			builder.append(", ");
+			builder.append(dc.getCollapseID(i));
 		}
+		builder.append("]");
 		
-//		long end = System.currentTimeMillis();
-//		System.out.println("Building String: " + (end - start) + "ms");
+		builder.append(", ['");
+		builder.append(getCollapseType(dc.getChangeInformation(0)));
+		for (int i = 1; i < OperationGrouper.NUM_LEVELS; ++i) {
+			builder.append("', '");
+			builder.append(getCollapseType(dc.getChangeInformation(i)));
+		}
+		builder.append("']");
 		
-//		start = System.currentTimeMillis();
-		executeJSCode(builder.toString());
-//		end = System.currentTimeMillis();
-//		System.out.println("Executing String: " + (end - start) + "ms");
+		builder.append(");");
 		
-		// Restore the last file
-		executeJSCode("popCurrentFile();");
+		return builder.toString();
 	}
 
-	private String getAddOperationString(DocChange docChange,
-			boolean scroll, boolean layout, boolean current) {
-		String executeStr = String.format("addOperation(%1$d, %2$d, %3$d, %4$d, %5$f, %6$f, %7$d, %8$s, %9$s, %10$s);",
+	private String getAddOperationString(DocChange docChange, boolean scroll, boolean layout, boolean current) {
+		String executeStr = String.format("addOperation(%d, %d, %d, %d, %f, %f, %d, %s, %s, %s);",
 				docChange.getSessionId(),
 				docChange.getCommandIndex(),
 				docChange.getTimestamp(),
@@ -1074,19 +1088,8 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Ope
 				Boolean.toString(scroll),
 				Boolean.toString(layout),
 				Boolean.toString(current));
+		
 		return executeStr;
-	}
-	
-	private void addEvents(Events events) {
-		StringBuilder builder = new StringBuilder();
-		
-		for (ICommand command : events.getCommands()) {
-			if (RuntimeHistoryManager.shouldCommandBeDisplayed(command)) {
-				builder.append(getAddEventString(command));
-			}
-		}
-		
-		executeJSCode(builder.toString());
 	}
 	
 	private int getTypeIndex(DocChange docChange) {
@@ -1190,21 +1193,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Ope
 
 	@Override
 	public void pastLogsRead(List<Events> listEvents) {
-		if (listEvents == null) {
-			throw new IllegalArgumentException();
-		}
-		
-		if (listEvents.isEmpty()) { 
-			return;
-		}
-
-		for (Events events : listEvents) {
-			// Add all the operations.
-			addOperations(events);
-			
-			// Add all the events, such as Run, unit tests, etc.
-			addEvents(events);
-		}
+		refresh();
 		
 		// Update the data.
 		performLayout();
@@ -1335,8 +1324,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Ope
 		if (path == null) { path = "null"; }
 		else { path = path.replace('\\', '/'); }
 		
-		String collapseType = changeInformation == null ? "type_unknown"
-				: "type_" + changeInformation.getChangeType().toString().toLowerCase();
+		String collapseType = getCollapseType(changeInformation);
 		
 		StringBuilder idList = new StringBuilder();
 		idList.append("[");
@@ -1350,6 +1338,11 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Ope
 		String executeStr = String.format("updateCollapseIds(%d, '%s', %d, %d, '%s', %s);",
 				sid, path, level, collapseID, collapseType, idList.toString());
 		executeJSCode(executeStr);
+	}
+
+	private String getCollapseType(IChangeInformation changeInformation) {
+		return changeInformation == null ? "type_unknown"
+				: "type_" + changeInformation.getChangeType().toString().toLowerCase();
 	}
 	
 }

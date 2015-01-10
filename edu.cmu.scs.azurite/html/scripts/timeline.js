@@ -807,7 +807,7 @@ function updateSeparatingLines() {
  * Add an edit operation to the end of the file.
  * Note that this is called immediately after an edit operation is performed.
  */
-function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current) {
+function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current, collapseTo, collapseType) {
 	if (global.currentFile === null) {
 		return;
 	}
@@ -847,6 +847,15 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current
 	}
 
 	var newOp = new EditOperation(sid, id, t1, t2, y1, y2, type, fileGroup);
+
+	if (collapseTo instanceof Array) {
+		newOp.collapseTo = collapseTo.slice();
+	}
+
+	if (collapseType instanceof Array) {
+		newOp.collapseType = collapseType.slice();
+		newOp.finalized = true;
+	}
 
 	if (global.currenFile !== global.files[0]) {
 		global.files.splice(global.currentFileIndex, 1);
@@ -1218,10 +1227,8 @@ function layout(newLayout, level) {
 	}
 
 	// Change the collapse level, if specified.
-	var levelChanging = false;
-	if (level !== undefined && global.collapseLevel !== level) {
+	if (level !== undefined) {
 		global.collapseLevel = level;
-		levelChanging = true;
 	}
 	
 	global.tempSessionTx = 0;
@@ -1255,25 +1262,23 @@ function layout(newLayout, level) {
 		session.g.attr('transform', 'translate(' + global.tempSessionTx + ' 0)');
 		session.tx = global.tempSessionTx;
 
-		if (levelChanging === true) {
-			// TODO reserve the selection in some reasonable way.
-			// For now, remove all the selections.
-			removeAllSelections();
+		// TODO reserve the selection in some reasonable way.
+		// For now, remove all the selections.
+		removeAllSelections();
 
-			// 1. For each FileGroup, re-create the rectangles.
-			for (var j = 0; j < session.fileGroups.length; ++j) {
-				var fileGroup = session.fileGroups[j];
-				var data = fileGroup.operations;
+		// 1. For each FileGroup, re-create the rectangles.
+		for (var j = 0; j < session.fileGroups.length; ++j) {
+			var fileGroup = session.fileGroups[j];
+			var data = fileGroup.operations;
 
-				if (level >= 0) {
-					data = collapse(level, data).map(global.valuesFunc);
-				}
-
-				var rectSelection = fileGroup.g.selectAll('rect.op_rect').data(data);
-				rectSelection.exit().remove();
-				rectSelection.enter().append('rect');
-				applyRectAttributes(rectSelection);
+			if (global.collapseLevel >= 0) {
+				data = collapse(global.collapseLevel, data).map(global.valuesFunc);
 			}
+
+			var rectSelection = fileGroup.g.selectAll('rect.op_rect').data(data);
+			rectSelection.exit().remove();
+			rectSelection.enter().append('rect');
+			applyRectAttributes(rectSelection);
 		}
 		
 		// Iterate through all the rects.
