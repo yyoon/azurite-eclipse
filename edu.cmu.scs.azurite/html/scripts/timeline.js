@@ -1559,6 +1559,8 @@ window.onload = function() {
 	azurite.initialize();
 
 	setupSVG();
+
+	$('#horizontal_zoom_bar').slider();
 	
 	initEventHandlers();
 	
