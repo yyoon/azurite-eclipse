@@ -1227,8 +1227,10 @@ function layout(newLayout, level) {
 	}
 
 	// Change the collapse level, if specified.
+	var levelChanging = false;
 	if (level !== undefined) {
 		global.collapseLevel = level;
+		levelChanging = true;
 	}
 	
 	global.tempSessionTx = 0;
@@ -1264,7 +1266,9 @@ function layout(newLayout, level) {
 
 		// TODO reserve the selection in some reasonable way.
 		// For now, remove all the selections.
+		if (levelChanging) {
 		removeAllSelections();
+		}
 
 		// 1. For each FileGroup, re-create the rectangles.
 		for (var j = 0; j < session.fileGroups.length; ++j) {
