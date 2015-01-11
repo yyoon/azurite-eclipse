@@ -51,8 +51,6 @@ var FILE_NAME_OFFSET_Y = 5;
 
 var FILES_PORTION = 0.15;
 
-var HIGHLIGHT_WIDTH = 2;
-
 var INDICATOR_WIDTH = 2;
 
 var SCROLLBAR_WIDTH = 10;
@@ -370,6 +368,8 @@ global.tooltipObject = {
 		return d.getInfo();
 	}
 };
+
+global.reverseCollapseMap = {};
 
 // Move to front function for d3 selection.
 d3.selection.prototype.moveToFront = function() {
@@ -692,6 +692,14 @@ function EditOperation(sid, id, t1, t2, y1, y2, type, fileGroup) {
 		return (d3.time.format('%m/%d @ %I:%M %p'))(date) + '<br>' + info;
 	};
 
+	this.getOperationId = function() {
+		return new OperationId(this.sid, this.id);
+	};
+
+	this.getOperationIdString = function() {
+		return '' + this.sid + '_' + this.id;
+	};
+
 	this.collapseTo = [id, id, id];
 	this.collapseType = ["type_unknown", "type_unknown", "type_unknown"];
 
@@ -747,6 +755,23 @@ function OperationGroup(operations) {
 				this.sid, this.id, global.collapseLevel);
 		
 		return (d3.time.format('%m/%d @ %I:%M %p'))(date) + '<br>' + info;
+	};
+
+	this.getOperationId = function() {
+		return new OperationId(this.sid, this.id);
+	};
+
+	this.isFullySelected = function() {
+		var fullySelected = true;
+		for (var i = 0; i < this.operations.length; ++i) {
+			var op = this.operations[i];
+			if (!isSelected(op.sid, op.id)) {
+				fullySelected = false;
+				break;
+			}
+		}
+
+		return fullySelected;
 	};
 }
 
@@ -1127,6 +1152,8 @@ function updateCollapseIds(sid, path, level, collapseId, collapseType, ids) {
 		op.collapseTo[level] = collapseId;
 		op.finalized = true;
 		if (ids[i] != collapseId) { op.collapseType[level] = "type_unknown"; }
+
+		global.reverseCollapseMap[op.getOperationIdString()] = fileGroup.operations[collapseOpIndex].getOperationId();
 	}
 
 	// And, if the level equals the current level, merge the corresponding rectangles into a single rectangle.
@@ -1264,11 +1291,7 @@ function layout(newLayout, level) {
 		session.g.attr('transform', 'translate(' + global.tempSessionTx + ' 0)');
 		session.tx = global.tempSessionTx;
 
-		// TODO reserve the selection in some reasonable way.
-		// For now, remove all the selections.
-		if (levelChanging) {
-		removeAllSelections();
-		}
+		global.reverseCollapseMap = {};
 
 		// 1. For each FileGroup, re-create the rectangles.
 		for (var j = 0; j < session.fileGroups.length; ++j) {
@@ -1277,6 +1300,14 @@ function layout(newLayout, level) {
 
 			if (global.collapseLevel >= 0) {
 				data = collapse(global.collapseLevel, data).map(global.valuesFunc);
+				for (var k = 0; k < data.length; ++k) {
+					if (data[k] instanceof OperationGroup) {
+						for (var l = 0; l < data[k].operations.length; ++l) {
+							var op = data[k].operations[l];
+							global.reverseCollapseMap[op.getOperationIdString()] = data[k].getOperationId();
+						}
+					}
+				}
 			}
 
 			var rectSelection = fileGroup.g.selectAll('rect.op_rect').data(data);
@@ -2189,22 +2220,46 @@ function addSelections(x1, y1, x2, y2, toggle, clearPrevSelections) {
 		global.selectedRects = [];
 	}
 
-	opRects.each(function(d, i) {
+	opRects.each(function(d) {
 		var sid = d.sid;
 		var id = d.id;
-		
-		var index = indexOfSelected(sid, id);
+		var i, op, index;
 
-		if (toggle === true) {
-			if (index !== -1) {
-				global.selectedRects.splice(index, 1);
+		if (d instanceof OperationGroup) {
+		// - This rect is a group rect.
+			if (toggle === true && d.isFullySelected()) {
+				for (i = 0; i < d.operations.length; ++i) {
+					op = d.operations[i];
+					index = indexOfSelected(op.sid, op.id);
+					if (index !== -1) {
+						global.selectedRects.splice(index, 1);
+					}
+				}
+			} else {
+				for (i = 0; i < d.operations.length; ++i) {
+					op = d.operations[i];
+					if (!isSelected(op.sid, op.id)) {
+						global.selectedRects.push(new OperationId(op.sid, op.id));
+					}
+				}
+			}
+		} else {
+		// - This rect is an operation rect.
+			index = indexOfSelected(sid, id);
+
+			if (toggle === true) {
+				if (index !== -1) {
+					global.selectedRects.splice(index, 1);
+				}
+				else {
+					global.selectedRects.push(new OperationId(sid, id));
+				}
 			}
 			else {
-				global.selectedRects.push(new OperationId(sid, id));
+				if (index !== -1) {
+					global.selectedRects.push(new OperationId(sid, id));
+				}
 			}
-		}
-		else if (!isSelected(sid, id)) {
-			global.selectedRects.push(new OperationId(sid, id));
 		}
 	});
 
@@ -2257,32 +2312,74 @@ function updateHighlight() {
 	svg.subRects.selectAll('rect.highlight_rect').remove();
 
 	var i, idString;
+	var set = d3.set();
 
 	for (i = 0; i < global.selectedRects.length; ++i) {
-		idString = '#' + global.selectedRects[i].sid + '_' + global.selectedRects[i].id;
+		var sid = global.selectedRects[i].sid;
+		var id = global.selectedRects[i].id;
+		idString = '' + sid + '_' + id;
+
+		var oid = global.reverseCollapseMap[idString];
+		if (oid instanceof OperationId) {
+			sid = oid.sid;
+			id = oid.id;
+		}
+		idString = '#' + sid + '_' + id;
+
+		if (set.has(idString)) {
+			continue;
+		}
+
+		set.add(idString);
 
 		var $ref = $(idString);
 		if ($ref.length === 0) {
 			continue;
 		}
+
+		var data = $ref.get(0).__data__;
+
+		var partial = false;
+		if (data instanceof OperationGroup) {
+			// Check if "all" are selected.
+			for (var j = 0; j < data.operations.length; ++j) {
+				var found = false;
+				for (var k = 0; k < global.selectedRects.length; ++k) {
+					var op = data.operations[j];
+					var sel = global.selectedRects[k];
+
+					if (op.sid === sel.sid && op.id === sel.id) {
+						found = true;
+						break;
+					}
+				}
+
+				if (!found) {
+					partial = true;
+					break;
+				}
+			}
+		}
+
 		var refBBox = $ref.get(0).getBBox();
 
-		d3.select($(idString)[0].parentNode)
-			.insert('rect', ':first-child')
-			.attr('class', 'highlight_rect')
-			.attr('fill', 'yellow')
-			.attr('x', refBBox.x - (HIGHLIGHT_WIDTH / global.scaleX))
-			.attr('y', refBBox.y - (HIGHLIGHT_WIDTH / global.scaleY))
+		var highlightRect = d3.select($(idString)[0].parentNode)
+			.insert('rect', ':first-child');
+
+		highlightRect
+			.attr('class', 'highlight_rect' + (partial ? ' partial_highlight' : ''))
+			.attr('x', refBBox.x)
+			.attr('y', refBBox.y)
 			.attr('rx', RECT_RADIUS)
 			.attr('ry', RECT_RADIUS)
-			.attr('width', refBBox.width + HIGHLIGHT_WIDTH * 2 / global.scaleX)
-			.attr('height', refBBox.height + HIGHLIGHT_WIDTH * 2 / global.scaleY);
+			.attr('width', refBBox.width)
+			.attr('height', refBBox.height);
 	}
 
 	svg.subRects.selectAll('rect.highlight_rect').moveToFront();
-	for (i = 0; i < global.selectedRects.length; ++i) {
-		idString = '#' + global.selectedRects[i].sid + '_' + global.selectedRects[i].id;
-		d3.select($(idString)[0]).moveToFront();
+	var idStrings = set.values();
+	for (i = 0; i < idStrings.length; ++i) {
+		d3.select($(idStrings[i])[0]).moveToFront();
 	}
 }
 
