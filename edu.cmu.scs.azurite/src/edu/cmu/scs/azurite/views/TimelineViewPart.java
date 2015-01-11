@@ -1242,6 +1242,19 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Ope
 		}
 	}
 	
+	public int getCurrentCollapseLevel() {
+		try {
+			Object result = evaluateJSCode("return global.collapseLevel;");
+			if (result instanceof Number) {
+				return ((Number) result).intValue();
+			} else {
+				return -1;
+			}
+		} catch (SWTException e) {
+			return -1;
+		}
+	}
+	
 	public List<OperationId> getRectSelection() {
 		Object selected = evaluateJSCode("return getStandardRectSelection();");
 		return translateSelection(selected);
