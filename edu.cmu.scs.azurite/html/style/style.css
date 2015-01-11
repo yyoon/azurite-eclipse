@@ -251,15 +251,13 @@ text {
 	pointer-events: none;
 }
 
-#button_wrapper {
-position: absolute;
+#bottom_left_wrapper {
+position: relative;
 
-bottom: 15px;
-width: 15%;
-height: 30px;
-
-text-align: center;
-vertical-align: middle;
+left: 10px;
+bottom: 46px;
+width: calc((100% - 20px) * 0.15);
+height: 56px;
 }
 
 #unhide_button {
