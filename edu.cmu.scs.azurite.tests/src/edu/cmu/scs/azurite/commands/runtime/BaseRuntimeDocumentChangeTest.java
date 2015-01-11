@@ -77,9 +77,11 @@ public class BaseRuntimeDocumentChangeTest {
 			public void apply(IDocument doc) {}
 			public String apply(String original) { return original; }
 			public void apply(StringBuilder builder) {}
+			public Range apply(Range range) { return range; }
 			public void applyInverse(IDocument doc) {}
 			public String applyInverse(String original) { return original; }
 			public void applyInverse(StringBuilder builder) {}
+			public Range applyInverse(Range range) { return range; }
 			public double getY1() { return 0; }
 			public double getY2() { return 0; }
 			public Range getDeletionRange() { return null; }

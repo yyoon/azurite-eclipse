@@ -1,13 +1,18 @@
 package edu.cmu.scs.azurite.commands.runtime;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
+import org.eclipse.jface.text.IDocument;
+
 import edu.cmu.scs.azurite.model.FileKey;
 import edu.cmu.scs.azurite.model.OperationId;
-import edu.cmu.scs.fluorite.commands.document.DocChange;
+import edu.cmu.scs.azurite.model.grouper.IChangeInformation;
+import edu.cmu.scs.azurite.model.grouper.OperationGrouper;
 import edu.cmu.scs.fluorite.commands.document.Delete;
+import edu.cmu.scs.fluorite.commands.document.DocChange;
 import edu.cmu.scs.fluorite.commands.document.Insert;
 import edu.cmu.scs.fluorite.commands.document.Replace;
 
@@ -22,6 +27,10 @@ public abstract class RuntimeDC {
 	private List<RuntimeDC> mConflicts;
 	
 	private FileKey mBelongsTo;
+	
+	private int[] mCollapseTo;
+	
+	private IChangeInformation[] mChangeInformation;
 	
 	public static RuntimeDC createRuntimeDocumentChange(DocChange original) {
 		if (original instanceof Insert) {
@@ -39,6 +48,12 @@ public abstract class RuntimeDC {
 		mOriginal = original;
 		
 		mConflicts = new ArrayList<RuntimeDC>();
+		
+		mCollapseTo = new int[OperationGrouper.NUM_LEVELS];
+		Arrays.fill(mCollapseTo, original != null ? original.getCommandIndex() : -1);
+		
+		mChangeInformation = new IChangeInformation[OperationGrouper.NUM_LEVELS];
+		Arrays.fill(mChangeInformation, null);
 	}
 	
 	public DocChange getOriginal() {
@@ -119,10 +134,58 @@ public abstract class RuntimeDC {
 		return commandIDComparator;
 	}
 	
-	public abstract String getHtmlInfo();
+	public String getHtmlInfo(int level) {
+		StringBuilder builder = new StringBuilder();
+		
+		if ("true".equals(System.getProperty("azuriteDebug"))) {
+			builder.append("ID: " + getOriginal().getCommandIndex() + ", [" + getCollapseID(0) + ", " + getCollapseID(1) + ", " + getCollapseID(2) + "]<br>");
+		}
+		
+		DocChange docChange = null;
+		String changeSummary = null;
+		if (level == -1) {
+			docChange = getOriginal();
+		} else if (mChangeInformation[level] != null) {
+			docChange = mChangeInformation[level].getMergedChange();
+			changeSummary = mChangeInformation[level].getChangeSummary();
+		}
+		
+		boolean empty = true;
+		
+		if (docChange != null) {
+			if (changeSummary != null) {
+				builder.append("<div class='change_summary'>");
+				builder.append(changeSummary);
+				builder.append("</div>");
+			}
+			
+			String deletedText = docChange.getDeletedText();
+			String insertedText = docChange.getInsertedText();
+			
+			if (deletedText != null && !deletedText.isEmpty()) {
+				builder.append("<div class='code code_deletion'>");
+				builder.append(transformToHtmlString(deletedText));
+				builder.append("</div>");
+				empty = false;
+			}
+			
+			if (insertedText != null && !insertedText.isEmpty()) {
+				builder.append("<div class='code code_insertion'>");
+				builder.append(transformToHtmlString(insertedText));
+				builder.append("</div>");
+				empty = false;
+			}
+		}
+		
+		if (empty) {
+			builder.append("No Changes");
+		}
+		
+		return builder.toString().replace("\n", "<br>");
+	}
 	
 	protected String transformToHtmlString(String originalCode) {
-		return originalCode.replace("\r\n", "\n").replace("\r", "\n").replace("\n", "&crarr;<br>");
+		return originalCode.replace("\r\n", "\n").replace("\r", "\n").replace("\n", "<br>");
 	}
 	
 	public abstract String getTypeString();
@@ -137,4 +200,58 @@ public abstract class RuntimeDC {
 		
 		return mOperationId;
 	}
+	
+	public int getCollapseID(int level) {
+		return mCollapseTo[level];
+	}
+	
+	public void setCollapseID(int level, int id) {
+		mCollapseTo[level] = id;
+	}
+	
+	public IChangeInformation getChangeInformation(int level) {
+		return mChangeInformation[level];
+	}
+	
+	public void setChangeInformation(int level, IChangeInformation changeInformation) {
+		mChangeInformation[level] = changeInformation;
+	}
+	
+	public static DocChange mergeChanges(RuntimeDC oldDC, RuntimeDC newDC) {
+		return mergeChanges(oldDC, newDC, null);
+	}
+	
+	public static DocChange mergeChanges(RuntimeDC oldDC, RuntimeDC newDC, IDocument docBefore) {
+		return DocChange.mergeChanges(oldDC.getOriginal(), newDC.getOriginal(), docBefore);
+	}
+	
+	public static DocChange mergeChanges(RuntimeDC oldDC, List<RuntimeDC> newDCs) {
+		return mergeChanges(oldDC, newDCs, null);
+	}
+	
+	public static DocChange mergeChanges(RuntimeDC oldDC, List<RuntimeDC> newDCs, IDocument docBefore) {
+		return mergeChanges(oldDC.getOriginal(), newDCs, docBefore);
+	}
+	
+	public static DocChange mergeChanges(DocChange oldChange, List<RuntimeDC> newDCs) {
+		return mergeChanges(oldChange, newDCs, null);
+	}
+	
+	public static DocChange mergeChanges(DocChange oldChange, List<RuntimeDC> newDCs, IDocument docBefore) {
+		DocChange result = oldChange;
+		for (RuntimeDC newDC : newDCs) {
+			result = DocChange.mergeChanges(result, newDC.getOriginal(), docBefore);
+		}
+		
+		return result;
+	}
+	
+	public static DocChange mergeChanges(List<RuntimeDC> dcs) {
+		return mergeChanges(dcs, null);
+	}
+	
+	public static DocChange mergeChanges(List<RuntimeDC> dcs, IDocument docBefore) {
+		return mergeChanges(dcs.get(0), dcs.subList(1, dcs.size()), docBefore);
+	}
+	
 }

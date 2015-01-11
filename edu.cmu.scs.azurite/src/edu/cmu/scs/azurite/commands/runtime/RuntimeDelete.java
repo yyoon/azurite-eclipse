@@ -93,17 +93,6 @@ public class RuntimeDelete extends RuntimeDC {
 	}
 
 	@Override
-	public String getHtmlInfo() {
-		StringBuilder builder = new StringBuilder();
-		
-		builder.append("----------\n");
-		builder.append(transformToHtmlString(getOriginal().getText()));
-		builder.append("\n----------");
-		
-		return builder.toString().replace("\n", "<br>");
-	}
-
-	@Override
 	public String getTypeString() {
 		return "delete";
 	}

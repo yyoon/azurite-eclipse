@@ -3,6 +3,7 @@ package edu.cmu.scs.azurite.model;
 import java.util.List;
 
 import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
+import edu.cmu.scs.fluorite.commands.ICommand;
 import edu.cmu.scs.fluorite.commands.document.DocChange;
 import edu.cmu.scs.fluorite.model.Events;
 
@@ -12,7 +13,7 @@ public interface RuntimeDCListener {
 	/**
 	 * Fired when a new file was opened and the active file was changed. 
 	 */
-	void activeFileChanged(String projectName, String filePath);
+	void activeFileChanged(FileKey fileKey, String snapshot);
 	
 	/**
 	 * Fired when a new runtime document change was recorded.
@@ -38,5 +39,11 @@ public interface RuntimeDCListener {
 	 * Fired when some past history files were read.
 	 */
 	void pastLogsRead(List<Events> listEvents);
+	
+	/**
+	 * Fired when some significant coding event (the ones that should be displayed in the timeline)
+	 * was executed.
+	 */
+	void codingEventOccurred(ICommand command);
 
 }
