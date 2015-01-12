@@ -67,6 +67,9 @@ var EVENT_WIDTH = 1;
 var EVENT_ICON_WIDTH = 16;
 var EVENT_ICON_HEIGHT = 16;
 
+var SCALE_X_MIN = 0.1;
+var SCALE_X_MAX = 3.0;
+
 
 // When changing one of the following heights, be sure to also change the corresponding css.
 // (e.g., vscroll_wrapper's padding values)
@@ -1560,7 +1563,14 @@ window.onload = function() {
 
 	setupSVG();
 
-	$('#horizontal_zoom_bar').slider();
+	$('#horizontal_zoom_bar').slider({
+		min: SCALE_X_MIN,
+		max: SCALE_X_MAX,
+		step: 0.1,
+		value: 1.0,
+		change: function(event, ui) { scaleX(ui.value); },
+		slide: function(event, ui) { scaleX(ui.value); },
+	});
 	
 	initEventHandlers();
 	
@@ -2493,7 +2503,11 @@ function range(begin, end) {
 }
 
 function scaleX(sx) {
-	sx = clamp(sx, 0.1, 50);
+	if (sx === global.scaleX) {
+		return;
+	}
+
+	sx = clamp(sx, SCALE_X_MIN, SCALE_X_MAX);
 	global.translateX = global.translateX / global.scaleX * sx;
 	global.scaleX = sx;
 
@@ -2512,6 +2526,8 @@ function scaleX(sx) {
 	}
 	
 	updateMarkerPosition();
+
+	$('#horizontal_zoom_bar').slider( 'value', sx );
 }
 
 function scaleY(sy) {
