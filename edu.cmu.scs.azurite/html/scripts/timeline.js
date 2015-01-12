@@ -90,6 +90,7 @@ var MIN_SCROLL_THUMB_SIZE = 30;
 
 
 var NUM_COLLAPSE_LEVELS = 3;
+var COLLAPSE_LEVEL_INITIALS = ['R', 'P', 'M', 'C'];
 
 
 // draw functions
@@ -1259,8 +1260,10 @@ function layout(newLayout, level) {
 	// Change the collapse level, if specified.
 	var levelChanging = false;
 	if (level !== undefined) {
+		level = parseInt(level);
 		global.collapseLevel = level;
 		levelChanging = true;
+		$('#collapse_level_button').text( COLLAPSE_LEVEL_INITIALS[level + 1] );
 	}
 	
 	global.tempSessionTx = 0;
@@ -1564,6 +1567,32 @@ window.onload = function() {
 	setupSVG();
 
 	$('#unhide_button').button();
+
+	var $collapseButton = $('#collapse_level_button');
+
+	$collapseButton.button();
+	$collapseButton.click(function() {
+		$('#collapse_level_button').contextmenu("open", $('#collapse_level_button'));
+	});
+
+	$collapseButton.contextmenu({
+		menu: [
+			{ title: "<strong>C</strong>lass Level", cmd: 2 },
+			{ title: "<strong>M</strong>ethod Level", cmd: 1 },
+			{ title: "<strong>P</strong>arse Level", cmd: 0 },
+			{ title: "<strong>R</strong>aw Level", cmd: -1 },
+		],
+
+		position: function(event, ui) {
+			return { my: "left bottom", at: "left-1 top-2", of: ui.target };
+		},
+
+		show: false,
+
+		select: function(event, ui) {
+			layout(global.layout, ui.cmd);
+		}
+	});
 
 	$('#horizontal_zoom_bar').slider({
 		min: SCALE_X_MIN,
