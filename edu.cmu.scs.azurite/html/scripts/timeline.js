@@ -1563,6 +1563,8 @@ window.onload = function() {
 
 	setupSVG();
 
+	$('#unhide_button').button();
+
 	$('#horizontal_zoom_bar').slider({
 		min: SCALE_X_MIN,
 		max: SCALE_X_MAX,

@@ -263,15 +263,22 @@ height: 56px;
 #unhide_button {
 display: none;	/* Initially Hidden */
 
-height: 20px;
-margin: 5px 0px;
+position: absolute;
+
+top: 10px;
+left: 10px;
+width: calc(100% - 20px);
+
+font-size: 1em;
 }
 
 #horizontal_zoom_bar {
+position: absolute;
+
 width: calc((100% - 20px) * 0.8);
 
 left: calc(20px + (100% - 20px) * 0.1);
-top: calc(100% - 13px);
+bottom: 3px;
 
 height: 8px;
 }
