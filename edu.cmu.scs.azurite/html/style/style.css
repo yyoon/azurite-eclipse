@@ -419,31 +419,6 @@ div.code_insertion {
 background-color: lightgreen;
 }
 
-div#level_buttons_wrapper .level_button {
-width: 10px;
-height: 10px;
-background-color: grey;
-position: absolute;
-
-bottom: 5px;
-}
-
-#level_button1 {
-left: 10px;
-}
-
-#level_button2 {
-left: 30px;
-}
-
-#level_button3 {
-left: 50px;
-}
-
-#level_button4 {
-left: 70px;
-}
-
 .highlight_rect {
 fill: none;
 stroke: yellow;
