@@ -272,6 +272,33 @@ width: calc(100% - 20px);
 font-size: 1em;
 }
 
+#unhide_button .ui-button-text {
+padding: .3em 1em;
+}
+
+#collapse_level_button {
+position: absolute;
+
+left: 10px;
+bottom: 0px;
+
+width: 16px;
+height: 16px;
+
+z-index: 2;
+
+font-weight: bold;
+font-size: 1em;
+}
+
+#collapse_level_button .ui-button-text {
+padding: 0;
+}
+
+#collapse_level_button:focus {
+outline: none;
+}
+
 #horizontal_zoom_bar {
 position: absolute;
 
@@ -417,31 +444,6 @@ background-color: lightpink;
 
 div.code_insertion {
 background-color: lightgreen;
-}
-
-div#level_buttons_wrapper .level_button {
-width: 10px;
-height: 10px;
-background-color: grey;
-position: absolute;
-
-bottom: 5px;
-}
-
-#level_button1 {
-left: 10px;
-}
-
-#level_button2 {
-left: 30px;
-}
-
-#level_button3 {
-left: 50px;
-}
-
-#level_button4 {
-left: 70px;
 }
 
 .highlight_rect {
