@@ -91,6 +91,7 @@ var MIN_SCROLL_THUMB_SIZE = 30;
 
 var NUM_COLLAPSE_LEVELS = 3;
 var COLLAPSE_LEVEL_INITIALS = ['R', 'P', 'M', 'C'];
+var COLLAPSE_LEVEL_THRESHOLDS = [3.1, 1.5, 0.7, 0.4, 0.1];
 
 
 // draw functions
@@ -2542,6 +2543,17 @@ function scaleX(sx) {
 	global.translateX = global.translateX / global.scaleX * sx;
 	global.scaleX = sx;
 
+	var prevCollapseLevel = global.collapseLevel;
+	var collapseLevel = prevCollapseLevel;
+	for (var level = -1; level < NUM_COLLAPSE_LEVELS; ++level) {
+		if (COLLAPSE_LEVEL_THRESHOLDS[level + 2] <= sx && sx < COLLAPSE_LEVEL_THRESHOLDS[level + 1]) {
+			collapseLevel = level;
+			break;
+		}
+	}
+
+	var levelChanging = prevCollapseLevel !== collapseLevel;
+
 	updateSubRectsTransform();
 
 	svg.subRects.selectAll('rect.op_rect').attr('width', rectDraw.wFunc);
@@ -2552,8 +2564,8 @@ function scaleX(sx) {
 
 	updateHScroll();
 	
-	if (global.layout === LayoutEnum.COMPACT) {
-		layout();
+	if (global.layout === LayoutEnum.COMPACT || levelChanging) {
+		layout(global.layout, collapseLevel);
 	}
 	
 	updateMarkerPosition();
