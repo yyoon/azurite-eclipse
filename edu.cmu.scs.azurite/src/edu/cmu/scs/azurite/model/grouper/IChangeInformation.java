@@ -7,7 +7,7 @@ import edu.cmu.scs.fluorite.commands.document.Range;
 
 public interface IChangeInformation {
 	
-	ChangeType getChangeType();
+	ChangeKind getChangeKind();
 	
 	String getChangeTypeString();
 	

@@ -26,7 +26,7 @@ public abstract class BaseChangeInformation implements IChangeInformation {
 	
 	@Override
 	public String getChangeTypeString() {
-		return "type_" + getChangeType().toString().toLowerCase();
+		return "type_" + getChangeKind().toString().toLowerCase();
 	}
 	
 	@Override

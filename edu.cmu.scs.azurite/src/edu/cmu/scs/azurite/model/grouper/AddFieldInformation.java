@@ -15,8 +15,8 @@ public class AddFieldInformation extends BaseChangeInformation {
 	}
 	
 	@Override
-	public ChangeType getChangeType() {
-		return ChangeType.ADD_FIELD;
+	public ChangeKind getChangeKind() {
+		return ChangeKind.ADD_FIELD;
 	}
 	
 	@Override
@@ -32,11 +32,11 @@ public class AddFieldInformation extends BaseChangeInformation {
 	@Override
 	public boolean shouldBeMerged(int level, IChangeInformation nextChange) {
 		if (level == OperationGrouper.LEVEL_METHOD) {
-			if (nextChange.getChangeType() == ChangeType.CHANGE_FIELD) {
+			if (nextChange.getChangeKind() == ChangeKind.CHANGE_FIELD) {
 				return getPostRange().equals(nextChange.getPreRange());
 			}
 			
-			if (nextChange.getChangeType() == ChangeType.DELETE_FIELD) {
+			if (nextChange.getChangeKind() == ChangeKind.DELETE_FIELD) {
 				return getPostRange().equals(nextChange.getPreRange());
 			}
 		}

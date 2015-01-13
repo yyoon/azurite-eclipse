@@ -164,7 +164,7 @@ public class OperationGrouper implements RuntimeDCListener {
 	private void updateCollapseIDs(List<RuntimeDC> dcs, int level, RuntimeDC collapseDC, int collapseID) {
 		DocChange mergedChange = this.mergedPendingChanges[level];
 		IChangeInformation ci = mergedChange != null
-				? determineChangeType(level, getCurrentSnapshot(level).get(), mergedChange)
+				? determineChangeKind(level, getCurrentSnapshot(level).get(), mergedChange)
 				: null;
 		
 		this.pendingChangeInformation[level] = ci;
@@ -262,12 +262,12 @@ public class OperationGrouper implements RuntimeDCListener {
 		if (this.mergedPendingChanges[level] == null || mergedChange == null) { return true; }
 		
 		if (this.pendingChangeInformation[level] == null) {
-			this.pendingChangeInformation[level] = determineChangeType(level, getCurrentSnapshot(level).get(), this.mergedPendingChanges[level]);
+			this.pendingChangeInformation[level] = determineChangeKind(level, getCurrentSnapshot(level).get(), this.mergedPendingChanges[level]);
 		}
 		
 		// The level 0 snapshot should contain the presnapshot.
 		IChangeInformation prevChange = this.pendingChangeInformation[level];
-		IChangeInformation nextChange = determineChangeType(level, getCurrentSnapshot(level - 1).get(), mergedChange);
+		IChangeInformation nextChange = determineChangeKind(level, getCurrentSnapshot(level - 1).get(), mergedChange);
 		
 		if (prevChange != null && nextChange != null) {
 			return prevChange.shouldBeMerged(level, nextChange);
@@ -281,7 +281,7 @@ public class OperationGrouper implements RuntimeDCListener {
 		return false;
 	}
 	
-	private static IChangeInformation determineChangeType(int level, String preSnapshot, DocChange docChange) {
+	private static IChangeInformation determineChangeKind(int level, String preSnapshot, DocChange docChange) {
 		// Pre-AST
 		Range preRange = docChange.getDeletionRange();
 		ASTNode preRoot = parseSnapshot(preSnapshot);

@@ -15,8 +15,8 @@ public class DeleteMethodInformation extends BaseChangeInformation {
 	}
 
 	@Override
-	public ChangeType getChangeType() {
-		return ChangeType.DELETE_METHOD;
+	public ChangeKind getChangeKind() {
+		return ChangeKind.DELETE_METHOD;
 	}
 	
 	@Override

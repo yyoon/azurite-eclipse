@@ -9,8 +9,8 @@ public class UnknownInformation extends BaseChangeInformation {
 	}
 
 	@Override
-	public ChangeType getChangeType() {
-		return ChangeType.UNKNOWN;
+	public ChangeKind getChangeKind() {
+		return ChangeKind.UNKNOWN;
 	}
 
 	@Override

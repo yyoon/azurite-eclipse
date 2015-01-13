@@ -1,6 +1,6 @@
 package edu.cmu.scs.azurite.model.grouper;
 
-public enum ChangeType {
+public enum ChangeKind {
 	UNKNOWN,
 	
 	NON_CODE_CHANGE,

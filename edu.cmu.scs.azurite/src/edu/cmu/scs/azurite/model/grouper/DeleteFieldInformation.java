@@ -15,8 +15,8 @@ public class DeleteFieldInformation extends BaseChangeInformation {
 	}
 
 	@Override
-	public ChangeType getChangeType() {
-		return ChangeType.DELETE_FIELD;
+	public ChangeKind getChangeKind() {
+		return ChangeKind.DELETE_FIELD;
 	}
 	
 	@Override

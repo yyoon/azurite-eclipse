@@ -20,8 +20,8 @@ public class ChangeMethodInformation extends BaseChangeInformation {
 	}
 
 	@Override
-	public ChangeType getChangeType() {
-		return ChangeType.CHANGE_METHOD;
+	public ChangeKind getChangeKind() {
+		return ChangeKind.CHANGE_METHOD;
 	}
 	
 	@Override
@@ -37,11 +37,11 @@ public class ChangeMethodInformation extends BaseChangeInformation {
 	@Override
 	public boolean shouldBeMerged(int level, IChangeInformation nextChange) {
 		if (level == OperationGrouper.LEVEL_METHOD) {
-			if (nextChange.getChangeType() == ChangeType.CHANGE_METHOD) {
+			if (nextChange.getChangeKind() == ChangeKind.CHANGE_METHOD) {
 				return getPostRange().equals(nextChange.getPreRange());
 			}
 			
-			if (nextChange.getChangeType() == ChangeType.DELETE_METHOD) {
+			if (nextChange.getChangeKind() == ChangeKind.DELETE_METHOD) {
 				return getPostRange().equals(nextChange.getPreRange());
 			}
 		}

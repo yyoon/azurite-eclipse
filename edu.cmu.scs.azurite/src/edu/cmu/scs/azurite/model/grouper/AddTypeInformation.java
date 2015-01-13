@@ -15,8 +15,8 @@ public class AddTypeInformation extends BaseChangeInformation {
 	}
 
 	@Override
-	public ChangeType getChangeType() {
-		return ChangeType.ADD_TYPE;
+	public ChangeKind getChangeKind() {
+		return ChangeKind.ADD_TYPE;
 	}
 	
 	@Override
