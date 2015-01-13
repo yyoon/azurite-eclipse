@@ -1,8 +1,10 @@
 package edu.cmu.scs.azurite.model.grouper;
 
 import org.eclipse.jdt.core.dom.ASTNode;
+import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.FieldDeclaration;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
+import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 
 import edu.cmu.scs.fluorite.commands.document.DocChange;
@@ -103,6 +105,24 @@ public abstract class BaseChangeInformation implements IChangeInformation {
 		}
 		
 		return null;
+	}
+	
+	protected String getTypeName(AbstractTypeDeclaration td) {
+		if (td.getName() != null) {
+			return td.getName().getIdentifier();
+		}
+		
+		return null;
+	}
+	
+	protected String getTypeKind(AbstractTypeDeclaration td) {
+		if (td.getNodeType() == ASTNode.TYPE_DECLARATION) {
+			return ((TypeDeclaration) td).isInterface() ? "interface" : "class";
+		} else if (td.getNodeType() == ASTNode.ENUM_DECLARATION) {
+			return "enum";
+		} else {
+			return "unknown";
+		}
 	}
 
 }
