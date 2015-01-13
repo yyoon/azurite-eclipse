@@ -323,7 +323,7 @@ public class OperationGrouper implements RuntimeDCListener {
 		
 		// Change Field
 		IChangeInformation ci = OperationGrouper.<ChangeFieldInformation, FieldDeclaration>determineChangeKindChange(
-				ASTNode.FIELD_DECLARATION, preRoot, postCovering, docChange, ChangeFieldInformation.class, FieldDeclaration.class);
+				preRoot, postCovering, docChange, ChangeFieldInformation.class, FieldDeclaration.class);
 		if (ci != null) {
 			return ci;
 		}
@@ -340,7 +340,7 @@ public class OperationGrouper implements RuntimeDCListener {
 		
 		// Determine Method Change
 		ci = OperationGrouper.<ChangeMethodInformation, MethodDeclaration>determineChangeKindChange(
-				ASTNode.METHOD_DECLARATION, preRoot, postCovering, docChange, ChangeMethodInformation.class, MethodDeclaration.class);
+				preRoot, postCovering, docChange, ChangeMethodInformation.class, MethodDeclaration.class);
 		if (ci != null) {
 			return ci;
 		}
@@ -355,11 +355,22 @@ public class OperationGrouper implements RuntimeDCListener {
 			return new DeleteTypeInformation(docChange, (AbstractTypeDeclaration) preCovered);
 		}
 		
+		// Change Type
+		ci = OperationGrouper.<ChangeTypeInformation, AbstractTypeDeclaration>determineChangeKindChange(
+				preRoot, postCovering, docChange, ChangeTypeInformation.class, AbstractTypeDeclaration.class);
+		if (ci != null) {
+			return ci;
+		}
+		
+		// The code stayed the same. Only formatting or comments were changed.
+		if (preRoot.toString().equals(postRoot.toString())) {
+			return new NonCodeChangeInformation(docChange);
+		}
+		
 		return new UnknownInformation(docChange);
 	}
 	
 	private static <CT extends IChangeInformation, AT extends ASTNode> CT determineChangeKindChange(
-			int nodeType,
 			ASTNode preRoot,
 			ASTNode postCovering,
 			DocChange docChange,
@@ -367,7 +378,7 @@ public class OperationGrouper implements RuntimeDCListener {
 			Class<AT> astClass) {
 		ASTNode node = postCovering;
 		while (node != null) {
-			if (node.getNodeType() == nodeType) {
+			if (astClass.isInstance(node)) {
 				Range postRange = new Range(node);
 				Range preRange = null;
 				ASTNode preNode = null;
@@ -375,7 +386,7 @@ public class OperationGrouper implements RuntimeDCListener {
 				try {
 					preRange = docChange.applyInverse(postRange);
 					preNode = NodeFinder.perform(preRoot, preRange);
-					if (getNodeType(preNode) != nodeType) {
+					if (!astClass.isInstance(preNode)) {
 						preNode = null;
 					}
 				} catch (Exception e) {
