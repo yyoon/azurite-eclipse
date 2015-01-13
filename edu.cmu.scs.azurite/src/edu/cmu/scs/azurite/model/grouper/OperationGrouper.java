@@ -1,5 +1,6 @@
 package edu.cmu.scs.azurite.model.grouper;
 
+import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -320,28 +321,10 @@ public class OperationGrouper implements RuntimeDCListener {
 		}
 		
 		// Change Field
-		if (postCovering != null) {
-			ASTNode node = postCovering;
-			while (node != null) {
-				if (node.getNodeType() == ASTNode.FIELD_DECLARATION) {
-					Range postFieldRange = new Range(node);
-					Range preFieldRange = null;
-					ASTNode preFieldNode = null;
-					try {
-						preFieldRange = docChange.applyInverse(postFieldRange);
-						preFieldNode = NodeFinder.perform(preRoot, preFieldRange);
-						if (getNodeType(preFieldNode) != ASTNode.FIELD_DECLARATION) {
-							preFieldNode = null;
-						}
-					} catch (Exception e) {
-						e.printStackTrace();
-					}
-					
-					return new ChangeFieldInformation(docChange, (FieldDeclaration) preFieldNode, preFieldRange, (FieldDeclaration) node);
-				}
-				
-				node = node.getParent();
-			}
+		IChangeInformation ci = OperationGrouper.<ChangeFieldInformation, FieldDeclaration>determineChangeKindChange(
+				ASTNode.FIELD_DECLARATION, preRoot, postCovering, docChange, ChangeFieldInformation.class, FieldDeclaration.class);
+		if (ci != null) {
+			return ci;
 		}
 		
 		// Add Method
@@ -355,31 +338,53 @@ public class OperationGrouper implements RuntimeDCListener {
 		}
 		
 		// Determine Method Change
-		if (postCovering != null) {
-			ASTNode node = postCovering;
-			while (node != null) {
-				if (node.getNodeType() == ASTNode.METHOD_DECLARATION) {
-					Range postMethodRange = new Range(node);
-					Range preMethodRange = null;
-					ASTNode preMethodNode = null;
-					try {
-						preMethodRange = docChange.applyInverse(postMethodRange);
-						preMethodNode = NodeFinder.perform(preRoot, preMethodRange);
-						if (getNodeType(preMethodNode) != ASTNode.METHOD_DECLARATION) {
-							preMethodNode = null;
-						}
-					} catch (Exception e) {
-						e.printStackTrace();
-					}
-					
-					return new ChangeMethodInformation(docChange, (MethodDeclaration) preMethodNode, preMethodRange, (MethodDeclaration) node);
-				}
-				
-				node = node.getParent();
-			}
+		ci = OperationGrouper.<ChangeMethodInformation, MethodDeclaration>determineChangeKindChange(
+				ASTNode.METHOD_DECLARATION, preRoot, postCovering, docChange, ChangeMethodInformation.class, MethodDeclaration.class);
+		if (ci != null) {
+			return ci;
 		}
 		
 		return new UnknownInformation(docChange);
+	}
+	
+	private static <CT extends IChangeInformation, AT extends ASTNode> CT determineChangeKindChange(
+			int nodeType,
+			ASTNode preRoot,
+			ASTNode postCovering,
+			DocChange docChange,
+			Class<CT> changeInfoClass,
+			Class<AT> astClass) {
+		ASTNode node = postCovering;
+		while (node != null) {
+			if (node.getNodeType() == nodeType) {
+				Range postRange = new Range(node);
+				Range preRange = null;
+				ASTNode preNode = null;
+				
+				try {
+					preRange = docChange.applyInverse(postRange);
+					preNode = NodeFinder.perform(preRoot, preRange);
+					if (getNodeType(preNode) != nodeType) {
+						preNode = null;
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+				
+				try {
+					Constructor<CT> cinfo = changeInfoClass.getConstructor(DocChange.class, astClass, Range.class, astClass);
+					return cinfo.newInstance(docChange, preNode, preRange, node);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+				
+				break;
+			}
+			
+			node = node.getParent();
+		}
+		
+		return null;
 	}
 	
 	private static int getNodeType(ASTNode node) {
