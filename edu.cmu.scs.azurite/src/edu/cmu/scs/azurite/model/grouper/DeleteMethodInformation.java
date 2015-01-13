@@ -1,20 +1,17 @@
 package edu.cmu.scs.azurite.model.grouper;
 
-import org.eclipse.jdt.core.dom.ASTNode;
+import org.eclipse.jdt.core.dom.MethodDeclaration;
 
 import edu.cmu.scs.fluorite.commands.document.DocChange;
-import edu.cmu.scs.fluorite.commands.document.Range;
 
 public class DeleteMethodInformation extends BaseChangeInformation {
 	
-	private final ASTNode preMethodNode;
-	private final Range preMethodRange;
+	private final MethodDeclaration preMethodNode;
 	
-	public DeleteMethodInformation(DocChange mergedChange, ASTNode preMethodNode) {
+	public DeleteMethodInformation(DocChange mergedChange, MethodDeclaration preMethodNode) {
 		super(mergedChange);
 		
 		this.preMethodNode = preMethodNode;
-		this.preMethodRange = new Range(preMethodNode);
 	}
 
 	@Override
@@ -24,7 +21,7 @@ public class DeleteMethodInformation extends BaseChangeInformation {
 	
 	@Override
 	public String getChangeSummary() {
-		String methodName = getMethodName(getPreMethodNode());
+		String methodName = getMethodName(getPreNode());
 		if (methodName != null) {
 			return String.format("Deleted method '%s'", methodName);
 		} else {
@@ -37,12 +34,9 @@ public class DeleteMethodInformation extends BaseChangeInformation {
 		return false;
 	}
 	
-	public ASTNode getPreMethodNode() {
+	@Override
+	public MethodDeclaration getPreNode() {
 		return this.preMethodNode;
-	}
-	
-	public Range getPreMethodRange() {
-		return this.preMethodRange;
 	}
 
 }

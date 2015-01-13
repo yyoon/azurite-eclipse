@@ -1,20 +1,17 @@
 package edu.cmu.scs.azurite.model.grouper;
 
-import org.eclipse.jdt.core.dom.ASTNode;
+import org.eclipse.jdt.core.dom.FieldDeclaration;
 
 import edu.cmu.scs.fluorite.commands.document.DocChange;
-import edu.cmu.scs.fluorite.commands.document.Range;
 
 public class AddFieldInformation extends BaseChangeInformation {
 	
-	private final ASTNode postFieldNode;
-	private final Range postFieldRange;
+	private final FieldDeclaration postFieldNode;
 	
-	public AddFieldInformation(DocChange mergedChange, ASTNode postFieldNode) {
+	public AddFieldInformation(DocChange mergedChange, FieldDeclaration postFieldNode) {
 		super(mergedChange);
 		
 		this.postFieldNode = postFieldNode;
-		this.postFieldRange = new Range(postFieldNode);
 	}
 	
 	@Override
@@ -24,7 +21,7 @@ public class AddFieldInformation extends BaseChangeInformation {
 	
 	@Override
 	public String getChangeSummary() {
-		String fieldName = getFieldName(getPostFieldNode());
+		String fieldName = getFieldName(getPostNode());
 		if (fieldName != null) {
 			return String.format("Added field '%s'", fieldName);
 		} else {
@@ -36,23 +33,20 @@ public class AddFieldInformation extends BaseChangeInformation {
 	public boolean shouldBeMerged(int level, IChangeInformation nextChange) {
 		if (level == OperationGrouper.LEVEL_METHOD) {
 			if (nextChange.getChangeType() == ChangeType.CHANGE_FIELD) {
-				return getPostFieldRange().equals(((ChangeFieldInformation) nextChange).getPreFieldRange());
+				return getPostRange().equals(nextChange.getPreRange());
 			}
 			
 			if (nextChange.getChangeType() == ChangeType.DELETE_FIELD) {
-				return getPostFieldRange().equals(((DeleteFieldInformation) nextChange).getPreFieldRange());
+				return getPostRange().equals(nextChange.getPreRange());
 			}
 		}
 		
 		return false;
 	}
 	
-	public ASTNode getPostFieldNode() {
+	@Override
+	public FieldDeclaration getPostNode() {
 		return this.postFieldNode;
-	}
-	
-	public Range getPostFieldRange() {
-		return this.postFieldRange;
 	}
 
 }

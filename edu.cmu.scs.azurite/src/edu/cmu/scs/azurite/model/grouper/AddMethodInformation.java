@@ -1,20 +1,17 @@
 package edu.cmu.scs.azurite.model.grouper;
 
-import org.eclipse.jdt.core.dom.ASTNode;
+import org.eclipse.jdt.core.dom.MethodDeclaration;
 
 import edu.cmu.scs.fluorite.commands.document.DocChange;
-import edu.cmu.scs.fluorite.commands.document.Range;
 
 public class AddMethodInformation extends BaseChangeInformation {
 	
-	private final ASTNode postMethodNode;
-	private final Range postMethodRange;
+	private final MethodDeclaration postMethodNode;
 	
-	public AddMethodInformation(DocChange mergedChange, ASTNode postMethodNode) {
+	public AddMethodInformation(DocChange mergedChange, MethodDeclaration postMethodNode) {
 		super(mergedChange);
 		
 		this.postMethodNode = postMethodNode;
-		this.postMethodRange = new Range(postMethodNode);
 	}
 
 	@Override
@@ -24,7 +21,7 @@ public class AddMethodInformation extends BaseChangeInformation {
 	
 	@Override
 	public String getChangeSummary() {
-		String methodName = getMethodName(getPostMethodNode());
+		String methodName = getMethodName(getPostNode());
 		if (methodName != null) {
 			return String.format("Added method '%s'", methodName);
 		} else {
@@ -36,23 +33,20 @@ public class AddMethodInformation extends BaseChangeInformation {
 	public boolean shouldBeMerged(int level, IChangeInformation nextChange) {
 		if (level == OperationGrouper.LEVEL_METHOD) {
 			if (nextChange.getChangeType() == ChangeType.CHANGE_METHOD) {
-				return getPostMethodRange().equals(((ChangeMethodInformation) nextChange).getPreMethodRange());
+				return getPostRange().equals(nextChange.getPreRange());
 			}
 			
 			if (nextChange.getChangeType() == ChangeType.DELETE_METHOD) {
-				return getPostMethodRange().equals(((DeleteMethodInformation) nextChange).getPreMethodRange());
+				return getPostRange().equals(nextChange.getPreRange());
 			}
 		}
 		
 		return false;
 	}
 	
-	public ASTNode getPostMethodNode() {
+	@Override
+	public MethodDeclaration getPostNode() {
 		return this.postMethodNode;
-	}
-	
-	public Range getPostMethodRange() {
-		return this.postMethodRange;
 	}
 
 }

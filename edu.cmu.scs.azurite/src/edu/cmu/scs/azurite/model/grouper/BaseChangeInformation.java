@@ -6,13 +6,20 @@ import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 
 import edu.cmu.scs.fluorite.commands.document.DocChange;
+import edu.cmu.scs.fluorite.commands.document.Range;
 
 public abstract class BaseChangeInformation implements IChangeInformation {
 	
 	private DocChange mergedChange;
 	
+	private Range preRange;
+	private Range postRange;
+	
 	public BaseChangeInformation(DocChange mergedChange) {
 		this.mergedChange = mergedChange;
+		
+		this.preRange = null;
+		this.postRange = null;
 	}
 	
 	@Override
@@ -28,6 +35,46 @@ public abstract class BaseChangeInformation implements IChangeInformation {
 	@Override
 	public DocChange getMergedChange() {
 		return this.mergedChange;
+	}
+	
+	@Override
+	public ASTNode getPreNode() {
+		return null;
+	}
+	
+	@Override
+	public ASTNode getPostNode() {
+		return null;
+	}
+	
+	@Override
+	public Range getPreRange() {
+		if (getPreNode() == null) { return null; }
+		
+		if (this.preRange == null) {
+			this.preRange = new Range(getPreNode());
+		}
+		
+		return this.preRange;
+	}
+	
+	@Override
+	public Range getPostRange() {
+		if (getPostNode() == null) { return null; }
+		
+		if (this.postRange == null) {
+			this.postRange = new Range(getPostNode());
+		}
+		
+		return this.postRange;
+	}
+	
+	protected void setPreRange(Range preRange) {
+		this.preRange = preRange;
+	}
+	
+	protected void setPostRange(Range postRange) {
+		this.postRange = postRange;
 	}
 	
 	protected String getFieldName(ASTNode fieldDeclarationNode) {

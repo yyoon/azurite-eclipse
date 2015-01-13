@@ -1,26 +1,22 @@
 package edu.cmu.scs.azurite.model.grouper;
 
-import org.eclipse.jdt.core.dom.ASTNode;
+import org.eclipse.jdt.core.dom.FieldDeclaration;
 
 import edu.cmu.scs.fluorite.commands.document.DocChange;
 import edu.cmu.scs.fluorite.commands.document.Range;
 
 public class ChangeFieldInformation extends BaseChangeInformation {
 	
-	private final ASTNode preFieldNode;
-	private final ASTNode postFieldNode;
+	private final FieldDeclaration preFieldNode;
+	private final FieldDeclaration postFieldNode;
 	
-	private final Range preFieldRange;
-	private final Range postFieldRange;
-	
-	public ChangeFieldInformation(DocChange mergedChange, ASTNode preFieldNode, Range preFieldRange, ASTNode postFieldNode) {
+	public ChangeFieldInformation(DocChange mergedChange, FieldDeclaration preFieldNode, Range preFieldRange, FieldDeclaration postFieldNode) {
 		super(mergedChange);
 		
 		this.preFieldNode = preFieldNode;
 		this.postFieldNode = postFieldNode;
 		
-		this.preFieldRange = preFieldRange;
-		this.postFieldRange = new Range(postFieldNode);
+		setPreRange(preFieldRange);
 	}
 
 	@Override
@@ -30,7 +26,7 @@ public class ChangeFieldInformation extends BaseChangeInformation {
 	
 	@Override
 	public String getChangeSummary() {
-		String fieldName = getFieldName(getPostFieldNode());
+		String fieldName = getFieldName(getPostNode());
 		if (fieldName != null) {
 			return String.format("Changed field '%s'", fieldName);
 		} else {
@@ -42,31 +38,25 @@ public class ChangeFieldInformation extends BaseChangeInformation {
 	public boolean shouldBeMerged(int level, IChangeInformation nextChange) {
 		if (level == OperationGrouper.LEVEL_METHOD) {
 			if (nextChange.getChangeType() == ChangeType.CHANGE_FIELD) {
-				return getPostFieldRange().equals(((ChangeFieldInformation) nextChange).getPreFieldRange());
+				return getPostRange().equals(nextChange.getPreRange());
 			}
 			
 			if (nextChange.getChangeType() == ChangeType.DELETE_FIELD) {
-				return getPostFieldRange().equals(((DeleteFieldInformation) nextChange).getPreFieldRange());
+				return getPostRange().equals(nextChange.getPreRange());
 			}
 		}
 		
 		return false;
 	}
 	
-	public ASTNode getPreFieldNode() {
+	@Override
+	public FieldDeclaration getPreNode() {
 		return this.preFieldNode;
 	}
 	
-	public ASTNode getPostFieldNode() {
+	@Override
+	public FieldDeclaration getPostNode() {
 		return this.postFieldNode;
-	}
-	
-	public Range getPreFieldRange() {
-		return this.preFieldRange;
-	}
-	
-	public Range getPostFieldRange() {
-		return this.postFieldRange;
 	}
 
 }

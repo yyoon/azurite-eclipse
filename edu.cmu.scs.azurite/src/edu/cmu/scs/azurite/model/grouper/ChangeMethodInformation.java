@@ -1,26 +1,22 @@
 package edu.cmu.scs.azurite.model.grouper;
 
-import org.eclipse.jdt.core.dom.ASTNode;
+import org.eclipse.jdt.core.dom.MethodDeclaration;
 
 import edu.cmu.scs.fluorite.commands.document.DocChange;
 import edu.cmu.scs.fluorite.commands.document.Range;
 
 public class ChangeMethodInformation extends BaseChangeInformation {
 	
-	private final ASTNode preMethodNode;
-	private final ASTNode postMethodNode;
+	private final MethodDeclaration preMethodNode;
+	private final MethodDeclaration postMethodNode;
 	
-	private final Range preMethodRange;
-	private final Range postMethodRange;
-	
-	public ChangeMethodInformation(DocChange mergedChange, ASTNode preMethodNode, Range preMethodRange, ASTNode postMethodNode) {
+	public ChangeMethodInformation(DocChange mergedChange, MethodDeclaration preMethodNode, Range preMethodRange, MethodDeclaration postMethodNode) {
 		super(mergedChange);
 		
 		this.preMethodNode = preMethodNode;
 		this.postMethodNode = postMethodNode;
 		
-		this.preMethodRange = preMethodRange;
-		this.postMethodRange = new Range(postMethodNode);
+		setPreRange(preMethodRange);
 	}
 
 	@Override
@@ -30,7 +26,7 @@ public class ChangeMethodInformation extends BaseChangeInformation {
 	
 	@Override
 	public String getChangeSummary() {
-		String methodName = getMethodName(getPostMethodNode());
+		String methodName = getMethodName(getPostNode());
 		if (methodName != null) {
 			return String.format("Changed method '%s'", methodName);
 		} else {
@@ -42,31 +38,25 @@ public class ChangeMethodInformation extends BaseChangeInformation {
 	public boolean shouldBeMerged(int level, IChangeInformation nextChange) {
 		if (level == OperationGrouper.LEVEL_METHOD) {
 			if (nextChange.getChangeType() == ChangeType.CHANGE_METHOD) {
-				return getPostMethodRange().equals(((ChangeMethodInformation) nextChange).getPreMethodRange());
+				return getPostRange().equals(nextChange.getPreRange());
 			}
 			
 			if (nextChange.getChangeType() == ChangeType.DELETE_METHOD) {
-				return getPostMethodRange().equals(((DeleteMethodInformation) nextChange).getPreMethodRange());
+				return getPostRange().equals(nextChange.getPreRange());
 			}
 		}
 		
 		return false;
 	}
 	
-	public ASTNode getPreMethodNode() {
+	@Override
+	public MethodDeclaration getPreNode() {
 		return this.preMethodNode;
 	}
 	
-	public ASTNode getPostMethodNode() {
+	@Override
+	public MethodDeclaration getPostNode() {
 		return this.postMethodNode;
-	}
-	
-	public Range getPreMethodRange() {
-		return this.preMethodRange;
-	}
-	
-	public Range getPostMethodRange() {
-		return this.postMethodRange;
 	}
 
 }
