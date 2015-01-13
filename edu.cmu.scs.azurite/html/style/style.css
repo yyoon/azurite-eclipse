@@ -302,10 +302,10 @@ outline: none;
 #horizontal_zoom_bar {
 position: absolute;
 
-width: calc((100% - 20px) * 0.8);
-
-left: calc(20px + (100% - 20px) * 0.1);
+left: 35px;
 bottom: 3px;
+
+width: calc(100% - 47px);
 
 height: 8px;
 }
