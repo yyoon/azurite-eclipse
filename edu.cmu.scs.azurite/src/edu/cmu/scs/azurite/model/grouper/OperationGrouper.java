@@ -14,6 +14,7 @@ import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTParser;
 import org.eclipse.jdt.core.dom.ASTVisitor;
+import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.FieldDeclaration;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
@@ -342,6 +343,16 @@ public class OperationGrouper implements RuntimeDCListener {
 				ASTNode.METHOD_DECLARATION, preRoot, postCovering, docChange, ChangeMethodInformation.class, MethodDeclaration.class);
 		if (ci != null) {
 			return ci;
+		}
+		
+		// Add Type
+		if (preCovered == null && postCovered != null && postCovered instanceof AbstractTypeDeclaration) {
+			return new AddTypeInformation(docChange, (AbstractTypeDeclaration) postCovered);
+		}
+		
+		// Delete Type
+		if (preCovered != null && preCovered instanceof AbstractTypeDeclaration && postCovered == null) {
+			return new DeleteTypeInformation(docChange, (AbstractTypeDeclaration) preCovered);
 		}
 		
 		return new UnknownInformation(docChange);
