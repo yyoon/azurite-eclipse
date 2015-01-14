@@ -146,6 +146,7 @@ public class OperationGrouperTest {
 					if (command instanceof FileOpenCommand) {
 						if (pendingChange != null) {
 							writer.print(pendingChange.persist());
+							pendingChange.apply(snapshots.get(key));
 							pendingChange = null;
 						}
 						
