@@ -29,13 +29,13 @@ public class ChangeTypeInformation extends BaseChangeInformation {
 		String typeName = getTypeName(getPostNode());
 		String typeKind = getTypeKind(getPostNode());
 		if (typeName != null && typeKind != null) {
-			return String.format("Added %s '%s'", typeKind, typeName);
+			return String.format("Changed %s '%s'", typeKind, typeName);
 		} else if (typeKind != null) {
-			return String.format("Added an unknown %s", typeKind);
+			return String.format("Changed an unknown %s", typeKind);
 		} else if (typeName != null) {
-			return String.format("Added %s", typeName);
+			return String.format("Changed %s", typeName);
 		} else {
-			return "Added an unknown type";
+			return "Changed an unknown type";
 		}
 	}
 
