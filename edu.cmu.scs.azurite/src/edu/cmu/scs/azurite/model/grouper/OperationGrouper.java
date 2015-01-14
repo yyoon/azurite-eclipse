@@ -1,5 +1,6 @@
 package edu.cmu.scs.azurite.model.grouper;
 
+import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -13,7 +14,10 @@ import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTParser;
 import org.eclipse.jdt.core.dom.ASTVisitor;
+import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.FieldDeclaration;
+import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.NodeFinder;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.Document;
@@ -34,7 +38,7 @@ public class OperationGrouper implements RuntimeDCListener {
 	
 	public static final int LEVEL_PARSABLE = 0;
 	public static final int LEVEL_METHOD = 1;
-	public static final int LEVEL_CLASS = 2;
+	public static final int LEVEL_TYPE = 2;
 	public static final int NUM_LEVELS = 3;
 	
 	private Map<FileKey, Document>[] knownSnapshots;
@@ -162,7 +166,7 @@ public class OperationGrouper implements RuntimeDCListener {
 	private void updateCollapseIDs(List<RuntimeDC> dcs, int level, RuntimeDC collapseDC, int collapseID) {
 		DocChange mergedChange = this.mergedPendingChanges[level];
 		IChangeInformation ci = mergedChange != null
-				? determineChangeType(level, getCurrentSnapshot(level).get(), mergedChange)
+				? determineChangeKind(level, getCurrentSnapshot(level).get(), mergedChange)
 				: null;
 		
 		this.pendingChangeInformation[level] = ci;
@@ -260,12 +264,12 @@ public class OperationGrouper implements RuntimeDCListener {
 		if (this.mergedPendingChanges[level] == null || mergedChange == null) { return true; }
 		
 		if (this.pendingChangeInformation[level] == null) {
-			this.pendingChangeInformation[level] = determineChangeType(level, getCurrentSnapshot(level).get(), this.mergedPendingChanges[level]);
+			this.pendingChangeInformation[level] = determineChangeKind(level, getCurrentSnapshot(level).get(), this.mergedPendingChanges[level]);
 		}
 		
 		// The level 0 snapshot should contain the presnapshot.
 		IChangeInformation prevChange = this.pendingChangeInformation[level];
-		IChangeInformation nextChange = determineChangeType(level, getCurrentSnapshot(level - 1).get(), mergedChange);
+		IChangeInformation nextChange = determineChangeKind(level, getCurrentSnapshot(level - 1).get(), mergedChange);
 		
 		if (prevChange != null && nextChange != null) {
 			return prevChange.shouldBeMerged(level, nextChange);
@@ -275,11 +279,27 @@ public class OperationGrouper implements RuntimeDCListener {
 	}
 	
 	private boolean shouldBeMergedLevel2(List<RuntimeDC> dcs, DocChange mergedChange) {
-		// TODO implement this properly.
+		int level = 2;
+		
+		// The mergedChange can be null when the new set of document changes cancel themselves out.
+		if (this.mergedPendingChanges[level] == null || mergedChange == null) { return true; }
+		
+		if (this.pendingChangeInformation[level] == null) {
+			this.pendingChangeInformation[level] = determineChangeKind(level, getCurrentSnapshot(level).get(), this.mergedPendingChanges[level]);
+		}
+		
+		// The level 1 snapshot should contain the presnapshot.
+		IChangeInformation prevChange = this.pendingChangeInformation[level];
+		IChangeInformation nextChange = determineChangeKind(level, getCurrentSnapshot(level - 1).get(), mergedChange);
+		
+		if (prevChange != null && nextChange != null) {
+			return prevChange.shouldBeMerged(level, nextChange);
+		}
+		
 		return false;
 	}
 	
-	private static IChangeInformation determineChangeType(int level, String preSnapshot, DocChange docChange) {
+	private static IChangeInformation determineChangeKind(int level, String preSnapshot, DocChange docChange) {
 		// Pre-AST
 		Range preRange = docChange.getDeletionRange();
 		ASTNode preRoot = parseSnapshot(preSnapshot);
@@ -309,69 +329,100 @@ public class OperationGrouper implements RuntimeDCListener {
 		
 		// Add Field
 		if (preCovered == null && getNodeType(postCovered) == ASTNode.FIELD_DECLARATION) {
-			return new AddFieldInformation(docChange, postCovered);
+			return new AddFieldInformation(docChange, (FieldDeclaration) postCovered);
 		}
 		
 		// Delete Field
 		if (getNodeType(preCovered) == ASTNode.FIELD_DECLARATION && postCovered == null) {
-			return new DeleteFieldInformation(docChange, preCovered);
+			return new DeleteFieldInformation(docChange, (FieldDeclaration) preCovered);
 		}
 		
 		// Change Field
-		if (postCovering != null) {
-			ASTNode node = postCovering;
-			while (node != null) {
-				if (node.getNodeType() == ASTNode.FIELD_DECLARATION) {
-					Range postFieldRange = new Range(node);
-					Range preFieldRange = null;
-					ASTNode preFieldNode = null;
-					try {
-						preFieldRange = docChange.applyInverse(postFieldRange);
-						preFieldNode = NodeFinder.perform(preRoot, preFieldRange);
-					} catch (Exception e) {
-						e.printStackTrace();
-					}
-					
-					return new ChangeFieldInformation(docChange, preFieldNode, preFieldRange, node);
-				}
-				
-				node = node.getParent();
-			}
+		IChangeInformation ci = OperationGrouper.<ChangeFieldInformation, FieldDeclaration>determineChangeKindChange(
+				preRoot, postCovering, docChange, ChangeFieldInformation.class, FieldDeclaration.class);
+		if (ci != null) {
+			return ci;
 		}
 		
 		// Add Method
 		if (preCovered == null && postCovered != null && postCovered.getNodeType() == ASTNode.METHOD_DECLARATION) {
-			return new AddMethodInformation(docChange, postCovered);
+			return new AddMethodInformation(docChange, (MethodDeclaration) postCovered);
 		}
 		
 		// Delete Method
 		if (preCovered != null && preCovered.getNodeType() == ASTNode.METHOD_DECLARATION && postCovered == null) {
-			return new DeleteMethodInformation(docChange, preCovered);
+			return new DeleteMethodInformation(docChange, (MethodDeclaration) preCovered);
 		}
 		
 		// Determine Method Change
-		if (postCovering != null) {
-			ASTNode node = postCovering;
-			while (node != null) {
-				if (node.getNodeType() == ASTNode.METHOD_DECLARATION) {
-					Range postMethodRange = new Range(node);
-					Range preMethodRange = null;
-					ASTNode preMethodNode = null;
-					try {
-						preMethodRange = docChange.applyInverse(postMethodRange);
-						preMethodNode = NodeFinder.perform(preRoot, preMethodRange);
-					} catch (Exception e) {
-						e.printStackTrace();
-					}
-					
-					return new ChangeMethodInformation(docChange, preMethodNode, preMethodRange, node);
-				}
-				
-				node = node.getParent();
-			}
+		ci = OperationGrouper.<ChangeMethodInformation, MethodDeclaration>determineChangeKindChange(
+				preRoot, postCovering, docChange, ChangeMethodInformation.class, MethodDeclaration.class);
+		if (ci != null) {
+			return ci;
+		}
+		
+		// Add Type
+		if (preCovered == null && postCovered != null && postCovered instanceof AbstractTypeDeclaration) {
+			return new AddTypeInformation(docChange, (AbstractTypeDeclaration) postCovered);
+		}
+		
+		// Delete Type
+		if (preCovered != null && preCovered instanceof AbstractTypeDeclaration && postCovered == null) {
+			return new DeleteTypeInformation(docChange, (AbstractTypeDeclaration) preCovered);
+		}
+		
+		// Change Type
+		ci = OperationGrouper.<ChangeTypeInformation, AbstractTypeDeclaration>determineChangeKindChange(
+				preRoot, postCovering, docChange, ChangeTypeInformation.class, AbstractTypeDeclaration.class);
+		if (ci != null) {
+			return ci;
+		}
+		
+		// The code stayed the same. Only formatting or comments were changed.
+		if (preRoot.toString().equals(postRoot.toString())) {
+			return new NonCodeChangeInformation(docChange);
 		}
 		
 		return new UnknownInformation(docChange);
+	}
+	
+	private static <CT extends IChangeInformation, AT extends ASTNode> CT determineChangeKindChange(
+			ASTNode preRoot,
+			ASTNode postCovering,
+			DocChange docChange,
+			Class<CT> changeInfoClass,
+			Class<AT> astClass) {
+		ASTNode node = postCovering;
+		while (node != null) {
+			if (astClass.isInstance(node)) {
+				Range postRange = new Range(node);
+				Range preRange = null;
+				ASTNode preNode = null;
+				
+				try {
+					preRange = docChange.applyInverse(postRange);
+					preNode = NodeFinder.perform(preRoot, preRange);
+					if (!astClass.isInstance(preNode)) {
+						preNode = null;
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+				
+				try {
+					Constructor<CT> cinfo = changeInfoClass.getConstructor(DocChange.class, astClass, Range.class, astClass);
+					return cinfo.newInstance(docChange, preNode, preRange, node);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+				
+				break;
+			}
+			
+			node = node.getParent();
+		}
+		
+		return null;
 	}
 	
 	private static int getNodeType(ASTNode node) {

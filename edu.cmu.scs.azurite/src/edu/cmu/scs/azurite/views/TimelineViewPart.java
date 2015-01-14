@@ -1355,7 +1355,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Ope
 
 	private String getCollapseType(IChangeInformation changeInformation) {
 		return changeInformation == null ? "type_unknown"
-				: "type_" + changeInformation.getChangeType().toString().toLowerCase();
+				: "type_" + changeInformation.getChangeKind().toString().toLowerCase();
 	}
 	
 }

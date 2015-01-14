@@ -9,8 +9,8 @@ public class DeleteImportStatementInformation extends BaseChangeInformation {
 	}
 
 	@Override
-	public ChangeType getChangeType() {
-		return ChangeType.DELETE_IMPORT_STATEMENT;
+	public ChangeKind getChangeKind() {
+		return ChangeKind.DELETE_IMPORT_STATEMENT;
 	}
 	
 	@Override
@@ -21,8 +21,8 @@ public class DeleteImportStatementInformation extends BaseChangeInformation {
 	@Override
 	public boolean shouldBeMerged(int level, IChangeInformation nextChange) {
 		return	level > 0 &&
-				(nextChange.getChangeType() == ChangeType.ADD_IMPORT_STATEMENT ||
-				 nextChange.getChangeType() == ChangeType.DELETE_IMPORT_STATEMENT);
+				(nextChange.getChangeKind() == ChangeKind.ADD_IMPORT_STATEMENT ||
+				 nextChange.getChangeKind() == ChangeKind.DELETE_IMPORT_STATEMENT);
 	}
 
 }

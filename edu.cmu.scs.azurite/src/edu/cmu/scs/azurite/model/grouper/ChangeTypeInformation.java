@@ -1,36 +1,41 @@
 package edu.cmu.scs.azurite.model.grouper;
 
-import org.eclipse.jdt.core.dom.MethodDeclaration;
+import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 
 import edu.cmu.scs.fluorite.commands.document.DocChange;
 import edu.cmu.scs.fluorite.commands.document.Range;
 
-public class ChangeMethodInformation extends BaseChangeInformation {
+public class ChangeTypeInformation extends BaseChangeInformation {
 	
-	private final MethodDeclaration preMethodNode;
-	private final MethodDeclaration postMethodNode;
+	private final AbstractTypeDeclaration preTypeNode;
+	private final AbstractTypeDeclaration postTypeNode;
 	
-	public ChangeMethodInformation(DocChange mergedChange, MethodDeclaration preMethodNode, Range preMethodRange, MethodDeclaration postMethodNode) {
+	public ChangeTypeInformation(DocChange mergedChange, AbstractTypeDeclaration preTypeNode, Range preTypeRange, AbstractTypeDeclaration postTypeNode) {
 		super(mergedChange);
 		
-		this.preMethodNode = preMethodNode;
-		this.postMethodNode = postMethodNode;
+		this.preTypeNode = preTypeNode;
+		this.postTypeNode = postTypeNode;
 		
-		setPreRange(preMethodRange);
+		setPreRange(preTypeRange);
 	}
 
 	@Override
 	public ChangeKind getChangeKind() {
-		return ChangeKind.CHANGE_METHOD;
+		return ChangeKind.CHANGE_TYPE;
 	}
 	
 	@Override
 	public String getChangeSummary() {
-		String methodName = getMethodName(getPostNode());
-		if (methodName != null) {
-			return String.format("Changed method '%s'", methodName);
+		String typeName = getTypeName(getPostNode());
+		String typeKind = getTypeKind(getPostNode());
+		if (typeName != null && typeKind != null) {
+			return String.format("Added %s '%s'", typeKind, typeName);
+		} else if (typeKind != null) {
+			return String.format("Added an unknown %s", typeKind);
+		} else if (typeName != null) {
+			return String.format("Added %s", typeName);
 		} else {
-			return "Changed a method";
+			return "Added an unknown type";
 		}
 	}
 
@@ -38,14 +43,7 @@ public class ChangeMethodInformation extends BaseChangeInformation {
 	public boolean shouldBeMerged(int level, IChangeInformation nextChange) {
 		switch (level) {
 		case OperationGrouper.LEVEL_METHOD:
-			switch (nextChange.getChangeKind()) {
-			case CHANGE_METHOD:
-			case DELETE_METHOD:
-				return getPostRange().equals(nextChange.getPreRange());
-				
-			default:
-				return false;
-			}
+			return false;
 			
 		case OperationGrouper.LEVEL_TYPE:
 			switch (nextChange.getChangeKind()) {
@@ -68,15 +66,15 @@ public class ChangeMethodInformation extends BaseChangeInformation {
 	}
 	
 	@Override
-	public MethodDeclaration getPreNode() {
-		return this.preMethodNode;
+	public AbstractTypeDeclaration getPreNode() {
+		return this.preTypeNode;
 	}
 	
 	@Override
-	public MethodDeclaration getPostNode() {
-		return this.postMethodNode;
+	public AbstractTypeDeclaration getPostNode() {
+		return this.postTypeNode;
 	}
-	
+
 	@Override
 	public Range getPreTypeRange() {
 		if (getMergedChange() != null) {
