@@ -374,15 +374,15 @@ rect.op_rect.type_delete_method {
 fill: pink;
 }
 
-rect.op_rect.type_add_class {
+rect.op_rect.type_add_type {
 fill: yellowgreen;
 }
 
-rect.op_rect.type_change_class {
+rect.op_rect.type_change_type {
 fill: lightskyblue;
 }
 
-rect.op_rect.type_delete_class {
+rect.op_rect.type_delete_type {
 fill: pink;
 }
 
