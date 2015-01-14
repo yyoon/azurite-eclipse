@@ -461,12 +461,12 @@ public class OperationGrouper implements RuntimeDCListener {
 
 	private static ASTNode parseSnapshot(String snapshot) {
 		// First, parse the file.
-		ASTParser parser = ASTParser.newParser(AST.JLS8);
+		ASTParser parser = ASTParser.newParser(AST.JLS4);
 		parser.setSource(snapshot.toCharArray());
 		
 		@SuppressWarnings("rawtypes")
 		Map options = JavaCore.getOptions();
-		JavaCore.setComplianceOptions(JavaCore.VERSION_1_8, options);
+		JavaCore.setComplianceOptions(JavaCore.VERSION_1_7, options);
 		parser.setCompilerOptions(options);
 		
 		// Do the parsing.
