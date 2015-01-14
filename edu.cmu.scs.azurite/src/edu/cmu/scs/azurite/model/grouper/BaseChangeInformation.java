@@ -71,6 +71,16 @@ public abstract class BaseChangeInformation implements IChangeInformation {
 		return this.postRange;
 	}
 	
+	@Override
+	public Range getPreTypeRange() {
+		return null;
+	}
+	
+	@Override
+	public Range getPostTypeRange() {
+		return null;
+	}
+	
 	protected void setPreRange(Range preRange) {
 		this.preRange = preRange;
 	}
@@ -123,6 +133,14 @@ public abstract class BaseChangeInformation implements IChangeInformation {
 		} else {
 			return "unknown";
 		}
+	}
+	
+	protected AbstractTypeDeclaration getEnclosingType(ASTNode node) {
+		while (node != null && !(node instanceof AbstractTypeDeclaration)) {
+			node = node.getParent();
+		}
+		
+		return (AbstractTypeDeclaration) node;
 	}
 
 }

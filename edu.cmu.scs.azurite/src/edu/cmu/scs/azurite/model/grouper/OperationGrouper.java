@@ -38,7 +38,7 @@ public class OperationGrouper implements RuntimeDCListener {
 	
 	public static final int LEVEL_PARSABLE = 0;
 	public static final int LEVEL_METHOD = 1;
-	public static final int LEVEL_CLASS = 2;
+	public static final int LEVEL_TYPE = 2;
 	public static final int NUM_LEVELS = 3;
 	
 	private Map<FileKey, Document>[] knownSnapshots;
@@ -279,7 +279,23 @@ public class OperationGrouper implements RuntimeDCListener {
 	}
 	
 	private boolean shouldBeMergedLevel2(List<RuntimeDC> dcs, DocChange mergedChange) {
-		// TODO implement this properly.
+		int level = 2;
+		
+		// The mergedChange can be null when the new set of document changes cancel themselves out.
+		if (this.mergedPendingChanges[level] == null || mergedChange == null) { return true; }
+		
+		if (this.pendingChangeInformation[level] == null) {
+			this.pendingChangeInformation[level] = determineChangeKind(level, getCurrentSnapshot(level).get(), this.mergedPendingChanges[level]);
+		}
+		
+		// The level 1 snapshot should contain the presnapshot.
+		IChangeInformation prevChange = this.pendingChangeInformation[level];
+		IChangeInformation nextChange = determineChangeKind(level, getCurrentSnapshot(level - 1).get(), mergedChange);
+		
+		if (prevChange != null && nextChange != null) {
+			return prevChange.shouldBeMerged(level, nextChange);
+		}
+		
 		return false;
 	}
 	

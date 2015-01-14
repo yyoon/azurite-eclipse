@@ -36,7 +36,6 @@ public class DeleteTypeInformation extends BaseChangeInformation {
 
 	@Override
 	public boolean shouldBeMerged(int level, IChangeInformation nextChange) {
-		// TODO Auto-generated method stub
 		return false;
 	}
 	

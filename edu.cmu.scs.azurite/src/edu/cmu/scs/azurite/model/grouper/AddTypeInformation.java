@@ -3,6 +3,7 @@ package edu.cmu.scs.azurite.model.grouper;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 
 import edu.cmu.scs.fluorite.commands.document.DocChange;
+import edu.cmu.scs.fluorite.commands.document.Range;
 
 public class AddTypeInformation extends BaseChangeInformation {
 	
@@ -36,7 +37,27 @@ public class AddTypeInformation extends BaseChangeInformation {
 
 	@Override
 	public boolean shouldBeMerged(int level, IChangeInformation nextChange) {
-		// TODO Auto-generated method stub
+		switch (level) {
+		case OperationGrouper.LEVEL_METHOD:
+			return false;
+			
+		case OperationGrouper.LEVEL_TYPE:
+			switch (nextChange.getChangeKind()) {
+			case ADD_FIELD:
+			case CHANGE_FIELD:
+			case DELETE_FIELD:
+			case ADD_METHOD:
+			case CHANGE_METHOD:
+			case DELETE_METHOD:
+			case CHANGE_TYPE:
+			case DELETE_TYPE:
+				return getPostTypeRange().equals(nextChange.getPreTypeRange());
+				
+			default:
+				return false;
+			}
+		}
+		
 		return false;
 	}
 	
@@ -45,4 +66,18 @@ public class AddTypeInformation extends BaseChangeInformation {
 		return this.postTypeNode;
 	}
 
+	@Override
+	public Range getPreTypeRange() {
+		if (getMergedChange() != null) {
+			return getMergedChange().applyInverse(getPostTypeRange());
+		} else {
+			return getPostTypeRange();
+		}
+	}
+	
+	@Override
+	public Range getPostTypeRange() {
+		return new Range(getEnclosingType(getPostNode()));
+	}
+	
 }

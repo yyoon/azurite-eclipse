@@ -29,4 +29,8 @@ public interface IChangeInformation {
 	
 	Range getPostRange();
 	
+	Range getPreTypeRange();
+	
+	Range getPostTypeRange();
+	
 }
