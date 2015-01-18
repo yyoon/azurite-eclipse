@@ -34,7 +34,7 @@ import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
 import edu.cmu.scs.azurite.plugin.Activator;
 import edu.cmu.scs.azurite.util.Utilities;
 import edu.cmu.scs.azurite.views.TimelineViewPart;
-import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
+import edu.cmu.scs.fluorite.commands.document.DocChange;
 
 public class ReviewViewer extends Composite {
 	
@@ -222,7 +222,7 @@ public class ReviewViewer extends Composite {
 		
 		// Get the "After" code
 		for (int i = historyForKey.size() - 1; i >= versionEndForKey; --i) {
-			BaseDocumentChangeEvent originalDC = historyForKey.get(i).getOriginal();
+			DocChange originalDC = historyForKey.get(i).getOriginal();
 			originalDC.applyInverse(fileContent);
 		}
 		
@@ -230,7 +230,7 @@ public class ReviewViewer extends Composite {
 		
 		// Get the "Before code
 		for (int i = versionEndForKey - 1; i >= versionBeginForKey; --i) {
-			BaseDocumentChangeEvent originalDC = historyForKey.get(i).getOriginal();
+			DocChange originalDC = historyForKey.get(i).getOriginal();
 			originalDC.applyInverse(fileContent);
 		}
 		

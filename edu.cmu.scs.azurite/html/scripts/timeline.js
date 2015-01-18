@@ -2,7 +2,7 @@
 /*global d3, azurite */
 
 /* Things to be called from Azurite */
-/*exported updateOperation, getRightmostTimestamp, addSelectionsByIds, removeSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarkerAtTimestamp, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile, addEvent, activateFirebugLite, showAllFilesEditedInRange, openAllFilesEditedInRange, removeAllSelections, showUp, showDown, isMarkerVisible */
+/*exported updateOperation, updateCollapseIds, getRightmostTimestamp, addSelectionsByIds, removeSelectionsByIds, showBefore, showAfter, undo, undoEverythingAfterSelection, showAllFiles, showSelectedFile, showAllFilesInProject, jumpToLocation, showAllFilesEditedTogether, showMarkerAtTimestamp, hideMarker, hideFirebugUI, pushCurrentFile, popCurrentFile, addEvent, activateFirebugLite, showAllFilesEditedInRange, openAllFilesEditedInRange, removeAllSelections, showUp, showDown, isMarkerVisible */
 
 /* Things to be called manually when debugging */
 /*exported test, testMarker, showEvents */
@@ -51,8 +51,6 @@ var FILE_NAME_OFFSET_Y = 5;
 
 var FILES_PORTION = 0.15;
 
-var HIGHLIGHT_WIDTH = 2;
-
 var INDICATOR_WIDTH = 2;
 
 var SCROLLBAR_WIDTH = 10;
@@ -68,6 +66,9 @@ var RANGE_START_LINE_DASH_ARRAY = '5,5';
 var EVENT_WIDTH = 1;
 var EVENT_ICON_WIDTH = 16;
 var EVENT_ICON_HEIGHT = 16;
+
+var SCALE_X_MIN = 0.1;
+var SCALE_X_MAX = 3.0;
 
 
 // When changing one of the following heights, be sure to also change the corresponding css.
@@ -87,6 +88,12 @@ var CHART_MARGINS = {
 
 var MIN_SCROLL_THUMB_SIZE = 30;
 
+
+var NUM_COLLAPSE_LEVELS = 3;
+var COLLAPSE_LEVEL_INITIALS = ['R', 'P', 'M', 'T'];
+var COLLAPSE_LEVEL_THRESHOLDS = [3.1, 1.5, 0.7, 0.4, 0.1];
+
+
 // draw functions
 
 var rectDraw = {};
@@ -101,7 +108,7 @@ rectDraw.yFunc = function(d) {
 	}
 };
 rectDraw.wFunc = function(d) {
-	return Math.max(MIN_WIDTH / global.scaleX, (d.t2 - d.t1) / DEFAULT_RATIO);
+	return d.getWidth();
 };
 rectDraw.hFunc = function(d) {
 	return Math.max(MIN_HEIGHT / global.scaleY, ROW_HEIGHT * (d.y2 - d.y1) / 100);
@@ -259,8 +266,9 @@ var LayoutEnum = {
 };
 
 // Use COMPACT by default.
-// TODO Save this to somewhere in the preferences store.
+// TODO Save these to somewhere in the preferences store.
 global.layout = LayoutEnum.COMPACT;
+global.collapseLevel = 0;
 
 // transforms
 global.translateX = 0;
@@ -350,6 +358,23 @@ global.timeScale = d3.time.scale()
 global.domainArray = [];
 global.rangeArray = [];
 global.timeScale.clamp(true);
+
+global.idFunc = function(d) { return d.sid + '_' + d.id; };
+global.valuesFunc = function(d) { return d.values; };
+
+global.tooltipObject = {
+	gravity: $.fn.tipsy.autoNS,
+	html: true,
+	checkFn: function() {
+		return !global.dragging;
+	},
+	title: function() {
+		var d = this.__data__;
+		return d.getInfo();
+	}
+};
+
+global.reverseCollapseMap = {};
 
 // Move to front function for d3 selection.
 d3.selection.prototype.moveToFront = function() {
@@ -579,6 +604,15 @@ function Session(sid, current) {
 		
 		return null;
 	};
+
+	this.getAllOperations = function() {
+		var operations = [];
+		for (var i = 0; i < this.fileGroups.length; ++i) {
+			operations = operations.concat(this.fileGroups[i].operations);
+		}
+
+		return operations;
+	};
 	
 	global.sessions.push(this);
 	global.sessions.sort(function (lhs, rhs) {
@@ -632,11 +666,15 @@ function EditOperation(sid, id, t1, t2, y1, y2, type, fileGroup) {
 			return "type_diff_delete";
 		}
 	};
-	
+
 	this.fileGroup = fileGroup;
 	this.session = fileGroup.session;
 	
 	this.visible = true;
+
+	this.getWidth = function() {
+		return Math.max(MIN_WIDTH / global.scaleX, (this.t2 - this.t1) / DEFAULT_RATIO);
+	};
 	
 	this.isVisible = function () {
 		return this.fileGroup.isVisible() && this.visible;
@@ -654,9 +692,91 @@ function EditOperation(sid, id, t1, t2, y1, y2, type, fileGroup) {
 		var date = new Date(this.sid + this.t1);
 		var info = azurite.getInfo(
 				this.fileGroup.file.project, this.fileGroup.file.path,
-				this.sid, this.id);
+				this.sid, this.id, -1);
 		
-		return date.toLocaleString() + '<br>' + info;
+		return (d3.time.format('%m/%d @ %I:%M %p'))(date) + '<br>' + info;
+	};
+
+	this.getOperationId = function() {
+		return new OperationId(this.sid, this.id);
+	};
+
+	this.getOperationIdString = function() {
+		return '' + this.sid + '_' + this.id;
+	};
+
+	this.collapseTo = [id, id, id];
+	this.collapseType = ["type_unknown", "type_unknown", "type_unknown"];
+
+	this.finalized = false;
+}
+
+/**
+ * operations: array of EditOperation objects
+ */
+function OperationGroup(operations) {
+	this.operations = operations.slice(0);
+
+	var firstOp = this.operations[0];
+	var lastOp = this.operations[this.operations.length - 1];
+
+	this.getWidth = function() {
+		var sum = 0;
+		for (var i = 0; i < this.operations.length; ++i) {
+			sum += this.operations[i].getWidth();
+		}
+
+		return sum;
+	};
+
+	this.typeString = function() {
+		return this.operations[0].collapseType[global.collapseLevel];
+	};
+
+	this.sid = firstOp.sid;
+	this.id = firstOp.id;
+	this.t1 = firstOp.t1;
+	this.t2 = lastOp.t2;
+
+	this.y1 = firstOp.y1;
+	this.y2 = firstOp.y2;
+	for (var i = 1; i < operations.length; ++i) {
+		this.y1 = Math.min(this.y1, operations[i].y1);
+		this.y2 = Math.max(this.y2, operations[i].y2);
+	}
+
+	this.fileGroup = firstOp.fileGroup;
+
+	this.visible = true;
+
+	this.isVisible = function () {
+		return this.fileGroup.isVisible() && this.visible;
+	};
+	
+	this.getInfo = function() {
+		var date = new Date(this.sid + this.t1);
+		var info = azurite.getInfo(
+				this.fileGroup.file.project, this.fileGroup.file.path,
+				this.sid, this.id, global.collapseLevel);
+		
+		return (d3.time.format('%m/%d @ %I:%M %p'))(date) + '<br>' + info;
+	};
+
+	this.getOperationId = function() {
+		return new OperationId(this.sid, this.id);
+	};
+
+	this.isFullySelected = function() {
+		var fullySelected = true;
+		for (var i = 0; i < this.operations.length; ++i) {
+			var op = this.operations[i];
+			if (!isSelected(op.sid, op.id)) {
+				fullySelected = false;
+				break;
+			}
+		}
+
+		return fullySelected;
 	};
 }
 
@@ -717,7 +837,7 @@ function updateSeparatingLines() {
  * Add an edit operation to the end of the file.
  * Note that this is called immediately after an edit operation is performed.
  */
-function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current) {
+function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current, collapseTo, collapseType) {
 	if (global.currentFile === null) {
 		return;
 	}
@@ -758,6 +878,15 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current
 
 	var newOp = new EditOperation(sid, id, t1, t2, y1, y2, type, fileGroup);
 
+	if (collapseTo instanceof Array) {
+		newOp.collapseTo = collapseTo.slice();
+	}
+
+	if (collapseType instanceof Array) {
+		newOp.collapseType = collapseType.slice();
+		newOp.finalized = true;
+	}
+
 	if (global.currenFile !== global.files[0]) {
 		global.files.splice(global.currentFileIndex, 1);
 		global.files.splice(0, 0, global.currentFile);
@@ -774,17 +903,7 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current
 
 	var rectToAppend = fileGroup.g.append('rect');
 	rectToAppend.datum(newOp);
-	rectToAppend
-		.attr('id', function(d) {
-			return d.sid + '_' + d.id;
-		})
-		.attr('class', rectDraw.classFunc)
-		.attr('y', rectDraw.yFunc)
-		.attr('width', rectDraw.wFunc)
-		.attr('height', rectDraw.hFunc)
-		.attr('rx', RECT_RADIUS)
-		.attr('ry', RECT_RADIUS)
-		.attr('vector-effect', 'non-scaling-stroke');
+	applyRectAttributes(rectToAppend);
 	
 	if (autolayout === true) {
 		var sessionTx = session.tx;
@@ -843,19 +962,6 @@ function addOperation(sid, id, t1, t2, y1, y2, type, scroll, autolayout, current
 			}
 		}
 	}
-	
-	// Add tipsy.
-	$(rectToAppend.node()).tipsy({
-		gravity: $.fn.tipsy.autoNS,
-		html: true,
-		checkFn: function() {
-			return !global.dragging;
-		},
-		title: function() {
-			var d = this.__data__;
-			return d.getInfo();
-		}
-	});
 	
 	global.lastRect = rectToAppend;
 	
@@ -963,6 +1069,113 @@ function updateOperation(sid, id, t2, y1, y2, type, scroll) {
 	}
 }
 
+function applyRectAttributes(rectSelection) {
+	rectSelection
+		.attr('id', global.idFunc)
+		.attr('class', rectDraw.classFunc)
+		.attr('y', rectDraw.yFunc)
+		.attr('width', rectDraw.wFunc)
+		.attr('height', rectDraw.hFunc)
+		.attr('rx', RECT_RADIUS)
+		.attr('ry', RECT_RADIUS)
+		.attr('vector-effect', 'non-scaling-stroke');
+
+	// Add tipsy.
+	rectSelection.each(function() {
+		$(this).tipsy(global.tooltipObject);
+	});
+}
+
+/**
+ * Called by Azurite
+ */
+function updateCollapseIds(sid, path, level, collapseId, collapseType, ids) {
+	if (ids.length === 0) { return; }
+
+	var session = findSession(sid);
+	if (session === null) { return; }
+
+	var fileGroup = null;
+	var i;
+	for (i = 0; i < session.fileGroups.length; ++i) {
+		if (session.fileGroups[i].file.path === path) {
+			fileGroup = session.fileGroups[i];
+			break;
+		}
+	}
+
+	if (fileGroup === null) { return; }
+
+	// Find the collapseId and update the collapse type.
+	var start = 0;
+	var end = fileGroup.operations.length;
+	var collapseOpIndex = -1;
+	var mid, midId;
+	while (start < end) {
+		mid = Math.floor((start + end) / 2);
+		midId = fileGroup.operations[mid].id;
+
+		if (midId > collapseId) {
+			end = mid;
+		} else if (midId < collapseId) {
+			start = mid + 1;
+		} else {
+			collapseOpIndex = mid;
+			break;
+		}
+	}
+
+	if (collapseOpIndex === -1) { return; }
+
+	fileGroup.operations[collapseOpIndex].collapseType[level] = collapseType;
+
+	// Now find the first id using binary search.
+	var firstId = ids[0];
+	start = collapseOpIndex;
+	end = fileGroup.operations.length;
+
+	var firstIndex = -1;
+	while (start < end) {
+		mid = Math.floor((start + end) / 2);
+		midId = fileGroup.operations[mid].id;
+
+		if (midId > firstId) {
+			end = mid;
+		} else if (midId < firstId) {
+			start = mid + 1;
+		} else {
+			firstIndex = mid;
+			break;
+		}
+	}
+
+	if (firstIndex === -1) { return; }
+
+	// Finally, update collapse ids.
+	for (i = 0; i < ids.length && fileGroup.operations[firstIndex + i].id === ids[i]; ++i) {
+		var op = fileGroup.operations[firstIndex + i];
+		op.collapseTo[level] = collapseId;
+		op.finalized = true;
+		if (ids[i] != collapseId) { op.collapseType[level] = "type_unknown"; }
+
+		global.reverseCollapseMap[op.getOperationIdString()] = fileGroup.operations[collapseOpIndex].getOperationId();
+	}
+
+	// And, if the level equals the current level, merge the corresponding rectangles into a single rectangle.
+	if (level === global.collapseLevel) {
+		var data = collapse(level, fileGroup.operations).map(global.valuesFunc);
+
+		// Remove unnecessary rects.
+		fileGroup.g.selectAll('rect.op_rect')
+			.filter(function(d) { return d.id !== collapseId && ids.indexOf(d.id) !== -1; })
+			.remove();
+
+		// Update the rects.
+		var rectSelection = fileGroup.g.selectAll('rect.op_rect').data(data);
+		applyRectAttributes(rectSelection);
+	}
+}
+
 /**
  * Called by Azurite
  */
@@ -1017,7 +1230,20 @@ function findSession(sid) {
 	return null;
 }
 
-function layout(newLayout) {
+function collapse(level, data) {
+	return d3.nest()
+		.key(function(d) { return d.collapseTo[level]; })
+		.rollup(function(operations) {
+			if (operations.length === 1 && !operations[0].finalized && operations[0] === global.lastOperation) {
+				return operations[0];
+			} else {
+				return new OperationGroup(operations);
+			}
+		})
+		.entries(data);
+}
+
+function layout(newLayout, level) {
 	// profiling
 	var _startTick = new Date().valueOf();
 	if (global.profile) {
@@ -1030,6 +1256,15 @@ function layout(newLayout) {
 	// Change the layout, if specified.
 	if (newLayout !== undefined) {
 		global.layout = newLayout;
+	}
+
+	// Change the collapse level, if specified.
+	var levelChanging = false;
+	if (level !== undefined) {
+		level = parseInt(level);
+		global.collapseLevel = level;
+		levelChanging = true;
+		$('#collapse_level_button').text( COLLAPSE_LEVEL_INITIALS[level + 1] );
 	}
 	
 	global.tempSessionTx = 0;
@@ -1062,6 +1297,31 @@ function layout(newLayout) {
 		
 		session.g.attr('transform', 'translate(' + global.tempSessionTx + ' 0)');
 		session.tx = global.tempSessionTx;
+
+		global.reverseCollapseMap = {};
+
+		// 1. For each FileGroup, re-create the rectangles.
+		for (var j = 0; j < session.fileGroups.length; ++j) {
+			var fileGroup = session.fileGroups[j];
+			var data = fileGroup.operations;
+
+			if (global.collapseLevel >= 0) {
+				data = collapse(global.collapseLevel, data).map(global.valuesFunc);
+				for (var k = 0; k < data.length; ++k) {
+					if (data[k] instanceof OperationGroup) {
+						for (var l = 0; l < data[k].operations.length; ++l) {
+							var op = data[k].operations[l];
+							global.reverseCollapseMap[op.getOperationIdString()] = data[k].getOperationId();
+						}
+					}
+				}
+			}
+
+			var rectSelection = fileGroup.g.selectAll('rect.op_rect').data(data);
+			rectSelection.exit().remove();
+			rectSelection.enter().append('rect');
+			applyRectAttributes(rectSelection);
+		}
 		
 		// Iterate through all the rects.
 		var rects = session.g.selectAll('rect.op_rect')[0].slice();
@@ -1306,6 +1566,43 @@ window.onload = function() {
 	azurite.initialize();
 
 	setupSVG();
+
+	$('#unhide_button').button();
+
+	var $collapseButton = $('#collapse_level_button');
+
+	$collapseButton.button();
+	$collapseButton.click(function() {
+		$('#collapse_level_button').contextmenu("open", $('#collapse_level_button'));
+	});
+
+	$collapseButton.contextmenu({
+		menu: [
+			{ title: "<strong>T</strong>ype Level", cmd: 2 },
+			{ title: "<strong>M</strong>ethod Level", cmd: 1 },
+			{ title: "<strong>P</strong>arse Level", cmd: 0 },
+			{ title: "<strong>R</strong>aw Level", cmd: -1 },
+		],
+
+		position: function(event, ui) {
+			return { my: "left bottom", at: "left-1 top-2", of: ui.target };
+		},
+
+		show: false,
+
+		select: function(event, ui) {
+			layout(global.layout, ui.cmd);
+		}
+	});
+
+	$('#horizontal_zoom_bar').slider({
+		min: SCALE_X_MIN,
+		max: SCALE_X_MAX,
+		step: 0.1,
+		value: 1.0,
+		change: function(event, ui) { scaleX(ui.value); },
+		slide: function(event, ui) { scaleX(ui.value); },
+	});
 	
 	initEventHandlers();
 	
@@ -1967,22 +2264,46 @@ function addSelections(x1, y1, x2, y2, toggle, clearPrevSelections) {
 		global.selectedRects = [];
 	}
 
-	opRects.each(function(d, i) {
+	opRects.each(function(d) {
 		var sid = d.sid;
 		var id = d.id;
-		
-		var index = indexOfSelected(sid, id);
+		var i, op, index;
 
-		if (toggle === true) {
-			if (index !== -1) {
-				global.selectedRects.splice(index, 1);
+		if (d instanceof OperationGroup) {
+		// - This rect is a group rect.
+			if (toggle === true && d.isFullySelected()) {
+				for (i = 0; i < d.operations.length; ++i) {
+					op = d.operations[i];
+					index = indexOfSelected(op.sid, op.id);
+					if (index !== -1) {
+						global.selectedRects.splice(index, 1);
+					}
+				}
+			} else {
+				for (i = 0; i < d.operations.length; ++i) {
+					op = d.operations[i];
+					if (!isSelected(op.sid, op.id)) {
+						global.selectedRects.push(new OperationId(op.sid, op.id));
+					}
+				}
+			}
+		} else {
+		// - This rect is an operation rect.
+			index = indexOfSelected(sid, id);
+
+			if (toggle === true) {
+				if (index !== -1) {
+					global.selectedRects.splice(index, 1);
+				}
+				else {
+					global.selectedRects.push(new OperationId(sid, id));
+				}
 			}
 			else {
-				global.selectedRects.push(new OperationId(sid, id));
+				if (index !== -1) {
+					global.selectedRects.push(new OperationId(sid, id));
+				}
 			}
-		}
-		else if (!isSelected(sid, id)) {
-			global.selectedRects.push(new OperationId(sid, id));
 		}
 	});
 
@@ -2035,32 +2356,74 @@ function updateHighlight() {
 	svg.subRects.selectAll('rect.highlight_rect').remove();
 
 	var i, idString;
+	var set = d3.set();
 
 	for (i = 0; i < global.selectedRects.length; ++i) {
-		idString = '#' + global.selectedRects[i].sid + '_' + global.selectedRects[i].id;
+		var sid = global.selectedRects[i].sid;
+		var id = global.selectedRects[i].id;
+		idString = '' + sid + '_' + id;
+
+		var oid = global.reverseCollapseMap[idString];
+		if (oid instanceof OperationId) {
+			sid = oid.sid;
+			id = oid.id;
+		}
+		idString = '#' + sid + '_' + id;
+
+		if (set.has(idString)) {
+			continue;
+		}
+
+		set.add(idString);
 
 		var $ref = $(idString);
 		if ($ref.length === 0) {
 			continue;
 		}
+
+		var data = $ref.get(0).__data__;
+
+		var partial = false;
+		if (data instanceof OperationGroup) {
+			// Check if "all" are selected.
+			for (var j = 0; j < data.operations.length; ++j) {
+				var found = false;
+				for (var k = 0; k < global.selectedRects.length; ++k) {
+					var op = data.operations[j];
+					var sel = global.selectedRects[k];
+
+					if (op.sid === sel.sid && op.id === sel.id) {
+						found = true;
+						break;
+					}
+				}
+
+				if (!found) {
+					partial = true;
+					break;
+				}
+			}
+		}
+
 		var refBBox = $ref.get(0).getBBox();
 
-		d3.select($(idString)[0].parentNode)
-			.insert('rect', ':first-child')
-			.attr('class', 'highlight_rect')
-			.attr('fill', 'yellow')
-			.attr('x', refBBox.x - (HIGHLIGHT_WIDTH / global.scaleX))
-			.attr('y', refBBox.y - (HIGHLIGHT_WIDTH / global.scaleY))
+		var highlightRect = d3.select($(idString)[0].parentNode)
+			.insert('rect', ':first-child');
+
+		highlightRect
+			.attr('class', 'highlight_rect' + (partial ? ' partial_highlight' : ''))
+			.attr('x', refBBox.x)
+			.attr('y', refBBox.y)
 			.attr('rx', RECT_RADIUS)
 			.attr('ry', RECT_RADIUS)
-			.attr('width', refBBox.width + HIGHLIGHT_WIDTH * 2 / global.scaleX)
-			.attr('height', refBBox.height + HIGHLIGHT_WIDTH * 2 / global.scaleY);
+			.attr('width', refBBox.width)
+			.attr('height', refBBox.height);
 	}
 
 	svg.subRects.selectAll('rect.highlight_rect').moveToFront();
-	for (i = 0; i < global.selectedRects.length; ++i) {
-		idString = '#' + global.selectedRects[i].sid + '_' + global.selectedRects[i].id;
-		d3.select($(idString)[0]).moveToFront();
+	var idStrings = set.values();
+	for (i = 0; i < idStrings.length; ++i) {
+		d3.select($(idStrings[i])[0]).moveToFront();
 	}
 }
 
@@ -2172,9 +2535,24 @@ function range(begin, end) {
 }
 
 function scaleX(sx) {
-	sx = clamp(sx, 0.1, 50);
+	if (sx === global.scaleX) {
+		return;
+	}
+
+	sx = clamp(sx, SCALE_X_MIN, SCALE_X_MAX);
 	global.translateX = global.translateX / global.scaleX * sx;
 	global.scaleX = sx;
+
+	var prevCollapseLevel = global.collapseLevel;
+	var collapseLevel = prevCollapseLevel;
+	for (var level = -1; level < NUM_COLLAPSE_LEVELS; ++level) {
+		if (COLLAPSE_LEVEL_THRESHOLDS[level + 2] <= sx && sx < COLLAPSE_LEVEL_THRESHOLDS[level + 1]) {
+			collapseLevel = level;
+			break;
+		}
+	}
+
+	var levelChanging = prevCollapseLevel !== collapseLevel;
 
 	updateSubRectsTransform();
 
@@ -2186,11 +2564,13 @@ function scaleX(sx) {
 
 	updateHScroll();
 	
-	if (global.layout === LayoutEnum.COMPACT) {
-		layout();
+	if (global.layout === LayoutEnum.COMPACT || levelChanging) {
+		layout(global.layout, collapseLevel);
 	}
 	
 	updateMarkerPosition();
+
+	$('#horizontal_zoom_bar').slider( 'value', sx );
 }
 
 function scaleY(sy) {
@@ -2570,6 +2950,8 @@ function addRandomOperations(sid, count, startover) {
 	}
 
 	for (i = 0; i < count; ++i) {
+		var prevOp = global.lastOperation;
+
 		++id;
 		var t1 = t + Math.floor(Math.random() * 15000) + 1000;
 		var t2 = t1 + Math.floor(Math.random() * 1000) + 1000;
@@ -2577,7 +2959,16 @@ function addRandomOperations(sid, count, startover) {
 
 		var y1 = Math.floor(Math.random() * 100);
 		var y2 = clamp(y1 + Math.floor(Math.random() * 30), y1, 100);
+
 		addOperation(sid, id, t1, t2, y1, y2, Math.floor(Math.random() * 3));
+
+		// Randomly merge with the previous one.
+		if (i === 0) { continue; }
+		for (var j = 0; j < NUM_COLLAPSE_LEVELS; ++j) {
+			if (j > 0 && prevOp.collapseTo[j - 1] === global.lastOperation.collapseTo[j - 1] || Math.random() < 0.5) {
+				global.lastOperation.collapseTo[j] = prevOp.collapseTo[j];
+			}
+		}
 	}
 }
 

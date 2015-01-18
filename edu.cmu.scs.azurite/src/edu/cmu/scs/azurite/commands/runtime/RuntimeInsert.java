@@ -2,7 +2,7 @@ package edu.cmu.scs.azurite.commands.runtime;
 
 import java.util.List;
 
-import edu.cmu.scs.fluorite.commands.Insert;
+import edu.cmu.scs.fluorite.commands.document.Insert;
 
 /**
  * @author YoungSeok Yoon
@@ -87,17 +87,6 @@ public class RuntimeInsert extends RuntimeDC {
 	public String toString() {
 		return "[Insert:" + getOriginal().getCommandIndex() + "] \""
 				+ getOriginal().getText() + "\"";
-	}
-
-	@Override
-	public String getHtmlInfo() {
-		StringBuilder builder = new StringBuilder();
-		
-		builder.append("++++++++++\n");
-		builder.append(transformToHtmlString(getOriginal().getText()));
-		builder.append("\n++++++++++");
-		
-		return builder.toString().replace("\n", "<br>");
 	}
 
 	@Override

@@ -3,7 +3,7 @@ package edu.cmu.scs.azurite.commands.runtime;
 import java.util.ArrayList;
 import java.util.List;
 
-import edu.cmu.scs.fluorite.commands.Delete;
+import edu.cmu.scs.fluorite.commands.document.Delete;
 
 /**
  * @author YoungSeok Yoon
@@ -90,17 +90,6 @@ public class RuntimeDelete extends RuntimeDC {
 	public String toString() {
 		return "[Delete:" + getOriginal().getCommandIndex() + "] \""
 				+ getOriginal().getText() + "\"";
-	}
-
-	@Override
-	public String getHtmlInfo() {
-		StringBuilder builder = new StringBuilder();
-		
-		builder.append("----------\n");
-		builder.append(transformToHtmlString(getOriginal().getText()));
-		builder.append("\n----------");
-		
-		return builder.toString().replace("\n", "<br>");
 	}
 
 	@Override

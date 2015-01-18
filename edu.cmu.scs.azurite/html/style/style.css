@@ -251,22 +251,71 @@ text {
 	pointer-events: none;
 }
 
-#button_wrapper {
-position: absolute;
+#bottom_left_wrapper {
+position: relative;
 
-bottom: 15px;
-width: 15%;
-height: 30px;
-
-text-align: center;
-vertical-align: middle;
+left: 10px;
+bottom: 46px;
+width: calc((100% - 20px) * 0.15);
+height: 56px;
 }
 
 #unhide_button {
 display: none;	/* Initially Hidden */
 
-height: 20px;
-margin: 5px 0px;
+position: absolute;
+
+top: 10px;
+left: 10px;
+width: calc(100% - 20px);
+
+font-size: 1em;
+}
+
+#unhide_button .ui-button-text {
+padding: .3em 1em;
+}
+
+#collapse_level_button {
+position: absolute;
+
+left: 10px;
+bottom: 0px;
+
+width: 16px;
+height: 16px;
+
+z-index: 2;
+
+font-weight: bold;
+font-size: 1em;
+}
+
+#collapse_level_button .ui-button-text {
+padding: 0;
+}
+
+#collapse_level_button:focus {
+outline: none;
+}
+
+#horizontal_zoom_bar {
+position: absolute;
+
+left: 35px;
+bottom: 3px;
+
+width: calc(100% - 47px);
+
+height: 8px;
+}
+
+#horizontal_zoom_bar .ui-slider-handle {
+top: -4px;
+width: 14px;
+height: 14px;
+
+margin-left: -7px;
 }
 
 rect.op_rect.type_insert {
@@ -301,6 +350,62 @@ rect.op_rect.type_diff_delete {
 fill: #ec9999;
 }
 
+rect.op_rect.type_add_field {
+fill: yellowgreen;
+}
+
+rect.op_rect.type_change_field {
+fill: lightskyblue;
+}
+
+rect.op_rect.type_delete_field {
+fill: pink;
+}
+
+rect.op_rect.type_add_method {
+fill: yellowgreen;
+}
+
+rect.op_rect.type_change_method {
+fill: lightskyblue;
+}
+
+rect.op_rect.type_delete_method {
+fill: pink;
+}
+
+rect.op_rect.type_add_type {
+fill: yellowgreen;
+}
+
+rect.op_rect.type_change_type {
+fill: lightskyblue;
+}
+
+rect.op_rect.type_delete_type {
+fill: pink;
+}
+
+rect.op_rect.type_add_import_statement {
+fill: yellowgreen;
+}
+
+rect.op_rect.type_delete_import_statement {
+fill: pink;
+}
+
+rect.op_rect.type_non_code_change {
+fill: grey;
+}
+
+rect.op_rect.type_mixed {
+fill: slateblue;
+}
+
+rect.op_rect.type_unknown {
+fill: grey;
+}
+
 rect#range_selection_box {
 fill: royalblue;
 fill-opacity: 0.3;
@@ -325,4 +430,30 @@ fill: orange;
 
 #marker_upper_triangle:hover {
 fill: #ffb733;
+}
+
+div.code {
+display: block;
+margin: 0px;
+padding: 0px;
+}
+
+div.code_deletion {
+background-color: lightpink;
+}
+
+div.code_insertion {
+background-color: lightgreen;
+}
+
+.highlight_rect {
+fill: none;
+stroke: yellow;
+stroke-width: 3;
+
+vector-effect: non-scaling-stroke;
+}
+
+.partial_highlight {
+stroke-dasharray: 5 3;
 }

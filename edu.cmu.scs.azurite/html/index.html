@@ -6,13 +6,16 @@
     <title>Azurite Timeline</title>
 
     <script type="text/javascript" src="scripts/azurite.js"></script>
-    <script type="text/javascript" src="scripts/d3.v3.js"></script>
+    <script type="text/javascript" src="scripts/d3.js"></script>
     <script type="text/javascript" src="scripts/jquery-1.8.2.js"></script>
     <script type="text/javascript" src="scripts/jquery.tipsy.js"></script>
     <script type="text/javascript" src="scripts/timeline.js"></script>
+    <script type="text/javascript" src="scripts/jquery-ui.js"></script>
+    <script type="text/javascript" src="scripts/jquery.ui-contextmenu.js"></script>
     
     <link href="style/style.css" rel="stylesheet" type="text/css">
     <link href="style/tipsy.css" rel="stylesheet" type="text/css">
+    <link href="style/jquery-ui.css" rel="stylesheet" type="text/css">
   </head>
   <body>
   <div id='main'>
@@ -21,8 +24,10 @@
         <div id='svg_inner_wrapper'>
         </div>
 
-        <div id='button_wrapper'>
+        <div id='bottom_left_wrapper'>
           <button id='unhide_button' onclick='showAllFiles()'>Unhide All Files</button>
+          <div id='horizontal_zoom_bar'></div>
+          <button id='collapse_level_button'>P</button>
         </div>
       </div>
     </div>

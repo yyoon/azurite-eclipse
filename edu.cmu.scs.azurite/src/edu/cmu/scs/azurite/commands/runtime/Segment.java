@@ -5,9 +5,9 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-import edu.cmu.scs.fluorite.commands.Delete;
-import edu.cmu.scs.fluorite.commands.Insert;
-import edu.cmu.scs.fluorite.commands.Replace;
+import edu.cmu.scs.fluorite.commands.document.Delete;
+import edu.cmu.scs.fluorite.commands.document.Insert;
+import edu.cmu.scs.fluorite.commands.document.Replace;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 
 /**

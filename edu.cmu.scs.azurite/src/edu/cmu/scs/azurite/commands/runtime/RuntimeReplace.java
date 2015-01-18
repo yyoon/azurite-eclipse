@@ -3,7 +3,7 @@ package edu.cmu.scs.azurite.commands.runtime;
 import java.util.ArrayList;
 import java.util.List;
 
-import edu.cmu.scs.fluorite.commands.Replace;
+import edu.cmu.scs.fluorite.commands.document.Replace;
 
 /**
  * @author YoungSeok Yoon
@@ -107,20 +107,6 @@ public class RuntimeReplace extends RuntimeDC {
 		return "[Replace:" + getOriginal().getCommandIndex() + "] \""
 				+ getOriginal().getDeletedText() + "\" -> \""
 				+ getOriginal().getInsertedText() + "\"";
-	}
-
-	@Override
-	public String getHtmlInfo() {
-		StringBuilder builder = new StringBuilder();
-		
-		builder.append("----------\n");
-		builder.append(transformToHtmlString(getOriginal().getDeletedText()));
-		builder.append("\n----------");
-		builder.append("\n++++++++++\n");
-		builder.append(transformToHtmlString(getOriginal().getInsertedText()));
-		builder.append("\n++++++++++");
-		
-		return builder.toString().replace("\n", "<br>");
 	}
 
 	@Override

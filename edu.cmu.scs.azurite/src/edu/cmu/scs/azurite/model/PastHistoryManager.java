@@ -18,10 +18,10 @@ import name.fraser.neil.plaintext.diff_match_patch_ext;
 import edu.cmu.scs.azurite.commands.diff.DiffDelete;
 import edu.cmu.scs.azurite.commands.diff.DiffInsert;
 import edu.cmu.scs.fluorite.commands.AbstractCommand;
-import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
 import edu.cmu.scs.fluorite.commands.FileOpenCommand;
 import edu.cmu.scs.fluorite.commands.ICommand;
-import edu.cmu.scs.fluorite.commands.Replace;
+import edu.cmu.scs.fluorite.commands.document.DocChange;
+import edu.cmu.scs.fluorite.commands.document.Replace;
 import edu.cmu.scs.fluorite.model.DocumentChangeListener;
 import edu.cmu.scs.fluorite.model.EventRecorder;
 import edu.cmu.scs.fluorite.model.Events;
@@ -201,7 +201,7 @@ public class PastHistoryManager implements DocumentChangeListener {
 			command.setCommandIndex(command.getCommandIndex() + insertedCount.value);
 			copyEvents.addCommand(command);
 
-			if (!(command instanceof BaseDocumentChangeEvent)) {
+			if (!(command instanceof DocChange)) {
 				continue;
 			}
 
@@ -245,7 +245,7 @@ public class PastHistoryManager implements DocumentChangeListener {
 				}
 			}
 
-			BaseDocumentChangeEvent docChange = (BaseDocumentChangeEvent) command;
+			DocChange docChange = (DocChange) command;
 			String originalContent = localFinalSnapshots.get(curFileKey);
 			if (originalContent != null || docChange instanceof FileOpenCommand) {
 				String updatedContent = docChange.apply(originalContent);
@@ -437,23 +437,23 @@ public class PastHistoryManager implements DocumentChangeListener {
 	}
 
 	@Override
-	public void documentChanged(BaseDocumentChangeEvent docChange) {
+	public void documentChanged(DocChange docChange) {
 		// Do nothing for this event
 	}
 
 	@Override
-	public void documentChangeFinalized(BaseDocumentChangeEvent docChange) {
+	public void documentChangeFinalized(DocChange docChange) {
 		// Do nothing for this event
 	}
 
 	@Override
-	public void documentChangeUpdated(BaseDocumentChangeEvent docChange) {
+	public void documentChangeUpdated(DocChange docChange) {
 		// Do nothing for this event
 	}
 
 	@Override
-	public void documentChangeAmended(BaseDocumentChangeEvent oldDocChange,
-			BaseDocumentChangeEvent newDocChange) {
+	public void documentChangeAmended(DocChange oldDocChange,
+			DocChange newDocChange) {
 		// Do nothing for this event
 	}
 

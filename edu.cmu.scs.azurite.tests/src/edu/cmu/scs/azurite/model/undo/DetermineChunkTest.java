@@ -14,10 +14,10 @@ import edu.cmu.scs.azurite.commands.runtime.RuntimeDelete;
 import edu.cmu.scs.azurite.commands.runtime.RuntimeInsert;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.fluorite.commands.AbstractCommand;
-import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
-import edu.cmu.scs.fluorite.commands.Delete;
-import edu.cmu.scs.fluorite.commands.Insert;
-import edu.cmu.scs.fluorite.commands.Replace;
+import edu.cmu.scs.fluorite.commands.document.DocChange;
+import edu.cmu.scs.fluorite.commands.document.Delete;
+import edu.cmu.scs.fluorite.commands.document.Insert;
+import edu.cmu.scs.fluorite.commands.document.Replace;
 
 public class DetermineChunkTest {
 	
@@ -55,7 +55,7 @@ public class DetermineChunkTest {
 	
 	@Test
 	public void testAdjacentInsertReplace() {
-		BaseDocumentChangeEvent[] operations = new BaseDocumentChangeEvent[] {
+		DocChange[] operations = new DocChange[] {
 				new Insert(0, "ABCD", null),
 				new Insert(2, "abcd", null),
 				new Insert(8, "1234", null),
@@ -73,8 +73,8 @@ public class DetermineChunkTest {
 		assertEquals(1, chunks.size());
 	}
 
-	private void applyOperations(BaseDocumentChangeEvent[] operations) {
-		for (BaseDocumentChangeEvent operation : operations) {
+	private void applyOperations(DocChange[] operations) {
+		for (DocChange operation : operations) {
 			operation.apply(document);
 			manager.documentChangeFinalized(operation);
 		}

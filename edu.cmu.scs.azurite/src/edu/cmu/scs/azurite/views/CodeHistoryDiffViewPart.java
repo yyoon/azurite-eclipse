@@ -73,18 +73,8 @@ public class CodeHistoryDiffViewPart extends ViewPart {
 		mes.remove(this.viewerId);
 		
 		availableViewerIds.addLast(this.viewerId);
-
-		if (mes.isEmpty()) {
-			hideMarker();
-		}
 		
 		super.dispose();
-	}
-
-	private void hideMarker() {
-		if (TimelineViewPart.getInstance() != null) {
-			TimelineViewPart.getInstance().hideMarker();
-		}
 	}
 
 	private CompareConfiguration createConfiguration() {

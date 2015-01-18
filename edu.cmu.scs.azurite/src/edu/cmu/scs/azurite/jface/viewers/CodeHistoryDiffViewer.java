@@ -139,7 +139,7 @@ public class CodeHistoryDiffViewer extends Composite {
 				new Action("Prev", Activator.getImageDescriptor("icons/old_go_previous.png")) {
 						@Override
 						public void run() {
-							selectVersion(Math.max(getCurrentVersion() - 1, 0), true);
+							selectPrevVersion();
 						}
 				});
 		mPrevAction.setId("historyDiffPrev");
@@ -149,7 +149,7 @@ public class CodeHistoryDiffViewer extends Composite {
 				new Action("Next", Activator.getImageDescriptor("icons/old_go_next.png")) {
 						@Override
 						public void run() {
-							selectVersion(Math.min(getCurrentVersion() + 1, mInvolvedDCs.size()), true);
+							selectNextVersion();
 						}
 				});
 		mNextAction.setId("historyDiffNext");
@@ -214,6 +214,66 @@ public class CodeHistoryDiffViewer extends Composite {
 	
 	private int getCurrentVersion() {
 		return mCurrentVersion;
+	}
+	
+	private void selectPrevVersion() {
+		// Don't do anything if the current version is the first possible version.
+		if (getCurrentVersion() == 0) {
+			return;
+		}
+		
+		TimelineViewPart timeline = TimelineViewPart.getInstance();
+		int collapseLevel = timeline != null ? timeline.getCurrentCollapseLevel() : -1;
+		
+		// No operation collapsing in place.
+		if (collapseLevel == -1) {
+			selectVersion(getCurrentVersion() - 1, true);
+			return;
+		}
+		
+		// Consider the operation collapsing.
+		// When selecting the previous version,
+		// see if the runtimeDC immediately before the current version is part of a group.
+		// If so, select the version immediately before the group.
+		int targetVersion = getCurrentVersion() - 1;
+		int collapseID = mInvolvedDCs.get(targetVersion).getCollapseID(collapseLevel);
+		
+		while (targetVersion > 0 &&
+				mInvolvedDCs.get(targetVersion - 1).getCollapseID(collapseLevel) == collapseID) {
+			--targetVersion;
+		}
+		
+		selectVersion(targetVersion, true);
+	}
+	
+	private void selectNextVersion() {
+		// Don't do anything if the current version is the last possible version.
+		if (getCurrentVersion() == mInvolvedDCs.size()) {
+			return;
+		}
+		
+		TimelineViewPart timeline = TimelineViewPart.getInstance();
+		int collapseLevel = timeline != null ? timeline.getCurrentCollapseLevel() : -1;
+		
+		// No operation collapsing in place.
+		if (collapseLevel == -1) {
+			selectVersion(getCurrentVersion() + 1, true);
+			return;
+		}
+		
+		// Consider the operation collapsing.
+		// When selecting the next version,
+		// see if the runtimeDC of the current version is part of a group.
+		// If so, select the version immediately after the group.
+		int collapseID = mInvolvedDCs.get(getCurrentVersion()).getCollapseID(collapseLevel);
+		int targetVersion = getCurrentVersion() + 1;
+		
+		while (targetVersion < mInvolvedDCs.size() &&
+				mInvolvedDCs.get(targetVersion).getCollapseID(collapseLevel) == collapseID) {
+			++targetVersion;
+		}
+		
+		selectVersion(targetVersion, true);
 	}
 
 	private void selectVersion(int version, boolean moveMarker) {

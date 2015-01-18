@@ -15,10 +15,10 @@ import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.model.OperationId;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.fluorite.commands.AbstractCommand;
-import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
-import edu.cmu.scs.fluorite.commands.Delete;
-import edu.cmu.scs.fluorite.commands.Insert;
-import edu.cmu.scs.fluorite.commands.Replace;
+import edu.cmu.scs.fluorite.commands.document.DocChange;
+import edu.cmu.scs.fluorite.commands.document.Delete;
+import edu.cmu.scs.fluorite.commands.document.Insert;
+import edu.cmu.scs.fluorite.commands.document.Replace;
 import edu.cmu.scs.fluorite.model.EventRecorder;
 
 public class SelectiveUndoRandomTest {
@@ -50,7 +50,7 @@ public class SelectiveUndoRandomTest {
 				randomStringOfLength(1000));
 		
 		for (int i = 0; i < numOperations; ++i) {
-			BaseDocumentChangeEvent operation = applyRandomOperation(doc);
+			DocChange operation = applyRandomOperation(doc);
 			manager.documentChangeFinalized(operation);
 		}
 		
@@ -79,7 +79,7 @@ public class SelectiveUndoRandomTest {
 		for (int numOp : numOps) {
 			int remaining = numOp - numOperationsSoFar;
 			for (int i = 0; i < remaining; ++i) {
-				BaseDocumentChangeEvent operation = applyRandomOperation(doc);
+				DocChange operation = applyRandomOperation(doc);
 				manager.documentChangeFinalized(operation);
 			}
 			
@@ -89,7 +89,7 @@ public class SelectiveUndoRandomTest {
 			manager.calculateDynamicSegments(manager.getCurrentFileKey());
 			
 			// add one more, and measure the time for calculation.
-			BaseDocumentChangeEvent operation = applyRandomOperation(doc);
+			DocChange operation = applyRandomOperation(doc);
 			manager.documentChangeFinalized(operation);
 			
 			long startTime = System.nanoTime();
@@ -123,13 +123,13 @@ public class SelectiveUndoRandomTest {
 					randomStringOfLength(INITIAL_TEXT_LENGTH));
 			
 			List<IDocument> documentList = new ArrayList<IDocument>();
-			List<BaseDocumentChangeEvent> docChanges = new ArrayList<BaseDocumentChangeEvent>();
+			List<DocChange> docChanges = new ArrayList<DocChange>();
 			for (int i = 0; i < numOperations; ++i) {
 				// Make a copy and keep it in the list.
 				documentList.add(new Document(doc.get()));
 				
 				// get a random operation and add it to the manager.
-				BaseDocumentChangeEvent operation = applyRandomOperation(doc);
+				DocChange operation = applyRandomOperation(doc);
 				docChanges.add(operation);
 				manager.documentChangeFinalized(operation);
 				
@@ -163,12 +163,12 @@ public class SelectiveUndoRandomTest {
 	}
 	
 	private void printTrace(String initialContent,
-			List<BaseDocumentChangeEvent> docChanges, int i, int j) {
+			List<DocChange> docChanges, int i, int j) {
 		System.out.println("i = " + i + "\tj = " + j);
 		System.out.println("Initial Content:");
 		System.out.println(initialContent);
 		
-		for (BaseDocumentChangeEvent docChange : docChanges) {
+		for (DocChange docChange : docChanges) {
 			if (docChange instanceof Insert) {
 				Insert insert = (Insert)docChange;
 				System.out.println("I[" + insert.getOffset() + ", "
@@ -191,7 +191,7 @@ public class SelectiveUndoRandomTest {
 		}
 	}
 	
-	private BaseDocumentChangeEvent applyRandomOperation(IDocument document) {
+	private DocChange applyRandomOperation(IDocument document) {
 		while (true) {
 			double randValue = Math.random() * 3.0;
 			

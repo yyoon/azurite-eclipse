@@ -6,7 +6,7 @@ import java.util.Map;
 import org.eclipse.jface.text.IDocument;
 
 import edu.cmu.scs.azurite.model.FileKey;
-import edu.cmu.scs.fluorite.commands.Insert;
+import edu.cmu.scs.fluorite.commands.document.Insert;
 
 public class DiffInsert extends Insert implements IDiffDC {
 	

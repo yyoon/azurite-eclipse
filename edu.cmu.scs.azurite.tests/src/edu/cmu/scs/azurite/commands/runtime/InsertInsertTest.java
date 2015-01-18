@@ -1,12 +1,11 @@
 package edu.cmu.scs.azurite.commands.runtime;
 
 import static org.junit.Assert.*;
-
 import static edu.cmu.scs.azurite.commands.runtime.TestHelper.*;
 
 import org.junit.Test;
 
-import edu.cmu.scs.fluorite.commands.Insert;
+import edu.cmu.scs.fluorite.commands.document.Insert;
 
 public class InsertInsertTest {
 	

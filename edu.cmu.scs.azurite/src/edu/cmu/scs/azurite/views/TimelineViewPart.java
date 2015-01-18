@@ -59,23 +59,24 @@ import edu.cmu.scs.azurite.model.FileKey;
 import edu.cmu.scs.azurite.model.OperationId;
 import edu.cmu.scs.azurite.model.RuntimeDCListener;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
+import edu.cmu.scs.azurite.model.grouper.IChangeInformation;
+import edu.cmu.scs.azurite.model.grouper.OperationGrouper;
+import edu.cmu.scs.azurite.model.grouper.OperationGrouperListener;
 import edu.cmu.scs.azurite.model.undo.SelectiveUndoEngine;
 import edu.cmu.scs.azurite.plugin.Activator;
 import edu.cmu.scs.azurite.preferences.Initializer;
-import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
-import edu.cmu.scs.fluorite.commands.Delete;
-import edu.cmu.scs.fluorite.commands.FileOpenCommand;
 import edu.cmu.scs.fluorite.commands.ICommand;
 import edu.cmu.scs.fluorite.commands.ITimestampOverridable;
 import edu.cmu.scs.fluorite.commands.ITypeOverridable;
-import edu.cmu.scs.fluorite.commands.Insert;
-import edu.cmu.scs.fluorite.commands.Replace;
-import edu.cmu.scs.fluorite.model.CommandExecutionListener;
+import edu.cmu.scs.fluorite.commands.document.Delete;
+import edu.cmu.scs.fluorite.commands.document.DocChange;
+import edu.cmu.scs.fluorite.commands.document.Insert;
+import edu.cmu.scs.fluorite.commands.document.Replace;
 import edu.cmu.scs.fluorite.model.EventRecorder;
 import edu.cmu.scs.fluorite.model.Events;
 import edu.cmu.scs.fluorite.util.Utilities;
 
-public class TimelineViewPart extends ViewPart implements RuntimeDCListener, CommandExecutionListener {
+public class TimelineViewPart extends ViewPart implements RuntimeDCListener, OperationGrouperListener {
 	
 	private static final String RETURN_CODE_OK = "ok";
 	private static final String RETURN_CODE_FAIL = "fail";
@@ -252,8 +253,9 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 
 		
 		// Register to the EventRecorder.
-		RuntimeHistoryManager.getInstance().addRuntimeDocumentChangeListener(this);
-		EventRecorder.getInstance().addCommandExecutionListener(this);
+		RuntimeHistoryManager manager = RuntimeHistoryManager.getInstance();
+		manager.addRuntimeDocumentChangeListener(this);
+		manager.getOperationGrouper().addOperationGrouperListener(this);
 	}
 
 	private void setupContextMenu() {
@@ -523,7 +525,6 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	@Override
 	public void dispose() {
 		RuntimeHistoryManager.getInstance().removeRuntimeDocumentChangeListener(this);
-		EventRecorder.getInstance().removeCommandExecutionListener(this);
 		this.rectMarkerManager.removeAllMarkers();
 		removeRectSelectionListener(this.rectMarkerManager);
 		
@@ -593,7 +594,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
                     			
                     			addFile(key.getProjectName(), key.getFilePath());
                     			for (RuntimeDC dc : manager.getRuntimeDocumentChanges(key)) {
-                    				addOperation(dc.getOriginal(), false, dc.getOriginal().getSessionId() == currentTimestamp);
+                    				addOperation(dc, false, dc.getOriginal().getSessionId() == currentTimestamp);
                     			}
                     		}
                     		
@@ -682,11 +683,12 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 
 		@Override
 		public Object function(Object[] arguments) {
-			if (arguments == null || arguments.length != 4
+			if (arguments == null || arguments.length != 5
 					|| !(arguments[0] instanceof String)
 					|| !(arguments[1] instanceof String)
 					|| !(arguments[2] instanceof Number)
-					|| !(arguments[3] instanceof Number)) {
+					|| !(arguments[3] instanceof Number)
+					|| !(arguments[4] instanceof Number)) {
 				return RETURN_CODE_FAIL;
 			}
 			
@@ -699,11 +701,13 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 				long id = ((Number)arguments[3]).longValue();
 				OperationId oid = new OperationId(sid, id);
 				
+				int level = ((Number)arguments[4]).intValue();
+				
 				RuntimeDC runtimeDC = RuntimeHistoryManager.getInstance()
 						.filterDocumentChangeByIdWithoutCalculating(key, oid);
 				
 				if (runtimeDC != null) {
-					String result = runtimeDC.getHtmlInfo();
+					String result = runtimeDC.getHtmlInfo(level);
 					if (result != null) {
 						return result;
 					}
@@ -943,7 +947,10 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	}
 	
 	@Override
-	public void activeFileChanged(String projectName, String filePath) {
+	public void activeFileChanged(FileKey fileKey, String snapshot) {
+		String projectName = fileKey.getProjectName();
+		String filePath = fileKey.getFilePath();
+		
 		if (projectName == null || filePath == null) {
 			// Some non-text file is opened maybe?
 			return;
@@ -958,7 +965,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	}
 	
 	@Override
-	public void documentChangeAdded(BaseDocumentChangeEvent docChange) {
+	public void documentChangeAdded(DocChange docChange) {
 		addOperation(docChange, true, true);
 	}
 	
@@ -968,7 +975,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 
 	private void addFile(String projectName, String filePath) {
 		String executeStr = getAddFileString(projectName, filePath);
-		browser.execute(executeStr);
+		executeJSCode(executeStr);
 	}
 
 	private String getAddFileString(String projectName, String filePath) {
@@ -982,7 +989,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		final String executeStr = getAddEventString(event);
 		Display.getDefault().syncExec(new Runnable() {
 			public void run() {
-				browser.execute(executeStr);
+				executeJSCode(executeStr);
 			}
 		});
 	}
@@ -1011,52 +1018,66 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		
 		return executeStr;
 	}
-
-	private void addOperation(BaseDocumentChangeEvent docChange, boolean scroll, boolean current) {
-		String executeStr = getAddOperationString(docChange, scroll, true, current);
-		browser.execute(executeStr);
+	
+	private void addOperation(RuntimeDC dc, boolean scroll, boolean current) {
+		String executeStr = getAddOperationString(dc, scroll, true, current);
+		executeJSCode(executeStr);
 	}
 
-	private void addOperations(Events events) {
-		// Store the current file.
-		browser.execute("pushCurrentFile();");
-		
-		// Add the operations
+	private void addOperation(DocChange docChange, boolean scroll, boolean current) {
+		String executeStr = getAddOperationString(docChange, scroll, true, current);
+		executeJSCode(executeStr);
+	}
+	
+	private String getAddOperationString(RuntimeDC dc, boolean scroll, boolean layout, boolean current) {
 		StringBuilder builder = new StringBuilder();
 		
-//		long start = System.currentTimeMillis();
+		DocChange docChange = dc.getOriginal();
 		
-		for (ICommand command : events.getCommands()) {
-			if (!(command instanceof BaseDocumentChangeEvent)) {
-				continue;
-			}
-			
-			BaseDocumentChangeEvent docChange = (BaseDocumentChangeEvent)command;
-			if (docChange instanceof FileOpenCommand) {
-				FileOpenCommand foc = (FileOpenCommand)docChange;
-				if (foc.getFilePath() != null) {
-					builder.append(getAddFileString(foc.getProjectName(), foc.getFilePath()));
-				}
-			} else {
-				builder.append(getAddOperationString(docChange, false, false, false));
-			}
+		builder.append("addOperation(");
+		builder.append(docChange.getSessionId());
+		builder.append(", ");
+		builder.append(docChange.getCommandIndex());
+		builder.append(", ");
+		builder.append(docChange.getTimestamp());
+		builder.append(", ");
+		builder.append(docChange.getTimestamp2());
+		builder.append(", ");
+		builder.append(docChange.getY1());
+		builder.append(", ");
+		builder.append(docChange.getY2());
+		builder.append(", ");
+		builder.append(getTypeIndex(docChange));
+		builder.append(", ");
+		builder.append(scroll);
+		builder.append(", ");
+		builder.append(layout);
+		builder.append(", ");
+		builder.append(current);
+		
+		builder.append(", [");
+		builder.append(dc.getCollapseID(0));
+		for (int i = 1; i < OperationGrouper.NUM_LEVELS; ++i) {
+			builder.append(", ");
+			builder.append(dc.getCollapseID(i));
 		}
+		builder.append("]");
 		
-//		long end = System.currentTimeMillis();
-//		System.out.println("Building String: " + (end - start) + "ms");
+		builder.append(", ['");
+		builder.append(getCollapseType(dc.getChangeInformation(0)));
+		for (int i = 1; i < OperationGrouper.NUM_LEVELS; ++i) {
+			builder.append("', '");
+			builder.append(getCollapseType(dc.getChangeInformation(i)));
+		}
+		builder.append("']");
 		
-//		start = System.currentTimeMillis();
-		browser.execute(builder.toString());
-//		end = System.currentTimeMillis();
-//		System.out.println("Executing String: " + (end - start) + "ms");
+		builder.append(");");
 		
-		// Restore the last file
-		browser.execute("popCurrentFile();");
+		return builder.toString();
 	}
 
-	private String getAddOperationString(BaseDocumentChangeEvent docChange,
-			boolean scroll, boolean layout, boolean current) {
-		String executeStr = String.format("addOperation(%1$d, %2$d, %3$d, %4$d, %5$f, %6$f, %7$d, %8$s, %9$s, %10$s);",
+	private String getAddOperationString(DocChange docChange, boolean scroll, boolean layout, boolean current) {
+		String executeStr = String.format("addOperation(%d, %d, %d, %d, %f, %f, %d, %s, %s, %s);",
 				docChange.getSessionId(),
 				docChange.getCommandIndex(),
 				docChange.getTimestamp(),
@@ -1067,22 +1088,11 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 				Boolean.toString(scroll),
 				Boolean.toString(layout),
 				Boolean.toString(current));
+		
 		return executeStr;
 	}
 	
-	private void addEvents(Events events) {
-		StringBuilder builder = new StringBuilder();
-		
-		for (ICommand command : events.getCommands()) {
-			if (RuntimeHistoryManager.shouldCommandBeDisplayed(command)) {
-				builder.append(getAddEventString(command));
-			}
-		}
-		
-		browser.execute(builder.toString());
-	}
-	
-	private int getTypeIndex(BaseDocumentChangeEvent docChange) {
+	private int getTypeIndex(DocChange docChange) {
 		if (docChange instanceof DiffInsert) {
 			return 10;
 		} else if (docChange instanceof DiffDelete) {
@@ -1099,7 +1109,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	}
 
 	@Override
-	public void documentChangeUpdated(BaseDocumentChangeEvent docChange) {
+	public void documentChangeUpdated(DocChange docChange) {
 		String executeStr = String.format(
 				"updateOperation(%1$d, %2$d, %3$d, %4$f, %5$f, %6$d, true);",
 				docChange.getSessionId(),
@@ -1108,11 +1118,11 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 				docChange.getY1(),
 				docChange.getY2(),
 				getTypeIndex(docChange));
-		browser.execute(executeStr);
+		executeJSCode(executeStr);
 	}
 	
 	@Override
-	public void documentChangeAmended(BaseDocumentChangeEvent oldDocChange, BaseDocumentChangeEvent newDocChange) {
+	public void documentChangeAmended(DocChange oldDocChange, DocChange newDocChange) {
 		String executeStr = String.format(
 				"updateOperation(%1$d, %2$d, %3$d, %4$f, %5$f, %6$d, true);",
 				oldDocChange.getSessionId(),
@@ -1121,7 +1131,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 				newDocChange.getY1(),
 				newDocChange.getY2(),
 				getTypeIndex(newDocChange));
-		browser.execute(executeStr);
+		executeJSCode(executeStr);
 	}
 
 	/**
@@ -1137,7 +1147,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		
 		buffer.append(", " + Boolean.toString(clearSelection) + ");");
 		
-		browser.execute(buffer.toString());
+		executeJSCode(buffer.toString());
 	}
 	
 	public void removeSelection(List<OperationId> ids) {
@@ -1148,7 +1158,7 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		
 		buffer.append(");");
 		
-		browser.execute(buffer.toString());
+		executeJSCode(buffer.toString());
 	}
 
 	private void getJavaScriptListFromOperationIds(StringBuffer buffer,
@@ -1178,36 +1188,28 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	}
 	
 	public void activateFirebugLite() {
-		browser.execute("activateFirebugLite();");
+		executeJSCode("activateFirebugLite();");
 	}
 
 	@Override
 	public void pastLogsRead(List<Events> listEvents) {
-		if (listEvents == null) {
-			throw new IllegalArgumentException();
-		}
-		
-		if (listEvents.isEmpty()) { 
-			return;
-		}
-
-		for (Events events : listEvents) {
-			// Add all the operations.
-			addOperations(events);
-			
-			// Add all the events, such as Run, unit tests, etc.
-			addEvents(events);
-		}
+		refresh();
 		
 		// Update the data.
 		performLayout();
 	}
 	
+	@Override
+	public void codingEventOccurred(ICommand command) {
+		addEventToTimeline(command);
+	}
+	
 	private void scrollToEnd() {
-		browser.execute("scrollToEnd()");
+		executeJSCode("scrollToEnd();");
 	}
 	
 	public void executeJSCode(String codeToExecute) {
+//		System.out.println(codeToExecute);
 		browser.execute(codeToExecute);
 	}
 	
@@ -1220,11 +1222,11 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	}
 	
 	public void showMarkerAtTimestamp(long absTimestamp) {
-		browser.execute("showMarkerAtTimestamp(" + absTimestamp + ");");
+		executeJSCode("showMarkerAtTimestamp(" + absTimestamp + ");");
 	}
 	
 	public void hideMarker() {
-		browser.execute("hideMarker();");
+		executeJSCode("hideMarker();");
 	}
 	
 	public int getSelectedRectsCount() {
@@ -1237,6 +1239,19 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 			}
 		} catch (SWTException e) {
 			return 0;
+		}
+	}
+	
+	public int getCurrentCollapseLevel() {
+		try {
+			Object result = evaluateJSCode("return global.collapseLevel;");
+			if (result instanceof Number) {
+				return ((Number) result).intValue();
+			} else {
+				return -1;
+			}
+		} catch (SWTException e) {
+			return -1;
 		}
 	}
 	
@@ -1292,17 +1307,9 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 		}
 		return ids;
 	}
-
-	@Override
-	public void commandExecuted(ICommand command) {
-		// Some events should be displayed in the timeline
-		if (RuntimeHistoryManager.shouldCommandBeDisplayed(command)) {
-			addEventToTimeline(command);
-		}
-	}
 	
 	private void performLayout() {
-		browser.execute("layout();");
+		executeJSCode("layout();");
 	}
 	
 	public long getMarkerTimestamp() {
@@ -1318,7 +1325,37 @@ public class TimelineViewPart extends ViewPart implements RuntimeDCListener, Com
 	}
 	
 	public void redrawEvents() {
-		browser.execute("updateEvents();");
+		executeJSCode("updateEvents();");
+	}
+
+	@Override
+	public void collapseIDsUpdated(List<RuntimeDC> dcs, int level, int collapseID, IChangeInformation changeInformation) {
+		if (dcs == null || dcs.isEmpty()) { return; }
+		
+		long sid = dcs.get(0).getOriginal().getSessionId();
+		String path = dcs.get(0).getBelongsTo().getFilePath();
+		if (path == null) { path = "null"; }
+		else { path = path.replace('\\', '/'); }
+		
+		String collapseType = getCollapseType(changeInformation);
+		
+		StringBuilder idList = new StringBuilder();
+		idList.append("[");
+		idList.append(dcs.get(0).getOriginal().getCommandIndex());
+		for (int i = 1; i < dcs.size(); ++i) {
+			idList.append(",");
+			idList.append(dcs.get(i).getOriginal().getCommandIndex());
+		}
+		idList.append("]");
+		
+		String executeStr = String.format("updateCollapseIds(%d, '%s', %d, %d, '%s', %s);",
+				sid, path, level, collapseID, collapseType, idList.toString());
+		executeJSCode(executeStr);
+	}
+
+	private String getCollapseType(IChangeInformation changeInformation) {
+		return changeInformation == null ? "type_unknown"
+				: "type_" + changeInformation.getChangeKind().toString().toLowerCase();
 	}
 	
 }

@@ -14,10 +14,10 @@ import edu.cmu.scs.azurite.commands.runtime.RuntimeDC;
 import edu.cmu.scs.azurite.model.OperationId;
 import edu.cmu.scs.azurite.model.RuntimeHistoryManager;
 import edu.cmu.scs.fluorite.commands.AbstractCommand;
-import edu.cmu.scs.fluorite.commands.BaseDocumentChangeEvent;
-import edu.cmu.scs.fluorite.commands.Delete;
-import edu.cmu.scs.fluorite.commands.Insert;
-import edu.cmu.scs.fluorite.commands.Replace;
+import edu.cmu.scs.fluorite.commands.document.DocChange;
+import edu.cmu.scs.fluorite.commands.document.Delete;
+import edu.cmu.scs.fluorite.commands.document.Insert;
+import edu.cmu.scs.fluorite.commands.document.Replace;
 import edu.cmu.scs.fluorite.model.EventRecorder;
 
 public class SelectiveUndoTest {
@@ -43,7 +43,7 @@ public class SelectiveUndoTest {
 	public void testInsertDeleteConflictWithinSelection() {
 		document.set("JW7qZlnmyG");
 		
-		BaseDocumentChangeEvent[] operations = new BaseDocumentChangeEvent[] {
+		DocChange[] operations = new DocChange[] {
 				new Insert(5, "SQ", null),
 				new Replace(8, 2, 0, 0, 4, "nm", "kvmk", null),
 				new Insert(3, "0a", null),
@@ -64,7 +64,7 @@ public class SelectiveUndoTest {
 	public void testInsertDeleteReplace() {
 		document.set("iRZdTMEc4W");
 		
-		BaseDocumentChangeEvent[] operations = new BaseDocumentChangeEvent[] {
+		DocChange[] operations = new DocChange[] {
 				new Insert(9, "s0", null),
 				new Delete(9, 2, 0, 0, "s0", null),
 				new Replace(8, 2, 0, 0, 2, "4W", "lT", null),
@@ -84,7 +84,7 @@ public class SelectiveUndoTest {
 	public void testDeleteDeleteReplace() {
 		document.set("pDarPrLtNF");
 		
-		BaseDocumentChangeEvent[] operations = new BaseDocumentChangeEvent[] {
+		DocChange[] operations = new DocChange[] {
 				new Delete(3, 1, 0, 0, "r", null),
 				new Delete(5, 4, 0, 0, "LtNF", null),
 				new Replace(3, 2, 0, 0, 5, "Pr", "xIGSe", null),
@@ -101,7 +101,7 @@ public class SelectiveUndoTest {
 
 	@Test
 	public void testNoConflict() {
-		BaseDocumentChangeEvent[] operations = new BaseDocumentChangeEvent[] {
+		DocChange[] operations = new DocChange[] {
 				new Insert(0, "First", null),
 				new Insert(5, "Second", null),
 				new Insert(11, "Third", null),
@@ -119,7 +119,7 @@ public class SelectiveUndoTest {
 	
 	@Test
 	public void testSimpleConflict() {
-		BaseDocumentChangeEvent[] operations = new BaseDocumentChangeEvent[] {
+		DocChange[] operations = new DocChange[] {
 				new Insert(0, "System.out.println(\"Hello, world!\");\n", null),
 				new Replace(27, 5, 0, 0, 3, "world", "Bob", null),
 				new Insert(0, "System.out.println(\"Hello, Alice!\");\n", null),
@@ -144,7 +144,7 @@ public class SelectiveUndoTest {
 	
 	@Test
 	public void testDeleteOrder01() {
-		BaseDocumentChangeEvent[] operations = new BaseDocumentChangeEvent[] {
+		DocChange[] operations = new DocChange[] {
 				new Insert(0, "AB", null),
 				new Delete(0, 1, 0, 0, "A", null),
 				new Delete(0, 1, 0, 0, "B", null),
@@ -161,7 +161,7 @@ public class SelectiveUndoTest {
 	
 	@Test
 	public void testDeleteOrder02() {
-		BaseDocumentChangeEvent[] operations = new BaseDocumentChangeEvent[] {
+		DocChange[] operations = new DocChange[] {
 				new Insert(0, "AB", null),
 				new Delete(1, 1, 0, 0, "B", null),
 				new Delete(0, 1, 0, 0, "A", null),
@@ -178,7 +178,7 @@ public class SelectiveUndoTest {
 	
 	@Test
 	public void testIDConflict01() {
-		BaseDocumentChangeEvent[] operations = new BaseDocumentChangeEvent[] {
+		DocChange[] operations = new DocChange[] {
 				new Insert(0, "AB", null),
 				new Insert(2, "CD", null),
 				new Insert(4, "EF", null),
@@ -196,7 +196,7 @@ public class SelectiveUndoTest {
 	
 	@Test
 	public void testComplexConflict() {
-		BaseDocumentChangeEvent[] operations = new BaseDocumentChangeEvent[] {
+		DocChange[] operations = new DocChange[] {
 				new Insert(0, "ABCD", null),
 				new Insert(2, "abcd", null),
 				new Insert(8, "1234", null),
@@ -225,8 +225,8 @@ public class SelectiveUndoTest {
 		engine.doSelectiveUndo(runtimeDocChanges, document);
 	}
 
-	private void applyOperations(BaseDocumentChangeEvent[] operations) {
-		for (BaseDocumentChangeEvent operation : operations) {
+	private void applyOperations(DocChange[] operations) {
+		for (DocChange operation : operations) {
 			operation.apply(document);
 			manager.documentChangeFinalized(operation);
 		}
