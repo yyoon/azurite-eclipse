@@ -90,7 +90,7 @@ var MIN_SCROLL_THUMB_SIZE = 30;
 
 
 var NUM_COLLAPSE_LEVELS = 3;
-var COLLAPSE_LEVEL_INITIALS = ['R', 'P', 'M', 'T'];
+var COLLAPSE_LEVEL_INITIALS = ['R', 'S', 'M', 'T'];
 var COLLAPSE_LEVEL_THRESHOLDS = [3.1, 1.5, 0.7, 0.4, 0.1];
 
 
@@ -1580,7 +1580,7 @@ window.onload = function() {
 		menu: [
 			{ title: "<strong>T</strong>ype Level", cmd: 2 },
 			{ title: "<strong>M</strong>ethod Level", cmd: 1 },
-			{ title: "<strong>P</strong>arse Level", cmd: 0 },
+			{ title: "<strong>S</strong>tatement Level", cmd: 0 },
 			{ title: "<strong>R</strong>aw Level", cmd: -1 },
 		],
 
